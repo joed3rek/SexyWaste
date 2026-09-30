@@ -7,6 +7,10 @@ then open http://127.0.0.1:8000
 
 from __future__ import annotations
 
+import threading
+import time
+import uuid
+
 from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -18,6 +22,7 @@ from backend.buildings.layers import sectors as pilot_sectors
 from backend.config import AREAS, FRONTEND_DIR, PILOTS, WASTE_STREAMS
 from backend.routing.network import load_graph, network_geojson, node_lonlat
 from backend.routing import points as points_v2
+from backend.routing import twotier
 from backend.routing.planner import PlanRequest, plan_routes
 from backend.routing.scenario import default_depot_and_facility, generate_points
 from backend.survey import store as survey_store
@@ -255,6 +260,111 @@ def get_reference(name: str):
     if name not in ("vehicles", "roads"):
         raise HTTPException(404, f"Unknown reference '{name}'")
     return points_v2.reference(name)
+
+
+class FleetRow(BaseModel):
+    type: str
+    count: int = Field(ge=0, le=200)
+
+
+class PlanV2In(BaseModel):
+    sector: str
+    depot: tuple[float, float]
+    mrf: tuple[float, float]
+    primary_fleet: list[FleetRow] = Field(min_length=1)
+    secondary_fleet: list[FleetRow] = []
+    stations: list[tuple[float, float]] | None = None
+    truck_depot: tuple[float, float] | None = None
+    radius_m: float = Field(500, ge=100, le=3000)
+    streams: list[str] = list(WASTE_STREAMS)
+    shift_h: float = Field(8, ge=1, le=16)
+    unload_min: float = Field(10, ge=0, le=120)
+    time_limit_s: int = Field(30, ge=5, le=300)
+
+
+@app.get("/api/pilots/{pilot_key}/v2/stations")
+def get_stations_v2(pilot_key: str, sector: str, radius_m: float = 500, trucks: str = ""):
+    """Suggested transfer stations. `trucks` lists truck types in use, comma separated; a station
+    holds at least two loads of the largest one."""
+    pilot = _pilot(pilot_key)
+    if sector not in set(pilot_sectors(pilot)["name"]):
+        raise HTTPException(404, f"Unknown sector '{sector}'")
+    fleet = [{"type": t, "count": 1} for t in trucks.split(",") if t]
+    try:
+        stations = twotier.suggest_stations(pilot, sector, radius_m, secondary_fleet=fleet)
+        cap, truck = twotier.station_capacity_kg(fleet, list(WASTE_STREAMS))
+    except KeyError as err:
+        raise HTTPException(422, str(err)) from err
+    return {"capacity_kg": round(cap), "capacity_basis": f"2 loads of {truck}",
+            "stations": [{k: v for k, v in s.items() if k != "node"} for s in stations]}
+
+
+def _plan_input(pilot_key: str, body: PlanV2In) -> twotier.PlanInput:
+    pilot = _pilot(pilot_key)
+    if body.sector not in set(pilot_sectors(pilot)["name"]):
+        raise HTTPException(404, f"Unknown sector '{body.sector}'")
+    if not set(body.streams) <= set(WASTE_STREAMS) or not body.streams:
+        raise HTTPException(422, f"streams must be from {WASTE_STREAMS}")
+    return twotier.PlanInput(
+        pilot=pilot, sector=body.sector, depot=body.depot, mrf=body.mrf,
+        primary_fleet=[r.model_dump() for r in body.primary_fleet],
+        secondary_fleet=[r.model_dump() for r in body.secondary_fleet],
+        stations=body.stations or None, truck_depot=body.truck_depot, radius_m=body.radius_m,
+        streams=body.streams, shift_h=body.shift_h, unload_min=body.unload_min, time_limit_s=body.time_limit_s)
+
+
+@app.post("/api/pilots/{pilot_key}/v2/plan")
+def post_plan_v2(pilot_key: str, body: PlanV2In):
+    try:
+        return twotier.plan(_plan_input(pilot_key, body))
+    except (ValueError, KeyError) as err:
+        raise HTTPException(422, str(err)) from err
+
+
+# Background jobs so the page can show progress while the optimiser runs.
+_JOBS: dict[str, dict] = {}
+_JOBS_LOCK = threading.Lock()
+
+
+@app.post("/api/pilots/{pilot_key}/v2/plan/jobs")
+def start_plan_job(pilot_key: str, body: PlanV2In):
+    inp = _plan_input(pilot_key, body)
+    job_id = uuid.uuid4().hex[:12]
+    job = {"status": "running", "stage": "Starting", "progress": 0.0, "started": time.time(), "result": None, "error": None}
+    with _JOBS_LOCK:
+        for k in [k for k, j in _JOBS.items() if time.time() - j["started"] > 3600]:
+            _JOBS.pop(k)
+        _JOBS[job_id] = job
+
+    def report(stage: str, frac: float):
+        job["stage"], job["progress"] = stage, max(job["progress"], min(1.0, frac))
+
+    def work():
+        try:
+            job["result"] = twotier.plan(inp, report)
+            job["status"] = "done"
+        except Exception as err:  # reported to the page, not raised
+            job["error"], job["status"] = str(err), "error"
+
+    threading.Thread(target=work, daemon=True).start()
+    return {"job_id": job_id, "expected_s": body.time_limit_s + 10}
+
+
+@app.get("/api/pilots/{pilot_key}/v2/plan/jobs/{job_id}")
+def get_plan_job(pilot_key: str, job_id: str):
+    job = _JOBS.get(job_id)
+    if job is None:
+        raise HTTPException(404, "Unknown or expired job")
+    elapsed = time.time() - job["started"]
+    frac = job["progress"]
+    eta = max(0.0, elapsed / frac - elapsed) if frac > 0.12 else None
+    out = {"status": job["status"], "stage": job["stage"], "progress": round(frac, 3), "elapsed_s": round(elapsed, 1),
+           "eta_s": None if eta is None else round(eta)}
+    if job["status"] == "done":
+        out["result"] = job["result"]
+    if job["status"] == "error":
+        out["error"] = job["error"]
+    return out
 
 
 # ---------- Regulations library ----------

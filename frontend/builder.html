@@ -17,67 +17,91 @@
       <a href="routes.html">Route builder v1</a>
       <a href="rules.html">Rules</a>
     </nav>
-    <h1>Route Builder v2</h1>
-    <p class="sub">Step 2 review: door-to-door collection points · HSR Layout</p>
-    <p id="status" class="hint">Loading…</p>
+    <h1>Route Builder</h1>
+    <p class="sub">Door to door → transfer station → MRF · HSR Layout</p>
 
     <section>
-      <h2>Collection points: street runs</h2>
-      <p class="hint">Buildings snap to their frontage street. Consecutive segments of one street merge into runs up to the length cap, then group by use. IDs come from OSM nodes and stay stable.</p>
-      <div id="paramsA" class="row wrap">
-        <label>Max run length (m) <input id="maxRun" type="number" min="50" max="1000" step="50" value="150" /></label>
-        <label>Max buildings / point <input id="maxBldA" type="number" min="5" max="200" value="40" /></label>
-        <label>Merge points under (bldgs) <input id="minBld" type="number" min="1" max="10" value="3" /></label>
-        <label>Merge radius (m) <input id="mergeR" type="number" min="0" max="500" step="10" value="120" /></label>
+      <h2>1 · Sector</h2>
+      <select id="sector"></select>
+      <p class="hint" id="sectorInfo"></p>
+    </section>
+
+    <section>
+      <h2>2 · Places</h2>
+      <div class="place-row">
+        <button class="place" id="placeDepot" data-kind="depot"><span class="pin depot"></span>Set start point</button>
+        <span id="depotState" class="muted small">not set</span>
       </div>
-      <div class="row">
-        <label>Sector <select id="sector"><option value="">All sectors</option></select></label>
-        <label>Size points by
-          <select id="stream">
-            <option value="total_kg">All streams</option>
-            <option value="wet">Wet waste</option>
-            <option value="dry">Dry waste</option>
-            <option value="sanitary">Sanitary waste</option>
-            <option value="special">Special care waste</option>
-          </select>
-        </label>
+      <div class="place-row">
+        <button class="place" id="placeMrf" data-kind="mrf"><span class="pin mrf"></span>Set MRF</button>
+        <span id="mrfState" class="muted small">not set</span>
       </div>
-      <div class="row">
-        <label>Vehicle for service time <select id="vehicle"></select></label>
-        <label>Streams collected <select id="collect">
-          <option value="wet,dry">Wet + dry</option>
-          <option value="wet,dry,sanitary,special">All four</option>
-          <option value="wet">Wet only</option>
-          <option value="dry">Dry only</option>
-        </select></label>
+      <div class="place-row">
+        <label class="inline">Transfer station radius <input id="radius" type="number" min="100" max="3000" step="50" value="500" /> m</label>
       </div>
-      <button id="apply">Generate points</button>
+      <div class="place-row">
+        <button id="suggest">Suggest transfer stations</button>
+        <button class="place" id="addStation" data-kind="station"><span class="pin station"></span>Add</button>
+      </div>
+      <p class="hint" id="stationState"></p>
+      <p class="hint" id="placeHint">Click a button, then click the map. Drag markers to move them. Click a transfer station to remove it.</p>
     </section>
 
     <section>
-      <label class="check"><input type="checkbox" id="showBlocks" checked /> Street blocks (display only)</label>
-      <label class="check"><input type="checkbox" id="showWidths" /> Estimated road widths</label>
-      <label class="check"><input type="checkbox" id="showBwg" checked /> Bulk waste generators</label>
-      <div id="legend" class="legend"></div>
+      <h2>3 · Vehicles</h2>
+      <h3>Door to door → transfer station</h3>
+      <div id="primaryFleet" class="fleet"></div>
+      <button class="link" id="addPrimary">+ Add vehicle type</button>
+      <h3>Transfer station → MRF</h3>
+      <div id="secondaryFleet" class="fleet"></div>
+      <button class="link" id="addSecondary">+ Add truck type</button>
+
+      <details class="advanced">
+        <summary>Advanced settings</summary>
+        <label>Shift length (hours) <input id="shift" type="number" min="1" max="16" step="0.5" value="8" /></label>
+        <label>Unloading at transfer station (min) <input id="unload" type="number" min="0" max="120" value="10" /></label>
+        <label>Optimisation time (s) <input id="timeLimit" type="number" min="5" max="300" value="30" /></label>
+        <fieldset class="streams"><legend>Streams collected</legend>
+          <label><input type="checkbox" value="wet" checked /> Wet</label>
+          <label><input type="checkbox" value="dry" checked /> Dry</label>
+          <label><input type="checkbox" value="sanitary" checked /> Sanitary</label>
+          <label><input type="checkbox" value="special" checked /> Special care</label>
+        </fieldset>
+        <div class="place-row"><button class="place" id="placeYard" data-kind="yard"><span class="pin yard"></span>Set truck yard</button> <span id="yardState" class="muted small">trucks start at the MRF</span></div>
+      </details>
     </section>
 
-    <section id="detail" hidden></section>
+    <button id="optimise" class="primary-btn">Optimise routes</button>
+    <div id="progress" class="progress-box" hidden>
+      <div class="progress-head"><span id="progStage">Starting…</span><span id="progPct">0%</span></div>
+      <div class="progress-track"><div id="progBar" class="progress-fill"></div></div>
+      <div class="progress-foot"><span id="progElapsed">0 s elapsed</span><span id="progEta"></span></div>
+    </div>
+    <p id="status" class="hint"></p>
 
-    <section>
-      <h2>Points</h2>
-      <table id="summary"></table>
-      <div class="scroll"><table id="bySector"></table></div>
+    <section id="results" hidden>
+      <h2>Result</h2>
+      <div class="kpis" id="kpis"></div>
+      <div id="warnings"></div>
+      <div class="route-legend">
+        <label><input type="checkbox" id="showRoutes" checked /><span class="ln door"></span>Door-to-door routes (one colour per vehicle)</label>
+        <label><input type="checkbox" id="showHaul" checked /><span class="ln haul"></span>Truck routes: transfer station &rarr; MRF</label>
+      </div>
+      <h3>Door-to-door vehicles <span class="muted small">hover to highlight · click for trips</span></h3>
+      <table id="vehTable" class="results-table"></table>
+      <div id="tripDetail"></div>
+      <h3>Trucks to MRF <span class="muted small">hover to highlight</span></h3>
+      <table id="truckTable" class="results-table"></table>
+      <h3>Transfer stations</h3>
+      <table id="stationTable" class="results-table"></table>
+      <details><summary class="muted small">Assumptions</summary><ul id="assumptions" class="small"></ul></details>
     </section>
-
-    <section>
-      <h2>Bulk waste generators <span class="cite">r. 6</span></h2>
-      <p class="hint">Separate points. Wet waste is excluded from their collection: it must be processed at source or covered by EBWGR certificates.</p>
-      <div id="bwgList" class="results tall"></div>
-    </section>
-
-    <p class="hint small">Quantities are estimates from building use and units. Road widths are mostly estimated from road class (see Rules → reference data). Footprints and streets © OpenStreetMap contributors.</p>
   </aside>
   <div id="map"></div>
+  <div id="mapBusy" class="map-busy" hidden>
+    <div class="spinner"></div>
+    <div><b>Optimising routes</b><br><span id="busyStage">Starting…</span><br><span id="busyEta" class="muted"></span></div>
+  </div>
 
   <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
   <script src="builder.js"></script>

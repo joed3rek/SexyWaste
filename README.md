@@ -422,7 +422,12 @@ The pilot covers HSR Layout Sectors 1-7, Bengaluru, using the sector boundaries 
 - **Collection planner.** Buildings coloured by estimated quantity, chosen as stream then fraction (for example dry waste, then plastic). Also by generator category, household vs commercial, and bulk waste generator compliance. Includes stream and dry-fraction totals, per-sector figures and a 3D view with height from floors. Each sector links to the route builder, which builds collection stops from the buildings.
 - **Bulk waste generator check.** Computed, not surveyed. Floor area is footprint × floors. Water counts only when a surveyor or BWSSB figure is recorded. Waste is units × typology. Every result shows the criterion met, the source of the value and the rule citation.
 - **Rules library.** The SWM Rules 2026 are stored as machine-readable JSON and a readable summary. The code reads thresholds, stream names and citations from it. See `docs/regulations/`.
-- **Route Builder v2 (in progress).** `builder.html` generates door-to-door collection points as street runs. Buildings are snapped to their frontage street and grouped by use along runs of one street, with stable IDs from OSM nodes.
+- **Route Builder v2.** `builder.html` plans two-tier collection for one sector at a time.
+  - You place the start point and the MRF on the map. Transfer stations are suggested on main roads to cover every collection point within a service radius along the road network, and you can drag, add or remove them.
+  - You enter the fleet as vehicle type and number, for door-to-door vehicles and for trucks.
+  - Small vehicles collect door to door from street-run collection points and make as many trips to the transfer stations as their capacity needs. Trucks carry the loads to the MRF.
+  - The result shows the routes, trips per vehicle, fill per trip, truck trips and the time to complete, against the shift length.
+  - Collection points are street runs: buildings are snapped to their frontage street and grouped by use, with stable IDs from OSM nodes.
   - Uses are never mixed in one point. Bulk waste generators are separate, and their wet waste is excluded.
   - Service time is 1–5 minutes per building, by vehicle class and kg, plus travel along the street.
   - Vehicle classes and road-width assumptions live in `reference/` with a source for every figure.
@@ -469,7 +474,7 @@ backend/
 │   └── norms.json         # ASSUMPTIONS: generation rates, typologies, dry fractions
 ├── survey/store.py        # SQLite survey records (building cards)
 ├── api/main.py            # FastAPI endpoints and static frontend hosting
-└── routing/               # Road network, OR-Tools solver, baseline, planner
+└── routing/               # Road network, v1 solver, v2 street-run points (points.py) and two-tier planner (twotier.py)
 frontend/
 ├── index.html             # Role picker
 ├── map.html, map.js       # Surveyor and planner map, building card

@@ -130,3 +130,69 @@ body.page { display: block; overflow-y: auto; }
 .swatch.ring { box-shadow: 0 0 0 2px #111827; }
 .row.wrap { flex-wrap: wrap; }
 .row.wrap label { flex: 1 1 45%; }
+
+/* Route Builder v2 */
+.place-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; flex-wrap: wrap; }
+button.place { display: inline-flex; align-items: center; gap: 6px; }
+button.place.active { outline: 3px solid #f59e0b; }
+label.inline { display: flex; align-items: center; gap: 6px; }
+label.inline input { width: 80px; }
+.pin { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px #111; }
+.pin.depot, .map-pin.depot { background: #16a34a; }
+.pin.mrf, .map-pin.mrf { background: #7c2d12; }
+.pin.station, .map-pin.station { background: #f59e0b; border-radius: 3px; }
+.pin.yard, .map-pin.yard { background: #475569; }
+.map-pin { color: #fff; font: 600 11px/1 system-ui, sans-serif; padding: 5px 7px; border-radius: 12px; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.4); cursor: grab; white-space: nowrap; }
+.map-pin.station { color: #111; border-radius: 4px; }
+.fleet { display: flex; flex-direction: column; gap: 6px; margin: 6px 0; }
+.fleet-row { display: grid; grid-template-columns: 34px 1fr 64px 28px; gap: 6px; align-items: center; }
+.fleet-row img { width: 34px; height: 22px; color: #334155; }
+.fleet-row .x, button.link { background: none; border: none; color: #2563eb; cursor: pointer; padding: 2px 4px; }
+.fleet-row .x { color: #64748b; font-size: 18px; }
+h3 { font-size: 13px; margin: 12px 0 4px; }
+details.advanced { margin-top: 10px; }
+details.advanced label { display: block; margin: 6px 0; }
+fieldset.streams { border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px 8px; }
+fieldset.streams label { display: inline-block; margin-right: 10px; }
+.primary-btn { width: 100%; padding: 10px; font-size: 15px; margin-top: 8px; }
+.kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 8px 0; }
+.kpi { border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px; }
+.kpi .k { font-size: 11px; color: #64748b; }
+.kpi .v { font-size: 20px; font-weight: 700; }
+.kpi .s { font-size: 11px; color: #64748b; }
+.kpi.bad { border-color: #dc2626; }
+.kpi.bad .v { color: #dc2626; }
+p.warn { background: #fef3c7; border-left: 3px solid #f59e0b; padding: 6px 8px; font-size: 12px; margin: 6px 0; }
+.results-table { width: 100%; font-size: 12px; border-collapse: collapse; }
+.results-table th, .results-table td { text-align: left; padding: 3px 4px; border-bottom: 1px solid #f1f5f9; }
+.results-table tr.over td { color: #dc2626; }
+.results-table tr.clickable:hover { background: #f1f5f9; cursor: pointer; }
+.trip-card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px; margin: 8px 0; }
+
+/* Optimisation progress */
+.progress-box { border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 10px; margin-top: 8px; }
+.progress-head, .progress-foot { display: flex; justify-content: space-between; font-size: 12px; }
+.progress-head { font-weight: 600; margin-bottom: 6px; }
+.progress-foot { color: #64748b; margin-top: 4px; }
+.progress-track { height: 10px; background: #e2e8f0; border-radius: 5px; overflow: hidden; }
+.progress-fill { height: 100%; width: 0; border-radius: 5px; transition: width .6s ease;
+  background: repeating-linear-gradient(45deg, #2563eb 0 10px, #3b82f6 10px 20px); background-size: 28px 28px; animation: stripes 1s linear infinite; }
+@keyframes stripes { to { background-position: 28px 0; } }
+.map-busy { position: fixed; top: 16px; left: calc(50% + 170px); transform: translateX(-50%); z-index: 5; display: flex; gap: 12px; align-items: center;
+  background: #fff; border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,.2); padding: 10px 16px; font-size: 13px; }
+.map-busy[hidden] { display: none !important; }
+.spinner { width: 26px; height: 26px; border: 3px solid #cbd5e1; border-top-color: #2563eb; border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Truck routes */
+.haul-arrow { display: flex; align-items: center; gap: 4px; pointer-events: none; }
+.haul-arrow .arrow { display: inline-block; color: #7c2d12; font-size: 20px; text-shadow: 0 0 3px #fff, 0 0 3px #fff; }
+.haul-arrow .lbl { background: #7c2d12; color: #fff; font: 600 11px/1 system-ui, sans-serif; padding: 3px 6px; border-radius: 10px; white-space: nowrap; }
+.route-legend { display: flex; flex-direction: column; gap: 4px; margin: 8px 0; font-size: 12px; }
+.route-legend label { display: flex; align-items: center; gap: 6px; }
+.ln { display: inline-block; width: 26px; height: 5px; border-radius: 3px; }
+.ln.door { background: linear-gradient(90deg, #2563eb 33%, #dc2626 33% 66%, #16a34a 66%); }
+.ln.haul { background: #7c2d12; height: 6px; box-shadow: 0 0 0 2px #fff, 0 0 0 3px #cbd5e1; }
+.results-table td.over { color: #dc2626; font-weight: 600; }
+.route-legend input[type=checkbox] { width: auto; margin: 0; flex: none; }
+.route-legend label { flex-direction: row; justify-content: flex-start; }
