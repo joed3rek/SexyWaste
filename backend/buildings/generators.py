@@ -579,37 +579,3 @@ def summary(pilot_key: str, surveys: dict[str, dict]) -> dict:
         },
         "assumptions_note": NORMS["_status"],
     })
-
-
-def collection_points(pilot_key: str, surveys: dict[str, dict], sector: str | None = None) -> list[dict]:
-    """Door-to-door collection stops built from mapped buildings, for route planning.
-
-    Ordinary generators are grouped on a square grid; each bulk waste generator is its own stop.
-    """
-    cfg = NORMS["collection_clustering"]
-    base = base_table(pilot_key)
-    pts = base.to_crs(METRIC_CRS).geometry.representative_point()
-    t = pd.DataFrame(all_properties(pilot_key, surveys)).assign(x=pts.x.values, y=pts.y.values)
-    t = t[t["kg_day"] > 0]
-    if sector:
-        t = t[t["sector"] == sector]
-    t["cell"] = ((t["x"] // cfg["grid_m"]).astype(int).astype(str) + "_" + (t["y"] // cfg["grid_m"]).astype(int).astype(str))
-    t.loc[t["bwg_status"] == "bwg", "cell"] = "bwg_" + t["id"]
-
-    to_wgs = gpd.GeoSeries(gpd.points_from_xy(t["x"], t["y"]), crs=METRIC_CRS).to_crs(4326)
-    t["lon"], t["lat"] = to_wgs.x.values, to_wgs.y.values
-
-    out = []
-    for i, (cell, g) in enumerate(t.groupby("cell"), start=1):
-        is_bwg = cell.startswith("bwg_")
-        n = len(g)
-        out.append({
-            "id": (f"BWG{i:03d}" if is_bwg else f"C{i:03d}"),
-            "lon": float(g["lon"].mean()), "lat": float(g["lat"].mean()),
-            "demand_kg": {s: round(float(g[s].sum()), 1) for s in STREAMS},
-            "service_min": round(min(cfg["service_min_cap"], cfg["service_min_base"] + cfg["service_min_per_building"] * n), 1),
-            "kind": "bwg" if is_bwg else "cluster",
-            "buildings": n,
-            "label": (_clean(g["name"].iloc[0]) or _clean(g["address"].iloc[0]) or g["id"].iloc[0]) if is_bwg else f"{n} building{'s' if n > 1 else ''}",
-        })
-    return out

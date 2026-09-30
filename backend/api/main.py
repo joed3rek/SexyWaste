@@ -1,4 +1,4 @@
-"""FastAPI app: routing, pilot building intelligence and regulations APIs, plus the static frontend.
+"""FastAPI app: pilot building intelligence, Route Builder and regulations APIs, plus the static frontend.
 
 Run from the repository root:
     .venv\\Scripts\\python -m uvicorn backend.api.main:app --reload
@@ -19,109 +19,19 @@ from pydantic import BaseModel, Field
 from backend import regulations
 from backend.buildings import generators
 from backend.buildings.layers import sectors as pilot_sectors
-from backend.config import AREAS, FRONTEND_DIR, PILOTS, WASTE_STREAMS
-from backend.routing.network import load_graph, network_geojson, node_lonlat
+from backend.config import FRONTEND_DIR, PILOTS, WASTE_STREAMS
 from backend.routing import points as points_v2
 from backend.routing import twotier
-from backend.routing.planner import PlanRequest, plan_routes
-from backend.routing.scenario import default_depot_and_facility, generate_points
 from backend.survey import store as survey_store
 
 app = FastAPI(title="SWM Urban Waste Intelligence")
 app.add_middleware(GZipMiddleware, minimum_size=2000)
 
 
-def _graph(area_key: str):
-    if area_key not in AREAS:
-        raise HTTPException(404, f"Unknown area '{area_key}'")
-    return load_graph(area_key)
-
-
 def _pilot(pilot_key: str) -> str:
     if pilot_key not in PILOTS:
         raise HTTPException(404, f"Unknown pilot '{pilot_key}'")
     return pilot_key
-
-
-class Point(BaseModel):
-    id: str
-    lon: float
-    lat: float
-    demand_kg: dict[str, float]
-    service_min: float = Field(ge=0)
-
-
-class SolveRequest(BaseModel):
-    depot: tuple[float, float]
-    facility: tuple[float, float]
-    points: list[Point] = Field(min_length=1)
-    stream: str = "wet"
-    num_vehicles: int = Field(3, ge=1, le=50)
-    capacity_kg: float = Field(1500, gt=0)
-    shift_min: float = Field(240, ge=30, le=720)
-    time_limit_s: int = Field(3, ge=1, le=60)
-
-
-# ---------- Routing ----------
-
-@app.get("/api/areas")
-def list_areas():
-    out = []
-    for a in AREAS.values():
-        item = {"key": a.key, "name": a.name, "center": [a.lon, a.lat], "pilot": a.pilot, "sectors": []}
-        if a.pilot:
-            item["sectors"] = list(pilot_sectors(a.pilot)["name"])
-        out.append(item)
-    return out
-
-
-@app.get("/api/areas/{area_key}/network")
-def get_network(area_key: str):
-    return network_geojson(_graph(area_key))
-
-
-@app.get("/api/areas/{area_key}/scenario")
-def get_scenario(area_key: str, n_points: int = 40, seed: int = 1, source: str = "synthetic", sector: str | None = None):
-    G = _graph(area_key)
-    depot, facility = default_depot_and_facility(G, area_key)
-    base = {"depot": node_lonlat(G, depot), "facility": node_lonlat(G, facility)}
-    if source == "buildings":
-        pilot = AREAS[area_key].pilot
-        if not pilot:
-            raise HTTPException(422, "Building-based collection points exist only for pilot areas")
-        points = generators.collection_points(pilot, survey_store.all_records(pilot), sector)
-        return {
-            **base,
-            "points": points,
-            "note": "Collection stops built from mapped buildings. Quantities are estimates (surveyed data where available).",
-        }
-    if not 1 <= n_points <= 200:
-        raise HTTPException(422, "n_points must be between 1 and 200")
-    return {
-        **base,
-        "points": generate_points(G, n_points, seed, exclude={depot, facility}),
-        "note": "Synthetic points and demands. Replace with municipal collection-point data.",
-    }
-
-
-@app.post("/api/areas/{area_key}/solve")
-def solve(area_key: str, req: SolveRequest):
-    if req.stream not in WASTE_STREAMS:
-        raise HTTPException(422, f"stream must be one of {WASTE_STREAMS}")
-    G = _graph(area_key)
-    return plan_routes(
-        G,
-        PlanRequest(
-            depot=req.depot,
-            facility=req.facility,
-            points=[p.model_dump() for p in req.points],
-            stream=req.stream,
-            num_vehicles=req.num_vehicles,
-            capacity_kg=req.capacity_kg,
-            shift_min=req.shift_min,
-            time_limit_s=req.time_limit_s,
-        ),
-    )
 
 
 # ---------- Pilot building intelligence ----------

@@ -68,10 +68,6 @@ def _approx_dist_m(lon1: float, lat1: float, lon2: float, lat2: float) -> float:
     return 6_371_000 * math.hypot(x, y)
 
 
-def nearest_node(G: nx.MultiDiGraph, lon: float, lat: float) -> int:
-    return min(G.nodes, key=lambda n: _approx_dist_m(lon, lat, G.nodes[n]["x"], G.nodes[n]["y"]))
-
-
 def node_lonlat(G: nx.MultiDiGraph, node: int) -> list[float]:
     return [G.nodes[node]["x"], G.nodes[node]["y"]]
 
@@ -106,26 +102,3 @@ def path_geometry(G: nx.MultiDiGraph, path: list[int]) -> tuple[list[list[float]
         length += float(data["length"])
         time_s += float(data["travel_time"])
     return coords, length, time_s
-
-
-def network_geojson(G: nx.MultiDiGraph) -> dict:
-    """Road network as a GeoJSON FeatureCollection for display."""
-    features = []
-    seen: set[frozenset] = set()
-    for u, v, data in G.edges(data=True):
-        pair = frozenset((u, v))
-        if pair in seen:
-            continue
-        seen.add(pair)
-        features.append(
-            {
-                "type": "Feature",
-                "geometry": {"type": "LineString", "coordinates": _edge_coords(G, u, v, data)},
-                "properties": {
-                    "road_class": _road_class(data.get("highway")),
-                    "name": data.get("name") if isinstance(data.get("name"), str) else None,
-                    "oneway": bool(data.get("oneway", False)),
-                },
-            }
-        )
-    return {"type": "FeatureCollection", "features": features}

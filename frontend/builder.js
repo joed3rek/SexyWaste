@@ -1,4 +1,4 @@
-// Route Builder v2: door to door -> transfer station -> MRF, planned per sector.
+// Route Builder: door to door -> transfer station -> MRF, planned per sector.
 
 const PILOT = "hsr";
 const $ = (id) => document.getElementById(id);
@@ -119,6 +119,8 @@ map.on("load", async () => {
     state.sectors = sectors;
     state.vehicles = vehicles.classes;
     $("sector").innerHTML = sectors.features.map((f) => `<option>${esc(f.properties.name)}</option>`).join("");
+    const wanted = new URLSearchParams(location.search).get("sector");
+    if (wanted && sectors.features.some((f) => f.properties.name === wanted)) $("sector").value = wanted;
     fleetRow($("primaryFleet"), "primary", "e_loader_3w", 4);
     fleetRow($("primaryFleet"), "primary", "mini_tipper", 2);
     fleetRow($("secondaryFleet"), "secondary", "rear_loader_compactor", 1);

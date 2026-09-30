@@ -132,13 +132,6 @@
       "special": 0.03
     }
   },
-  "collection_clustering": {
-    "_note": "Buildings are grouped into door-to-door collection stops on a square grid for route planning.",
-    "grid_m": 120,
-    "service_min_base": 1.0,
-    "service_min_per_building": 0.25,
-    "service_min_cap": 15
-  },
   "dry_waste_fractions": {
     "_note": "Assumed split of dry waste into fractions for MRF sorting. SWM Rules 2026 r. 3(1)(zw) names paper including paperboard, plastic, metal, glass etc.; wood and rubber are also sorted at MRFs. 'other_and_rejects' covers textiles, multi-layer packaging and inert rejects.",
     "paper": 0.34,

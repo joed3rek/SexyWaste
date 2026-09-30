@@ -266,7 +266,7 @@ function renderRoleSections() {
       <section>
         <h2>By sector</h2>
         ${bySector([["Sector", (r) => esc(r.sector)], ["Wet", (r) => fmt(r.wet_tpd, 1)], ["Dry", (r) => fmt(r.dry_tpd, 1)], ["t/day", (r) => fmt(r.tpd, 1)], ["BWG", (r) => fmt(r.bwg)],
-          ["", (r) => `<a href="routes.html?area=hsr&source=buildings&sector=${encodeURIComponent(r.sector)}">Routes →</a>`]])}
+          ["", (r) => `<a href="builder.html?sector=${encodeURIComponent(r.sector)}">Routes →</a>`]])}
       </section>
       <section>
         <h2>Bulk waste generators <span class="cite">r. 3(1)(i), r. 6</span></h2>

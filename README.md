@@ -422,7 +422,7 @@ The pilot covers HSR Layout Sectors 1-7, Bengaluru, using the sector boundaries 
 - **Collection planner.** Buildings coloured by estimated quantity, chosen as stream then fraction (for example dry waste, then plastic). Also by generator category, household vs commercial, and bulk waste generator compliance. Includes stream and dry-fraction totals, per-sector figures and a 3D view with height from floors. Each sector links to the route builder, which builds collection stops from the buildings.
 - **Bulk waste generator check.** Computed, not surveyed. Floor area is footprint × floors. Water counts only when a surveyor or BWSSB figure is recorded. Waste is units × typology. Every result shows the criterion met, the source of the value and the rule citation.
 - **Rules library.** The SWM Rules 2026 are stored as machine-readable JSON and a readable summary. The code reads thresholds, stream names and citations from it. See `docs/regulations/`.
-- **Route Builder v2.** `builder.html` plans two-tier collection for one sector at a time.
+- **Route builder.** `builder.html` plans two-tier collection for one sector at a time.
   - You place the start point and the MRF on the map. Transfer stations are suggested on main roads to cover every collection point within a service radius along the road network, and you can drag, add or remove them.
   - You enter the fleet as vehicle type and number, for door-to-door vehicles and for trucks.
   - Small vehicles collect door to door from street-run collection points and make as many trips to the transfer stations as their capacity needs. Trucks carry the loads to the MRF.
@@ -431,7 +431,6 @@ The pilot covers HSR Layout Sectors 1-7, Bengaluru, using the sector boundaries 
   - Uses are never mixed in one point. Bulk waste generators are separate, and their wet waste is excluded.
   - Service time is 1–5 minutes per building, by vehicle class and kg, plus travel along the street.
   - Vehicle classes and road-width assumptions live in `reference/` with a source for every figure.
-- **Route builder v1.** OR-Tools capacitated routing with a shift limit, compared against a nearest-neighbour baseline. It runs per stream, on building-based stops or synthetic points.
 
 All waste quantities are **estimates** from typology norms in `backend/buildings/norms.json`. The data model carries a weighed value that replaces the estimate when available.
 
@@ -474,23 +473,23 @@ backend/
 │   └── norms.json         # ASSUMPTIONS: generation rates, typologies, dry fractions
 ├── survey/store.py        # SQLite survey records (building cards)
 ├── api/main.py            # FastAPI endpoints and static frontend hosting
-└── routing/               # Road network, v1 solver, v2 street-run points (points.py) and two-tier planner (twotier.py)
+└── routing/               # Road network, street-run collection points (points.py) and two-tier planner (twotier.py)
 frontend/
 ├── index.html             # Role picker
 ├── map.html, map.js       # Surveyor and planner map, building card
-├── routes.html, app.js    # Route builder
+├── builder.html, builder.js  # Route builder
 ├── rules.html, rules.js   # Rules library viewer
 └── stub.html              # Placeholder for roles not yet built
 docs/regulations/          # Readable summaries of the regulations library
-tests/                     # Routing, buildings, survey and regulations tests
+tests/                     # Network, points, planner, buildings, survey and regulations tests
 ```
 
 Known limits:
 
-- Each vehicle makes a single trip. Multi-trip routing with unloading runs is the next step.
 - Road speeds are assumed per road class, not measured.
 - Generation norms are placeholders until a characterisation survey and weighed data calibrate them.
-- Depot and MRF locations are placeholders. Drag them to real sites in the route builder.
+- Vehicle width limits apply to the streets a vehicle collects from, not to streets it only drives through.
+- Trucks are assumed to shuttle while door-to-door collection is under way, with enough room at each transfer station.
 - The app has no login yet. Anyone who can open it can edit survey records.
 
 ### Full application prerequisites (planned)

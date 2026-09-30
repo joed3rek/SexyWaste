@@ -22,8 +22,6 @@ class Area:
 AREAS: dict[str, Area] = {
     a.key: a
     for a in [
-        Area("shivajinagar", "Shivajinagar, Bengaluru", 12.9857, 77.6050, 1200),
-        Area("jayanagar", "Jayanagar, Bengaluru", 12.9299, 77.5826, 1200),
         Area("hsr", "HSR Layout Sectors 1-7, Bengaluru (pilot)", 12.9125, 77.6410, 300, pilot="hsr"),
     ]
 }
