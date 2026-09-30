@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <link rel="icon" href="data:," />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Role Preview</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="page">
+  <main class="picker">
+    <p><a href="index.html">← Choose another role</a></p>
+    <h1 id="title"></h1>
+    <p class="sub">This role is a stub in the pilot. The surveyor and planner roles work end to end.</p>
+    <h2>First screen</h2>
+    <p id="first"></p>
+    <h2>Depends on</h2>
+    <ul id="deps"></ul>
+  </main>
+  <script>
+    const ROLES = {
+      generator: {
+        title: "Generator: household, RWA or institution",
+        first: "Their building on the map, their estimated waste by stream, and their compliance status. Bulk waste generators see whether they process wet waste at source or hold an EBWGR certificate (SWM Rules 2026, r. 6).",
+        deps: ["Surveyed building card (use, units)", "Bulk waste generator check", "Collector's segregation observation"],
+      },
+      recycler: {
+        title: "Recycler: formal or informal",
+        first: "Dry waste fractions available by area (paper, plastic, metal, glass, wood, rubber), pickup requests, and MRF drop-off points (r. 9).",
+        deps: ["Dry fraction estimates per building", "MRF locations and throughput", "Waste picker registration (r. 39(53)-(54))"],
+      },
+      ward: {
+        title: "Ward officer",
+        first: "Dashboard of survey coverage, bulk waste generators and their compliance, segregation observed, and the ward-wise figures needed for the ULB action plan (r. 39(2)) and annual report (Form IV).",
+        deps: ["Surveys", "Bulk waste generator register (r. 39(36))", "Collection records"],
+      },
+    };
+    const r = ROLES[new URLSearchParams(location.search).get("role")] || ROLES.generator;
+    document.title = r.title;
+    document.getElementById("title").textContent = r.title;
+    document.getElementById("first").textContent = r.first;
+    document.getElementById("deps").innerHTML = r.deps.map((d) => `<li>${d}</li>`).join("");
+  </script>
+</body>
+</html>

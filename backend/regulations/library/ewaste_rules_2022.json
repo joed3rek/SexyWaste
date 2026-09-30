@@ -1,0 +1,33 @@
+{
+  "id": "ewaste_rules_2022",
+  "title": "E-Waste (Management) Rules, 2022",
+  "citation": "G.S.R. 801(E), MoEFCC, 2 November 2022",
+  "notified_on": "2022-11-02",
+  "in_force_from": "2023-04-01",
+  "supersedes": "E-Waste (Management) Rules, 2016",
+  "source_file": "data/regulations/ewaste_management_rules_2022.pdf",
+  "currency": "In force. Later amendments, if any, are not in the library.",
+
+  "scope": {"rule": "2", "applies_to": "Every manufacturer, producer, refurbisher, dismantler and recycler of e-waste or electrical and electronic equipment in Schedule I, including components, consumables, parts and spares.",
+            "excludes": ["waste batteries under the Battery Waste Management Rules, 2022", "packaging plastics under the Plastic Waste Management Rules, 2016", "micro enterprises", "radio-active wastes"]},
+
+  "definitions": [
+    {"term": "e-waste", "rule": "3(1)(l)", "text": "Electrical and electronic equipment, including solar photo-voltaic modules or panels or cells, whole or in part discarded as waste, as well as rejects from manufacturing, refurbishment and repair processes."},
+    {"term": "bulk consumer", "rule": "3(1)(b)", "text": "Any entity which has used at least one thousand units of electrical and electronic equipment listed in Schedule I at any point of time in the particular financial year, and includes e-retailer.", "threshold_units_per_year": 1000},
+    {"term": "orphaned products", "rule": "3(1)(q)", "text": "Non-branded or assembled electrical and electronic equipment, or those produced by a company which has closed its operations."}
+  ],
+
+  "duties": [
+    {"who": "bulk consumer", "rule": "8", "text": "Hand over e-waste only to a registered producer, refurbisher or recycler."},
+    {"who": "local bodies (urban and rural)", "rule": "Schedule V, item 3", "text": "(1) Where e-waste is found mixed with municipal solid waste, segregate, collect and channelise it to a registered recycler or refurbisher; (2) collect and channelise orphan product e-waste; (3) facilitate e-waste collection, segregation and disposal systems; (4) conduct training to build local body capacity."},
+    {"who": "manufacturer, producer, refurbisher, recycler", "rule": "11", "text": "E-waste may be stored for up to 180 days, extendable by CPCB to 365 days."}
+  ],
+
+  "schedule_i_notes": "Schedule I includes fluorescent and other mercury-containing lamps (CEEW5) and solar photovoltaic panels (CEEW14).",
+
+  "routing_implications": {
+    "in_municipal_door_to_door_routes": false,
+    "summary": "E-waste is not one of the four SWM streams. Where it turns up in municipal waste, the ULB must separate it and send it to a registered recycler or refurbisher (Schedule V, item 3). SWM Rules 2026 r. 9(7)(ii) lets a registered MRF act as the deposition centre for this.",
+    "planning_note": "Institutions and offices using 1,000 or more EEE units a year are e-waste bulk consumers (r. 3(1)(b)). This is a different test from the SWM bulk waste generator criteria."
+  }
+}

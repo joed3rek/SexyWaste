@@ -1,0 +1,168 @@
+{
+  "_status": "ASSUMPTIONS, not regulation. Placeholder norms for estimating generation from mapped buildings. Calibrate with a ward waste characterisation survey, BBMP/GBA weighbridge data and CPCB BWG norms once issued (SWM Rules 2026, r. 6(e)).",
+  "household": {
+    "kg_per_capita_per_day": 0.5,
+    "persons_per_dwelling": 3.8,
+    "m2_floor_area_per_apartment": 100,
+    "dwellings_per_floor_house": 1,
+    "_sources": "kg/capita and persons/dwelling are typical Bengaluru metro estimates."
+  },
+  "default_levels": {
+    "residential_house": 3,
+    "residential_apartment": 5,
+    "mixed_use": 3,
+    "commercial_retail": 2,
+    "commercial_office": 5,
+    "food_service": 2,
+    "hotel": 4,
+    "healthcare": 4,
+    "educational": 3,
+    "religious": 1,
+    "market": 1,
+    "industrial": 1,
+    "public_institutional": 2,
+    "construction": 1,
+    "structure": 1,
+    "unclassified": 3
+  },
+  "apartment_footprint_m2_if_untagged": 450,
+  "non_residential": {
+    "_unit": "kg per day per 100 m2 of floor area",
+    "commercial_retail": {
+      "kg_per_100m2": 1.5
+    },
+    "commercial_office": {
+      "kg_per_100m2": 0.8
+    },
+    "food_service": {
+      "kg_per_100m2": 15.0
+    },
+    "hotel": {
+      "kg_per_100m2": 4.0
+    },
+    "healthcare": {
+      "kg_per_100m2": 2.5
+    },
+    "educational": {
+      "kg_per_100m2": 0.8
+    },
+    "religious": {
+      "kg_per_100m2": 2.0
+    },
+    "market": {
+      "kg_per_100m2": 20.0
+    },
+    "industrial": {
+      "kg_per_100m2": 1.0
+    },
+    "public_institutional": {
+      "kg_per_100m2": 0.8
+    }
+  },
+  "mixed_use": {
+    "_rule": "Ground floor treated as the commercial use found inside the building; upper floors as residential dwellings.",
+    "commercial_floors": 1
+  },
+  "stream_shares": {
+    "_note": "Share of each building's waste by stream (wet, dry, sanitary, special care). Rows sum to 1.",
+    "household": {
+      "wet": 0.55,
+      "dry": 0.35,
+      "sanitary": 0.07,
+      "special": 0.03
+    },
+    "commercial_retail": {
+      "wet": 0.2,
+      "dry": 0.75,
+      "sanitary": 0.03,
+      "special": 0.02
+    },
+    "commercial_office": {
+      "wet": 0.25,
+      "dry": 0.7,
+      "sanitary": 0.03,
+      "special": 0.02
+    },
+    "food_service": {
+      "wet": 0.8,
+      "dry": 0.18,
+      "sanitary": 0.01,
+      "special": 0.01
+    },
+    "hotel": {
+      "wet": 0.6,
+      "dry": 0.33,
+      "sanitary": 0.05,
+      "special": 0.02
+    },
+    "healthcare": {
+      "wet": 0.4,
+      "dry": 0.45,
+      "sanitary": 0.12,
+      "special": 0.03
+    },
+    "educational": {
+      "wet": 0.4,
+      "dry": 0.52,
+      "sanitary": 0.06,
+      "special": 0.02
+    },
+    "religious": {
+      "wet": 0.75,
+      "dry": 0.2,
+      "sanitary": 0.03,
+      "special": 0.02
+    },
+    "market": {
+      "wet": 0.85,
+      "dry": 0.13,
+      "sanitary": 0.01,
+      "special": 0.01
+    },
+    "industrial": {
+      "wet": 0.2,
+      "dry": 0.7,
+      "sanitary": 0.05,
+      "special": 0.05
+    },
+    "public_institutional": {
+      "wet": 0.3,
+      "dry": 0.62,
+      "sanitary": 0.05,
+      "special": 0.03
+    }
+  },
+  "collection_clustering": {
+    "_note": "Buildings are grouped into door-to-door collection stops on a square grid for route planning.",
+    "grid_m": 120,
+    "service_min_base": 1.0,
+    "service_min_per_building": 0.25,
+    "service_min_cap": 15
+  },
+  "dry_waste_fractions": {
+    "_note": "Assumed split of dry waste into fractions for MRF sorting. SWM Rules 2026 r. 3(1)(zw) names paper including paperboard, plastic, metal, glass etc.; wood and rubber are also sorted at MRFs. 'other_and_rejects' covers textiles, multi-layer packaging and inert rejects.",
+    "paper": 0.34,
+    "plastic": 0.28,
+    "metal": 0.04,
+    "glass": 0.07,
+    "wood": 0.03,
+    "rubber": 0.02,
+    "other_and_rejects": 0.22
+  },
+  "per_unit": {
+    "_note": "Typology rates per surveyed unit, kg/day. Used when a surveyor records the number of units. Residential units use the household norm. Replace with weighed data when available.",
+    "commercial_retail": 2.0,
+    "commercial_office": 1.5,
+    "food_service": 15.0,
+    "hotel": 1.2,
+    "market": 5.0,
+    "healthcare": 3.0
+  },
+  "surveyed_use": {
+    "_note": "How a surveyor's building use maps to a typology when OSM does not already give a finer one.",
+    "commercial_default": "commercial_retail",
+    "institutional_default": "public_institutional",
+    "apartment_if_units_over": 2
+  },
+  "_water": "Water use is not estimated. The BWG water criterion (40,000 L/day) is checked only against surveyor input or BWSSB billing data."
+}

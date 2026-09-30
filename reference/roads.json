@@ -1,0 +1,12 @@
+{
+  "_about": "Road width estimation for vehicle access checks. OSM tags 'width' on almost no HSR street (5 of 2,890 segments) and 'lanes' on about a quarter, so widths are estimated. All values are unsourced planning assumptions, editable in the UI.",
+  "width_source_order": ["OSM width tag", "OSM lanes x lane_width_m", "default by highway class"],
+  "lane_width_m": {"value": 3.0, "sourced": false},
+  "default_width_m": {
+    "trunk": 14, "trunk_link": 7, "primary": 12, "primary_link": 7, "secondary": 10, "secondary_link": 6,
+    "tertiary": 8, "tertiary_link": 6, "unclassified": 6, "residential": 6, "living_street": 4, "service": 4,
+    "_other": 5,
+    "sourced": false,
+    "note": "Unsourced defaults. Verify against street surveys or ward road inventories."
+  }
+}

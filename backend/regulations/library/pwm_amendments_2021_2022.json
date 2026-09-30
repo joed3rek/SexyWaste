@@ -1,0 +1,26 @@
+{
+  "id": "pwm_amendments_2021_2022",
+  "title": "Plastic Waste Management (Amendment) Rules, 2021 and (Second Amendment) Rules, 2022",
+  "instruments": [
+    {"citation": "G.S.R. 571(E), MoEFCC, 12 August 2021", "short_title": "Plastic Waste Management (Amendment) Rules, 2021", "source_file": "data/regulations/plastic waste.pdf"},
+    {"citation": "G.S.R. 522(E), MoEFCC, 6 July 2022", "short_title": "Plastic Waste Management (Second Amendment) Rules, 2022", "source_file": "data/regulations/plastic waster 2.pdf"}
+  ],
+  "amends": "Plastic Waste Management Rules, 2016 (G.S.R. 320(E), 18 March 2016)",
+  "currency": "TO VERIFY: the principal 2016 rules and any amendments after July 2022 are not in the library. These two files only amend the principal rules.",
+
+  "key_points": [
+    {"instrument": "2021", "rule": "4(1)(c)", "text": "Plastic carry bags at least 75 microns from 30 September 2021 and 120 microns from 31 December 2022."},
+    {"instrument": "2021", "rule": "4(1)(j)", "text": "Non-woven plastic carry bags at least 60 GSM from 30 September 2021."},
+    {"instrument": "2021", "rule": "4(2)", "text": "Identified single-use plastic items prohibited from 1 July 2022: ear buds with plastic sticks, balloon sticks, plastic flags, candy and ice-cream sticks, polystyrene decoration, plates, cups, glasses, cutlery, straws, trays, wrapping films on sweet boxes, invitation cards and cigarette packets, PVC banners under 100 microns, stirrers."},
+    {"instrument": "2022", "rule": "3(ac)", "text": "Biodegradable plastics defined; must meet BIS standards and CPCB certification."},
+    {"instrument": "2022", "rule": "3(ga), 3(aab)", "text": "End-of-life disposal and waste to energy defined, including co-processing in cement or steel industries and waste to oil."},
+    {"instrument": "2022", "rule": "3(qb)", "text": "Plastic waste processors: recyclers and entities using plastic waste for energy, co-processing or waste to oil, and industrial composting."},
+    {"instrument": "2022", "rule": "9(1)", "text": "Producers, importers and brand owners fulfil Extended Producer Responsibility for plastic packaging per Schedule II."},
+    {"instrument": "2022", "rule": "18", "text": "Environmental compensation on the polluter pays principle."}
+  ],
+
+  "routing_implications": {
+    "in_municipal_door_to_door_routes": true,
+    "summary": "Plastic is a fraction of the SWM dry waste stream, collected door to door and sorted at the MRF (SWM r. 3(1)(zw)). The MRF may act as an EPR uptake point for plastic waste processors and brand owners (SWM r. 9(7)(i)). These rules shape MRF output channels, not collection routes."
+  }
+}

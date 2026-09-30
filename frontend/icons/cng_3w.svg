@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 40" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-label="CNG three-wheeler">
+  <path d="M6 28V14l6-6h8v20"/><path d="M20 12h36v16H20"/><path d="M38 12v16"/>
+  <circle cx="12" cy="31" r="4"/><circle cx="46" cy="31" r="4"/>
+  <rect x="24" y="17" width="10" height="6" rx="3" stroke-width="1.6"/>
+</svg>

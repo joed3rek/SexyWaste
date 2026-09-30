@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <link rel="icon" href="data:," />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Waste Generator Map</title>
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <aside id="panel">
+    <nav class="tabs">
+      <a href="index.html">Roles</a>
+      <a href="map.html?role=surveyor" data-role="surveyor">Surveyor</a>
+      <a href="map.html?role=planner" data-role="planner">Planner</a>
+      <a href="routes.html">Route builder</a>
+      <a href="rules.html">Rules</a>
+    </nav>
+    <h1 id="title">Waste Generator Map</h1>
+    <p class="sub">HSR Layout Sectors 1–7 · SWM Rules 2026</p>
+    <p id="status" class="hint">Loading…</p>
+
+    <section>
+      <label>Colour buildings by
+        <select id="colourBy"></select>
+      </label>
+      <div class="row" id="quantityControls" hidden>
+        <label>Stream
+          <select id="stream">
+            <option value="kg_day">All streams</option>
+            <option value="wet">Wet waste</option>
+            <option value="dry">Dry waste</option>
+            <option value="sanitary">Sanitary waste</option>
+            <option value="special">Special care waste</option>
+          </select>
+        </label>
+        <label>Fraction <select id="fraction" disabled><option value="">All</option></select></label>
+      </div>
+      <div class="row">
+        <label>Sector <select id="sector"><option value="">All sectors</option></select></label>
+        <label>Find <input id="search" placeholder="House no. or name" /></label>
+      </div>
+      <div id="searchResults" class="results"></div>
+      <label class="check"><input type="checkbox" id="filterFocus" /> <span id="filterFocusLabel"></span></label>
+      <label class="check"><input type="checkbox" id="showLanduse" /> Show land use</label>
+      <label class="check"><input type="checkbox" id="show3d" /> 3D view (height = floors)</label>
+      <div id="legend" class="legend"></div>
+    </section>
+
+    <section id="detail" hidden></section>
+
+    <div id="roleSections"></div>
+
+    <p id="assumptions" class="hint small"></p>
+    <p class="hint small">Footprints, addresses and land use © OpenStreetMap contributors.</p>
+  </aside>
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <script src="map.js"></script>
+</body>
+</html>

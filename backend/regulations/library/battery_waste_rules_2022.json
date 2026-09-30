@@ -1,0 +1,46 @@
+{
+  "id": "battery_waste_rules_2022",
+  "title": "Battery Waste Management Rules, 2022 (as amended to 2025)",
+  "citation": "S.O. 3984(E), MoEFCC, 22 August 2022 (published 24 August 2022); last amended by S.O. 958(E), 24 February 2025",
+  "notified_on": "2022-08-22",
+  "in_force_from": "2022-08-24",
+  "supersedes": "Batteries (Management and Handling) Rules, 2001",
+  "amendments": [
+    {"citation": "S.O. 4669(E), 25 October 2023", "in_library": false},
+    {"citation": "G.S.R. 190(E), 14 March 2024", "in_library": false},
+    {"citation": "S.O. 2374(E), 20 June 2024", "in_library": false},
+    {"citation": "S.O. 5210(E), 3 December 2024", "in_library": false},
+    {"citation": "S.O. 958(E), 24 February 2025", "in_library": true, "summary": "Schedule I labelling: the EPR registration number may be printed as a barcode or QR code on the battery, equipment or packaging, or on the product brochure. Cd and Pb symbols are not required at or below 20 ppm cadmium or 40 ppm lead."}
+  ],
+  "source_files": ["data/regulations/battery_waste_management_rules_2022.pdf", "data/regulations/battery_waste_management_amendment_2025.pdf"],
+  "currency": "In force. Four amendments between October 2023 and December 2024 are cited in the 2025 notification but are not in the library.",
+
+  "scope": {"rule": "2", "applies_to": "Producers, dealers, consumers and entities in collection, segregation, transportation, refurbishment and recycling of waste battery; all batteries regardless of chemistry, shape, volume, weight, material composition and use.",
+            "excludes": ["batteries in defence and security equipment", "equipment designed to be sent into space"]},
+
+  "definitions": [
+    {"term": "Portable battery", "rule": "3(1)(t)", "text": "Battery that is sealed, less than five kilograms, not made for industrial purposes, electric vehicle or to be used as an automotive battery."},
+    {"term": "Electric vehicle battery", "rule": "3(1)(j)", "text": "Any battery specifically designed to provide traction to hybrid and electric vehicles for road transport."},
+    {"term": "Automotive battery", "rule": "3(1)(b)", "text": "Any battery used only for automotive starter, lighting or ignition power."},
+    {"term": "Public Waste Management Authorities", "rule": "3(1)(v)", "text": "Village Panchayat, Municipal Corporation, Municipality and agencies engaged on their behalf."},
+    {"term": "Waste Battery", "rule": "3(1)(ze)", "text": "Used or end-of-life battery and its components, pre-consumer off-spec battery, battery past its date for appropriate use, and battery discarded by the user."}
+  ],
+
+  "duties": [
+    {"who": "consumer", "rule": "5(1)", "text": "Discard waste battery separately from other waste streams, especially mixed and domestic waste, and give it to an entity engaged in collection, refurbishment or recycling."},
+    {"who": "Public Waste Management Authorities (the ULB)", "rule": "6(1)", "text": "Hand over collected waste battery to producers or their agencies, or to entities engaged in refurbishment or recycling, or recycle or refurbish it themselves."},
+    {"who": "entities in collection, segregation and treatment", "rule": "7", "text": "Hand over waste battery only to registered refurbishers or recyclers and follow CPCB standards and guidelines."},
+    {"who": "producer", "rule": "4", "text": "Meet EPR collection and recycling or refurbishment targets per Schedule II. Waste battery collected shall not be sent for landfilling or incineration (4(3))."}
+  ],
+
+  "epr_targets_relevant": [
+    {"battery_type": "EV battery of e-rickshaw (three wheelers)", "schedule": "II(x)", "text": "Minimum 70% of the quantity placed in the market in the third preceding year, from 2024-25, in a seven-year compliance cycle."},
+    {"battery_type": "Portable rechargeable battery in consumer electronics", "schedule": "II(vi)", "text": "Minimum 70% of the quantity placed in the market in the fifth preceding year, from 2024-25, in a ten-year compliance cycle."}
+  ],
+
+  "routing_implications": {
+    "in_municipal_door_to_door_routes": false,
+    "summary": "Households must keep waste batteries out of mixed and domestic waste (r. 5). Batteries that reach the municipal system are special care waste under SWM Rules 2026 r. 3(1)(zx), taken to deposition centres, and the ULB hands them to producers or registered recyclers (r. 6).",
+    "fleet_note": "Traction batteries of the e-loader three-wheeler and EV mini tipper classes are electric vehicle batteries under these rules. At end of life the ULB or its contractor must hand them to a registered recycler or refurbisher."
+  }
+}
