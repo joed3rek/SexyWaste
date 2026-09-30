@@ -18,6 +18,7 @@ import pandas as pd
 from backend import regulations as regs
 from backend.buildings import layers
 from backend.buildings.layers import METRIC_CRS
+from backend.config import ROOT
 
 NORMS = json.loads((Path(__file__).with_name("norms.json")).read_text(encoding="utf-8"))
 STREAMS = regs.stream_keys()
@@ -373,6 +374,7 @@ def compute(base: dict, survey: dict | None = None) -> dict:
         quantity_source = "weighed"
 
     fractions = {f: streams["dry"] * NORMS["dry_waste_fractions"][f] for f in FRACTIONS}
+    home_composted, home_basis = _home_composting(s, streams["wet"])
     water = s.get("water_lpd")
     water_source = {"bwssb": "BWSSB data", "surveyor": "surveyor"}.get(s.get("water_source") or "surveyor") if water is not None else None
     bwg = _bwg(cat, floor_area, levels_source, water, water_source, kg_day, quantity_source)
@@ -392,6 +394,9 @@ def compute(base: dict, survey: dict | None = None) -> dict:
         **{k: round(v, 2) for k, v in streams.items()},
         **{f"dry_{f}": round(v, 2) for f, v in fractions.items()},
         "quantity_source": quantity_source,
+        "wet_home_composted": round(home_composted, 2),
+        "wet_to_collect": round(streams["wet"] - home_composted, 2),
+        "home_compost_basis": home_basis,
         "water_lpd": water,
         "water_source": water_source,
         "bwg_status": bwg["status"],
@@ -403,6 +408,23 @@ def compute(base: dict, survey: dict | None = None) -> dict:
         "surveyed": bool(survey),
         "survey": survey,
     }
+
+
+def _home_composting(s: dict, wet: float) -> tuple[float, str | None]:
+    """Wet waste composted in the building itself, from the survey: a recorded kg/day, or the
+    share implied by the answer (all / most / some). Assumed shares are in reference/composting.json."""
+    answer = s.get("home_compost")
+    if answer not in ("all", "most", "some") or wet <= 0:
+        return 0.0, None
+    if s.get("home_compost_kg") is not None:
+        return min(float(s["home_compost_kg"]), wet), "surveyed kg/day"
+    share = _compost_ref()["home_compost_share"][answer]
+    return wet * share, f"assumed {round(share * 100)}% of wet waste ('{answer}')"
+
+
+@lru_cache(maxsize=1)
+def _compost_ref() -> dict:
+    return json.loads((ROOT / "reference" / "composting.json").read_text(encoding="utf-8"))
 
 
 BASE_FIELDS = ["id", "sector", "house_number", "street", "name", "address", "category", "sub_use", "basis",

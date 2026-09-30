@@ -428,6 +428,13 @@ The pilot covers HSR Layout Sectors 1-7, Bengaluru, using the sector boundaries 
   - Small vehicles collect door to door from street-run collection points and make as many trips to the transfer stations as their capacity needs. Trucks carry the loads to the MRF.
   - The result shows the routes, trips per vehicle, fill per trip, truck trips and the time to complete, against the shift length.
   - Collection points are street runs: buildings are snapped to their frontage street and grouped by use, with stable IDs from OSM nodes.
+- **Park composting.** Public parks (OSM parks and gardens not tagged private) set aside part of their area to compost the neighbourhood's wet waste.
+  - The share is by park size, from 5% for parks under 2,000 m² down to 1% for parks over 20,000 m², or a flat 3% average. It can be edited or switched off per park.
+  - Capacity = composting area × land norm (vermicomposting 2.5 kg/day per m² or windrow 6.25, CPHEEO Table 3.5), capped at 5 t/day per site so no buffer zone is needed (SWM Rules 2026, r. 3(1)(h)).
+  - Buildings within 300 m by road feed the nearest site with room, residential first. Residents bring a share themselves (30% by default); vehicles unload the rest at the park before going to the transfer station.
+  - Results show wet waste kept from the MRF, compost produced, each park's load and the truck trips and time compared with no park composting.
+- **Composting inside buildings.** The surveyor records whether wet waste is composted in the building (all, most or some, the method, and kg/day if known). Only the remaining wet waste is collected.
+- Composting assumptions and sources live in `reference/composting.json`.
   - Uses are never mixed in one point. Bulk waste generators are separate, and their wet waste is excluded.
   - Service time is 1–5 minutes per building, by vehicle class and kg, plus travel along the street.
   - Vehicle classes and road-width assumptions live in `reference/` with a source for every figure.
@@ -473,7 +480,7 @@ backend/
 │   └── norms.json         # ASSUMPTIONS: generation rates, typologies, dry fractions
 ├── survey/store.py        # SQLite survey records (building cards)
 ├── api/main.py            # FastAPI endpoints and static frontend hosting
-└── routing/               # Road network, street-run collection points (points.py) and two-tier planner (twotier.py)
+└── routing/               # Road network, street-run collection points (points.py), park composting (parks.py) and two-tier planner (twotier.py)
 frontend/
 ├── index.html             # Role picker
 ├── map.html, map.js       # Surveyor and planner map, building card

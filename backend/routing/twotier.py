@@ -36,6 +36,7 @@ from shapely.geometry import Point
 
 from backend.buildings import layers
 from backend.regulations import stream_keys
+from backend.routing import parks as PK
 from backend.routing import points as P
 from backend.routing.network import _road_class, load_graph, node_lonlat, path_geometry
 
@@ -61,6 +62,8 @@ class PlanInput:
     truck_load_min: float = 15
     truck_unload_min: float = 15
     time_limit_s: int = 20
+    # Park composting: {"enabled", "method", "share_mode", "dropoff_pct", "radius_m", "overrides", "excluded"}
+    park: dict | None = None
 
 
 # ---------- Graph helpers ----------
@@ -280,6 +283,27 @@ def _suggest(inp: PlanInput, pts: list[dict]) -> list[dict]:
              "on_main_road": c in main, "suggested": True} for i, c in enumerate(chosen)]
 
 
+def _park_access_nodes(pilot: str, sites: list[dict], pts: list[dict], radius: float) -> dict:
+    """Put each park's composting site at the road junction on the park's edge (within about 60 m)
+    that has the most wet waste within the catchment radius, so large parks such as lake parks are
+    served from the side where people live, not from their middle."""
+    import shapely
+    from shapely.geometry import shape
+    G, _, nodes, xy, _ = _graph(pilot)
+    wet_at = defaultdict(float)
+    for p in pts:
+        if not p.get("is_bwg"):
+            wet_at[p["node"]] += p["load"].get("wet", 0.0)
+    out = {}
+    for x in sites:
+        edge = shape(x["geometry"]).buffer(0.00055)  # about 60 m at this latitude
+        near = [int(n) for n in nodes[shapely.contains_xy(edge, xy[:, 0], xy[:, 1])]]
+        if not near:
+            near = _nearest_nodes(pilot, np.array([[x["lon"], x["lat"]]]))
+        out[x["id"]] = max(near, key=lambda n: sum(wet_at[m] for m in _reach(pilot, n, radius) if m in wet_at))
+    return out
+
+
 # ---------- Tier 1: vehicle territories and trips ----------
 
 def _solve_group(pts: list[dict], station: int, t: dict, times: _Times, inp: PlanInput,
@@ -334,13 +358,30 @@ def _solve_group(pts: list[dict], station: int, t: dict, times: _Times, inp: Pla
         if not seq:
             continue
         served.update(seq)
-        stops = [station] + [pts[i]["node"] for i in seq] + [station]
         load = {s: sum(pts[i]["load"][s] for i in seq) for s in inp.streams}
+        # Wet waste bound for park composting is unloaded at the park site(s) on the way back.
+        park_kg = defaultdict(float)
+        for i in seq:
+            if pts[i].get("park_vehicle_kg", 0) > 0:
+                park_kg[(pts[i]["park_node"], pts[i]["park_id"])] += pts[i]["park_vehicle_kg"]
+        park_stops, at, todo = [], pts[seq[-1]]["node"], set(park_kg)
+        while todo:
+            nxt = min(todo, key=lambda k: times.t(at, k[0]))
+            park_stops.append(nxt)
+            todo.remove(nxt)
+            at = nxt[0]
+        stops = [station] + [pts[i]["node"] for i in seq] + [k[0] for k in park_stops] + [station]
+        to_parks = sum(park_kg.values())
+        to_station = dict(load)
+        if "wet" in to_station:
+            to_station["wet"] = max(0.0, to_station["wet"] - to_parks)
+        park_unload = PK.reference()["park_unload_min"]["value"] * 60 * len(park_stops)
         trips.append({"type": t["key"], "point_ids": [pts[i]["id"] for i in seq], "nodes": stops,
-                      "kg": round(sum(load.values()), 1), "kg_by_stream": {s: round(x, 1) for s, x in load.items()},
+                      "kg": round(sum(load.values()), 1), "kg_by_stream": {s: round(x, 1) for s, x in to_station.items()},
+                      "park_drops": [{"park_id": k[1], "kg": round(park_kg[k], 1)} for k in park_stops],
                       "fill_pct": round(100 * max(sum(load.values()) / t["cap_kg"], _litres(load, t["density"]) / t["cap_l"])),
                       "drive_s": sum(times.t(a, b) for a, b in zip(stops[:-1], stops[1:])),
-                      "service_s": sum(svc[i + 1] for i in seq), "unload_s": inp.unload_min * 60})
+                      "service_s": sum(svc[i + 1] for i in seq), "unload_s": inp.unload_min * 60 + park_unload})
     # Longest trips first leaves the short top-up trip for the end of the shift.
     trips.sort(key=lambda x: -x["kg"])
     return trips, [p for i, p in enumerate(pts) if i not in served]
@@ -491,13 +532,19 @@ def _split_point(p: dict, t: dict, streams: list[str]) -> list[dict]:
     else:
         # One large building (for example an apartment complex): split its waste into equal loads.
         parts = [[(bid, [x / k for x in kg]) for bid, kg in rows] for _ in range(k)]
+    # Building rows hold gross amounts; scale each part to the point's net load (after residents'
+    # own drop-off at a park) and give each part its share of the wet waste bound for the park.
+    gross = {st: sum(r[1][STREAMS.index(st)] for r in rows) for st in streams}
     out = []
     for i, part in enumerate(parts, start=1):
         kg_rows = [r[1] for r in part]
-        load = {s: sum(r[STREAMS.index(s)] for r in kg_rows) for s in streams}
+        raw = {st: sum(r[STREAMS.index(st)] for r in kg_rows) for st in streams}
+        load = {st: (raw[st] * p["load"][st] / gross[st] if gross[st] else 0.0) for st in streams}
         if p.get("wet_excluded") and "wet" in load:
             load["wet"] = 0.0
-        out.append({**p, "id": f"{p['id']}#{i}", "parent_id": p["id"], "building_ids": [r[0] for r in part],
+        wet_share = raw.get("wet", 0) / gross["wet"] if gross.get("wet") else 0.0
+        extra = {k: p[k] * wet_share for k in ("park_vehicle_kg", "park_wet_kg", "dropoff_kg") if p.get(k)}
+        out.append({**p, **extra, "id": f"{p['id']}#{i}", "parent_id": p["id"], "building_ids": [r[0] for r in part],
                     "building_kg": kg_rows, "buildings": len(part), "load": load, "load_kg": sum(load.values()),
                     "span_m": p["span_m"] / len(parts)})
     return out
@@ -595,6 +642,28 @@ def plan(inp: PlanInput, progress=None) -> dict:
 
     report("Preparing collection points", 0.03)
     pts = _sector_points(inp)
+    park_cfg = inp.park or {}
+    park_on = bool(park_cfg.get("enabled"))
+    park_sites, park_stats = [], {}
+    pref = PK.reference()
+    dropoff_pct = float(park_cfg.get("dropoff_pct", pref["resident_dropoff_pct"]["value"]))
+    if park_on:
+        report("Allocating wet waste to park composting", 0.05)
+        park_sites = PK.sites(inp.pilot, inp.sector, park_cfg.get("method"), park_cfg.get("share_mode", "tiers"),
+                              park_cfg.get("overrides"), park_cfg.get("excluded"))
+        usable = [x for x in park_sites if x["usable"]]
+        radius = float(park_cfg.get("radius_m", pref["catchment_radius_m"]["value"]))
+        site_nodes = _park_access_nodes(inp.pilot, usable, pts, radius)
+        for x in park_sites:
+            x["node"] = site_nodes.get(x["id"])
+            if x["node"] is not None:  # show the site where it meets the road
+                x["lon"], x["lat"] = node_lonlat(G, x["node"])
+        park_stats = PK.allocate(pts, park_sites, site_nodes, lambda n, c: _reach(inp.pilot, n, float(c)), radius, dropoff_pct)
+        for p in pts:
+            if p.get("dropoff_kg"):  # residents carry this part themselves
+                p["load"]["wet"] = max(0.0, p["load"]["wet"] - p["dropoff_kg"])
+                p["load_kg"] = sum(p["load"].values())
+        pts = [p for p in pts if p["load_kg"] > 0.01]
     report("Placing transfer stations", 0.07)
     if inp.stations:
         snodes = _nearest_nodes(inp.pilot, np.array(inp.stations))
@@ -626,7 +695,7 @@ def plan(inp: PlanInput, progress=None) -> dict:
         for k in range(int(row["count"])):
             vehicles.append({"id": f"{types[row['type']]['label']} {k + 1}", "type": row["type"],
                              "weight": types[row["type"]]["cap_kg"]})
-    passes = 3
+    passes = 4
     best = None
     for i in range(passes):
         def rep(_stage, frac, i=i):
@@ -640,7 +709,7 @@ def plan(inp: PlanInput, progress=None) -> dict:
         mean = sum(busy) / len(busy) if busy else 0
         for v, done in zip(vehicles, vs):
             if done["total_s"] > 0 and mean > 0:
-                v["weight"] *= (mean / done["total_s"]) ** 0.8
+                v["weight"] *= (mean / done["total_s"]) ** 1.0
     vehicles, dropped, _ = best
     for v in vehicles:
         v.pop("weight", None)
@@ -659,6 +728,24 @@ def plan(inp: PlanInput, progress=None) -> dict:
         s["primary_trips"] = len(trs)
     report("Scheduling vehicles and trucks", 0.90)
     trucks = _schedule_secondary([s for s in stations if s["kg"] > 0], secondary_fleet, mrf, truck_start, times, inp, inp.streams)
+    baseline = None
+    if park_on and secondary_fleet:
+        # The same stations if the park-bound wet waste went there instead.
+        extra = defaultdict(float)
+        for p in pts:
+            if p.get("park_wet_kg"):
+                extra[p["station"]] += p["park_wet_kg"]
+        base_st = []
+        for st in stations:
+            kgs = dict(st["kg_by_stream"])
+            if "wet" in kgs:
+                kgs["wet"] += extra.get(st["id"], 0.0)
+            if sum(kgs.values()) > 0:
+                base_st.append({"id": st["id"], "node": st["node"], "kg": sum(kgs.values()), "kg_by_stream": kgs})
+        bt = _schedule_secondary(base_st, secondary_fleet, mrf, truck_start, times, inp, inp.streams)
+        baseline = {"truck_trips": sum(len(t["trips"]) for t in bt),
+                    "truck_min": round(max((t["total_s"] for t in bt), default=0) / 60, 1),
+                    "kg_to_mrf": round(sum(x["kg"] for x in base_st), 1)}
 
     report("Drawing routes", 0.94)
     # Geometry and tidy output.
@@ -707,7 +794,30 @@ def plan(inp: PlanInput, progress=None) -> dict:
         s.pop("node")
 
     report("Done", 1.0)
+    delivered = defaultdict(float)
+    for v in vehicles:
+        for tr in v["trips"]:
+            for d in tr.get("park_drops", []):
+                delivered[d["park_id"]] += d["kg"]
     collected = {st: round(sum(s["kg_by_stream"][st] for s in stations), 1) for st in inp.streams}
+    if "wet" in collected:
+        collected["wet"] = round(collected["wet"] + sum(delivered.values()), 1)
+    yield_pct = pref["compost_yield_pct"]["value"]
+    park_out = []
+    for x in park_sites:
+        st = park_stats.get(x["id"], {})
+        received = st.get("dropoff_kg", 0.0) + delivered.get(x["id"], 0.0)
+        park_out.append({**{k: v for k, v in x.items() if k != "node"},
+                         "points": st.get("points", 0), "dropoff_kg": round(st.get("dropoff_kg", 0.0), 1),
+                         "vehicle_kg": round(delivered.get(x["id"], 0.0), 1), "received_kg": round(received, 1),
+                         "compost_kg": round(received * yield_pct / 100, 1),
+                         "use_pct": round(100 * received / x["capacity_kg"]) if x["capacity_kg"] else 0})
+    catchment = [{"from": [p["lon"], p["lat"]], "park_id": p["park_id"], "kg": round(p["park_wet_kg"], 1)}
+                 for p in pts if p.get("park_id") and "#" not in str(p["id"])]
+    catchment += [{"from": [p["lon"], p["lat"]], "park_id": p["park_id"], "kg": round(p["park_wet_kg"], 1)}
+                  for p in pts if p.get("park_id") and str(p["id"]).endswith("#1")]
+    home_composted = round(sum(p.get("home_composted_kg", 0.0) for p in pts), 1)
+    to_parks = round(sum(x["received_kg"] for x in park_out), 1)
     uncollected = {st: round(sum(p["load"][st] for p in dropped), 1) for st in inp.streams}
     dropped_ids = sorted({p.get("parent_id", p["id"]) for p in dropped})
     primary_min = max((v["total_min"] for v in vehicles), default=0)
@@ -720,6 +830,8 @@ def plan(inp: PlanInput, progress=None) -> dict:
         "sector": inp.sector,
         "depot": node_lonlat(G, depot), "mrf": node_lonlat(G, mrf), "truck_depot": node_lonlat(G, truck_start),
         "stations": stations,
+        "parks": park_out,
+        "catchment": catchment,
         "station_capacity_kg": round(station_capacity_kg(secondary_fleet, inp.streams)[0]),
         "primary": {"vehicles": vehicles, "trips": sum(len(v["trips"]) for v in vehicles),
                     "time_min": primary_min, "km": round(sum(v["km"] for v in vehicles), 1)},
@@ -734,6 +846,17 @@ def plan(inp: PlanInput, progress=None) -> dict:
             "time_to_complete_min": round(overall, 1), "shift_min": inp.shift_h * 60,
             "within_shift": overall <= inp.shift_h * 60,
             "vehicles_over_shift": [v["id"] for v in vehicles if not v["within_shift"]],
+            "composting": {
+                "parks_enabled": park_on,
+                "wet_to_parks_kg": to_parks,
+                "resident_dropoff_kg": round(sum(x["dropoff_kg"] for x in park_out), 1),
+                "vehicle_to_parks_kg": round(sum(x["vehicle_kg"] for x in park_out), 1),
+                "compost_kg": round(sum(x["compost_kg"] for x in park_out), 1),
+                "home_composted_kg": home_composted,
+                "wet_diverted_kg": round(to_parks + home_composted, 1),
+                "park_sites": sum(1 for x in park_out if x["usable"]),
+                "without_parks": baseline,
+            },
         },
         "assumptions": [
             "Waste quantities are estimates from building use and units (weighed data replaces them when entered).",
@@ -745,5 +868,14 @@ def plan(inp: PlanInput, progress=None) -> dict:
             "Trucks shuttle while primary collection is under way; completion adds the last haul to the MRF.",
             "Vehicle width limits apply to the streets a vehicle collects from, not to streets it drives through.",
             "Bulk waste generators' wet waste is excluded: processed at source or covered by EBWGR certificates (SWM Rules 2026, r. 6).",
-        ],
+            "Wet waste composted inside buildings (from the survey) is not collected.",
+        ] + ([
+            f"Park composting: {pref['methods'][park_cfg.get('method') or pref['default_method']]['label'].lower()} at "
+            f"{pref['methods'][park_cfg.get('method') or pref['default_method']]['kg_per_day_per_m2']} kg/day per m2 (CPHEEO Table 3.5); "
+            f"each site capped at {PK.site_cap_kg()[0] / 1000:.0f} t/day so no buffer zone is needed ({PK.site_cap_kg()[1]}).",
+            f"Buildings within {park_cfg.get('radius_m', pref['catchment_radius_m']['value'])} m by road feed the nearest park site with room, residential first; "
+            f"residents carry {dropoff_pct:.0f}% themselves and vehicles unload the rest at the park "
+            f"({pref['park_unload_min']['value']} min per stop) before the transfer station.",
+            f"Compost produced is assumed to be {yield_pct}% of the wet waste received.",
+        ] if park_on else []),
     }

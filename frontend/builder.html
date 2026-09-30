@@ -70,6 +70,28 @@
       </details>
     </section>
 
+    <section>
+      <h2>4 · Park composting</h2>
+      <label class="check"><input type="checkbox" id="parkOn" checked /> Compost the neighbourhood's wet waste in public parks</label>
+      <div id="parkOpts">
+        <div class="row">
+          <label>Method <select id="parkMethod"></select></label>
+          <label>Share of park area <select id="parkShare">
+            <option value="tiers">By park size (5% small → 1% large)</option>
+            <option value="average">Average: 3% of every park</option>
+          </select></label>
+        </div>
+        <div class="row">
+          <label>Residents bring themselves <input id="dropoff" type="number" min="0" max="100" step="5" value="30" /> %</label>
+          <label>Catchment <input id="parkRadius" type="number" min="100" max="1000" step="50" value="300" /> m</label>
+        </div>
+        <p class="hint" id="parkInfo"></p>
+        <details id="parkListBox"><summary class="small">Parks in this sector: edit share or leave one out</summary>
+          <table id="parkTable" class="results-table"></table>
+        </details>
+      </div>
+    </section>
+
     <button id="optimise" class="primary-btn">Optimise routes</button>
     <div id="progress" class="progress-box" hidden>
       <div class="progress-head"><span id="progStage">Starting…</span><span id="progPct">0%</span></div>
@@ -85,12 +107,14 @@
       <div class="route-legend">
         <label><input type="checkbox" id="showRoutes" checked /><span class="ln door"></span>Door-to-door routes (one colour per vehicle)</label>
         <label><input type="checkbox" id="showHaul" checked /><span class="ln haul"></span>Truck routes: transfer station &rarr; MRF</label>
+        <label><input type="checkbox" id="showCatch" checked /><span class="ln catch"></span>Buildings sending wet waste to a park</label>
       </div>
       <h3>Door-to-door vehicles <span class="muted small">hover to highlight · click for trips</span></h3>
       <table id="vehTable" class="results-table"></table>
       <div id="tripDetail"></div>
       <h3>Trucks to MRF <span class="muted small">hover to highlight</span></h3>
       <table id="truckTable" class="results-table"></table>
+      <div id="parkResults"></div>
       <h3>Transfer stations</h3>
       <table id="stationTable" class="results-table"></table>
       <details><summary class="muted small">Assumptions</summary><ul id="assumptions" class="small"></ul></details>

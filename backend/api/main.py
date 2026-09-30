@@ -21,7 +21,7 @@ from backend.buildings import generators
 from backend.buildings.layers import sectors as pilot_sectors
 from backend.config import FRONTEND_DIR, PILOTS, WASTE_STREAMS
 from backend.routing import points as points_v2
-from backend.routing import twotier
+from backend.routing import parks, twotier
 from backend.survey import store as survey_store
 
 app = FastAPI(title="SWM Urban Waste Intelligence")
@@ -99,6 +99,9 @@ class SurveyIn(BaseModel):
     weighed_kg_day: float | None = Field(None, ge=0)
     surveyor: str | None = None
     notes: str | None = None
+    home_compost: str | None = None
+    home_compost_method: str | None = None
+    home_compost_kg: float | None = Field(None, ge=0)
 
 
 @app.put("/api/pilots/{pilot_key}/survey")
@@ -127,6 +130,8 @@ def survey_options():
         "onsite_processing": survey_store.ONSITE_PROCESSING,
         "segregation_observed": survey_store.SEGREGATION,
         "water_source": survey_store.WATER_SOURCES,
+        "home_compost": survey_store.HOME_COMPOST,
+        "home_compost_method": survey_store.HOME_COMPOST_METHODS,
     }
 
 
@@ -165,9 +170,24 @@ def get_segments_v2(pilot_key: str):
     return Response(out.to_json(drop_id=True), media_type="application/json")
 
 
+@app.get("/api/pilots/{pilot_key}/v2/parks")
+def get_parks_v2(pilot_key: str, sector: str, method: str | None = None, share_mode: str = "tiers"):
+    """Public parks in a sector with the composting site each could host."""
+    pilot = _pilot(pilot_key)
+    if sector not in set(pilot_sectors(pilot)["name"]):
+        raise HTTPException(404, f"Unknown sector '{sector}'")
+    if share_mode not in ("tiers", "average"):
+        raise HTTPException(422, "share_mode must be 'tiers' or 'average'")
+    try:
+        return {"sites": parks.sites(pilot, sector, method, share_mode), "reference": parks.reference(),
+                "site_cap_kg": parks.site_cap_kg()[0], "cap_rule": parks.site_cap_kg()[1]}
+    except ValueError as err:
+        raise HTTPException(422, str(err)) from err
+
+
 @app.get("/api/reference/{name}")
 def get_reference(name: str):
-    if name not in ("vehicles", "roads"):
+    if name not in ("vehicles", "roads", "composting"):
         raise HTTPException(404, f"Unknown reference '{name}'")
     return points_v2.reference(name)
 
@@ -190,6 +210,7 @@ class PlanV2In(BaseModel):
     shift_h: float = Field(8, ge=1, le=16)
     unload_min: float = Field(10, ge=0, le=120)
     time_limit_s: int = Field(30, ge=5, le=300)
+    park: dict | None = None
 
 
 @app.get("/api/pilots/{pilot_key}/v2/stations")
@@ -220,7 +241,8 @@ def _plan_input(pilot_key: str, body: PlanV2In) -> twotier.PlanInput:
         primary_fleet=[r.model_dump() for r in body.primary_fleet],
         secondary_fleet=[r.model_dump() for r in body.secondary_fleet],
         stations=body.stations or None, truck_depot=body.truck_depot, radius_m=body.radius_m,
-        streams=body.streams, shift_h=body.shift_h, unload_min=body.unload_min, time_limit_s=body.time_limit_s)
+        streams=body.streams, shift_h=body.shift_h, unload_min=body.unload_min, time_limit_s=body.time_limit_s,
+        park=body.park)
 
 
 @app.post("/api/pilots/{pilot_key}/v2/plan")

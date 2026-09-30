@@ -38,6 +38,8 @@ const FRACTIONS = { paper: "Paper", plastic: "Plastic", metal: "Metal", glass: "
 const USE_LABELS = { residential: "Residential", commercial: "Commercial", mixed: "Mixed", institutional: "Institutional", vacant: "Vacant", construction: "Under construction" };
 const ONSITE_LABELS = { none: "None", compost: "Composting", biogas: "Biogas", certificate: "EBWGR certificate" };
 const SEG_LABELS = { mixed: "Mixed", partial: "Partial", four_stream: "Four-stream" };
+const HOME_COMPOST_LABELS = { no: "No", all: "Yes, all wet waste", most: "Yes, most of it", some: "Yes, some of it" };
+const HOME_COMPOST_METHODS = { pit: "Compost pit", bin: "Compost bin / pot", aerobic: "Aerobic composting unit", biogas: "Biogas unit" };
 
 const COLOUR_MODES = ROLE === "surveyor"
   ? { survey: "Survey status", category: "Generator category (OSM guess)", confidence: "Classification confidence" }
@@ -330,12 +332,14 @@ function renderCard(p) {
     <h3>Estimated waste: ${fmt(p.kg_day, 1)} kg/day</h3>
     <p class="muted small">${esc(p.quantity_source)}${p.quantity_source !== "weighed" ? ". Replace with weighed data when available." : ""}</p>
     <table>${streamRows}<tr><td colspan="2" class="muted small">Dry waste fractions</td></tr>${fracRows}</table>
+    ${p.wet_home_composted > 0 ? `<p class="small"><b>${fmt(p.wet_home_composted, 1)} kg/day</b> of the wet waste is composted in the building (${esc(p.home_compost_basis)}), so only <b>${fmt(p.wet_to_collect, 1)} kg/day</b> of wet waste is collected.</p>` : ""}
     <h3>Bulk waste generator <span class="cite">r. 3(1)(i)</span></h3>
     <p>${bwgBadge}${p.bwg_group ? ` <span class="muted small">${esc(p.bwg_group)}</span>` : ""}</p>
     ${p.bwg_criteria?.length ? `<ul class="small">${p.bwg_criteria.map((c) => `<li>${esc(c)}</li>`).join("")}</ul>` : ""}
     ${p.bwg_compliance ? `<p><span class="swatch" style="background:${COMPLIANCE_COLOURS[p.bwg_compliance]}"></span>${esc(summary.compliance_labels[p.bwg_compliance])} <span class="cite">r. 6(c)-(f)</span></p>` : ""}
     <table class="card">
       <tr><td>On-site processing</td><td>${s.onsite_processing ? ONSITE_LABELS[s.onsite_processing] : `<span class="muted">Not surveyed</span>`}</td></tr>
+      <tr><td>Composting in the building</td><td>${s.home_compost ? HOME_COMPOST_LABELS[s.home_compost] + (s.home_compost_method ? ` · ${HOME_COMPOST_METHODS[s.home_compost_method]}` : "") + (s.home_compost_kg != null ? ` · ${fmt(s.home_compost_kg, 1)} kg/day` : "") : `<span class="muted">Not asked</span>`}</td></tr>
       <tr><td>Segregation observed</td><td>${s.segregation_observed ? SEG_LABELS[s.segregation_observed] : `<span class="muted">No collector record</span>`}</td></tr>
     </table>
     <h3>Collection</h3>
@@ -369,7 +373,12 @@ function surveyForm(p) {
         <label>Water use, L/day <input name="water_lpd" type="number" min="0" step="100" value="${s.water_lpd ?? ""}" /></label>
         <label>Water source <select name="water_source">${options({ surveyor: "Surveyor estimate", bwssb: "BWSSB bill" }, s.water_source, "—")}</select></label>
       </div>
-      <label>On-site processing <select name="onsite_processing">${options(ONSITE_LABELS, s.onsite_processing, "Not checked")}</select></label>
+      <label>On-site processing (bulk waste generators) <select name="onsite_processing">${options(ONSITE_LABELS, s.onsite_processing, "Not checked")}</select></label>
+      <label>Is wet waste composted in the building? <select name="home_compost">${options(HOME_COMPOST_LABELS, s.home_compost, "Not asked")}</select></label>
+      <div class="row" id="homeCompostWrap">
+        <label>How <select name="home_compost_method">${options(HOME_COMPOST_METHODS, s.home_compost_method, "—")}</select></label>
+        <label>kg/day (optional) <input name="home_compost_kg" type="number" min="0" step="0.1" value="${s.home_compost_kg ?? ""}" placeholder="if known" /></label>
+      </div>
       <label>Segregation observed (collector) <select name="segregation_observed">${options(SEG_LABELS, s.segregation_observed, "Not observed")}</select></label>
       <details${s.weighed_kg_day != null ? " open" : ""}><summary class="small">Weighed data (optional)</summary>
         <label>Weighed waste, kg/day <input name="weighed_kg_day" type="number" min="0" step="0.1" value="${s.weighed_kg_day ?? ""}" /></label>
@@ -389,6 +398,9 @@ function wireSurveyForm(p) {
   const toggle = () => ($("comUnitsWrap").hidden = form.use.value !== "mixed");
   form.use.addEventListener("change", toggle);
   toggle();
+  const toggleCompost = () => ($("homeCompostWrap").hidden = !["all", "most", "some"].includes(form.home_compost.value));
+  form.home_compost.addEventListener("change", toggleCompost);
+  toggleCompost();
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     const data = Object.fromEntries(new FormData(form).entries());

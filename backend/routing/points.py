@@ -239,6 +239,9 @@ def generator_table(pilot_key: str, surveys: dict) -> pd.DataFrame:
             return None
         return CATEGORY_USE.get(r["category"])
 
+    # Collect only what the building does not compost itself.
+    if "wet_to_collect" in t:
+        t["wet"] = t["wet_to_collect"]
     t["use"] = t.apply(use_of, axis=1)
     t["onsite"] = t["survey"].apply(lambda s: (s or {}).get("onsite_processing") if isinstance(s, dict) else None)
     return t[t["use"].notna() & (t["kg_day"] > 0)].copy()
@@ -265,6 +268,7 @@ def _point(pid, use, g, label, span_m, width_m, lonlat, extra=None) -> dict:
         "buildings": int(len(g)), "building_ids": list(g["id"]),
         "building_kg": [[round(float(x), 2) for x in row] for row in g[list(STREAMS)].to_numpy()],
         "kg": kg, "total_kg": round(float(sum(kg.values())), 1),
+        "home_composted_kg": round(float(g["wet_home_composted"].sum()), 1) if "wet_home_composted" in g else 0.0,
         "span_m": round(float(span_m), 1), "min_width_m": width_m,
         "lon": lonlat[0], "lat": lonlat[1], **(extra or {}),
     }

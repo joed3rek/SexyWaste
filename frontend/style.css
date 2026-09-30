@@ -196,3 +196,8 @@ p.warn { background: #fef3c7; border-left: 3px solid #f59e0b; padding: 6px 8px; 
 .results-table td.over { color: #dc2626; font-weight: 600; }
 .route-legend input[type=checkbox] { width: auto; margin: 0; flex: none; }
 .route-legend label { flex-direction: row; justify-content: flex-start; }
+
+/* Park composting */
+.map-pin.park { background: #15803d; }
+.ln.catch { background: repeating-linear-gradient(90deg, #15803d 0 4px, transparent 4px 7px); height: 3px; }
+#parkTable input[type=checkbox] { width: auto; margin: 0; }

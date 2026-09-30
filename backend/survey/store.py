@@ -17,10 +17,13 @@ USES = ("residential", "commercial", "mixed", "institutional", "vacant", "constr
 ONSITE_PROCESSING = ("none", "compost", "biogas", "certificate")  # certificate = EBWGR certificate
 SEGREGATION = ("mixed", "partial", "four_stream")
 WATER_SOURCES = ("surveyor", "bwssb")
+HOME_COMPOST = ("no", "all", "most", "some")
+HOME_COMPOST_METHODS = ("pit", "bin", "aerobic", "biogas")
 
 FIELDS = (
     "use", "units", "commercial_units", "floors", "water_lpd", "water_source",
     "onsite_processing", "segregation_observed", "weighed_kg_day", "surveyor", "notes",
+    "home_compost", "home_compost_method", "home_compost_kg",
 )
 
 _SCHEMA = """
@@ -31,6 +34,7 @@ CREATE TABLE IF NOT EXISTS building_survey (
     water_lpd REAL, water_source TEXT,
     onsite_processing TEXT, segregation_observed TEXT, weighed_kg_day REAL,
     surveyor TEXT, notes TEXT, updated_at TEXT NOT NULL,
+    home_compost TEXT, home_compost_method TEXT, home_compost_kg REAL,
     PRIMARY KEY (pilot, building_id)
 )
 """
@@ -42,6 +46,11 @@ def _connect(db_path: Path | None = None) -> sqlite3.Connection:
     con = sqlite3.connect(path)
     con.row_factory = sqlite3.Row
     con.execute(_SCHEMA)
+    # Upgrade databases created before a column existed.
+    have = {r[1] for r in con.execute("PRAGMA table_info(building_survey)")}
+    for col, kind in (("home_compost", "TEXT"), ("home_compost_method", "TEXT"), ("home_compost_kg", "REAL")):
+        if col not in have:
+            con.execute(f"ALTER TABLE building_survey ADD COLUMN {col} {kind}")
     return con
 
 
@@ -49,12 +58,13 @@ def validate(record: dict) -> dict:
     """Return a clean record or raise ValueError."""
     clean = {k: record.get(k) for k in FIELDS}
     for key, allowed in (("use", USES), ("onsite_processing", ONSITE_PROCESSING),
-                         ("segregation_observed", SEGREGATION), ("water_source", WATER_SOURCES)):
+                         ("segregation_observed", SEGREGATION), ("water_source", WATER_SOURCES),
+                         ("home_compost", HOME_COMPOST), ("home_compost_method", HOME_COMPOST_METHODS)):
         if clean[key] in ("", None):
             clean[key] = None
         elif clean[key] not in allowed:
             raise ValueError(f"{key} must be one of {allowed}")
-    for key in ("units", "commercial_units", "floors", "water_lpd", "weighed_kg_day"):
+    for key in ("units", "commercial_units", "floors", "water_lpd", "weighed_kg_day", "home_compost_kg"):
         v = clean[key]
         if v in ("", None):
             clean[key] = None
@@ -63,6 +73,9 @@ def validate(record: dict) -> dict:
         if v < 0:
             raise ValueError(f"{key} cannot be negative")
         clean[key] = int(v) if key in ("units", "commercial_units") else v
+    if clean["home_compost"] in (None, "no"):
+        clean["home_compost_method"] = None
+        clean["home_compost_kg"] = None
     if clean["units"] is not None and clean["commercial_units"] is not None and clean["commercial_units"] > clean["units"]:
         raise ValueError("commercial_units cannot exceed units")
     return clean

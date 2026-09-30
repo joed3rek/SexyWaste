@@ -1,0 +1,44 @@
+{
+  "_about": "Park composting and on-site (home) composting. Land norms are sourced; everything marked sourced: false is a planning assumption, editable. The per-site cap is read from the SWM Rules 2026 buffer-zone threshold in the regulations library, not from this file.",
+
+  "sources": {
+    "cpheeo_t35": {"title": "CPHEEO Municipal Solid Waste Management Manual, Part II, Table 3.5 'Summary of different composting technologies' (developed by ICLEI South Asia). Copy consulted: May 2014 edition.", "url": "https://www.nswai.org/docs/municipal%20solid%20waste%20management.pdf"}
+  },
+
+  "methods": {
+    "vermi": {"label": "Vermicomposting", "kg_per_day_per_m2": 2.5, "sourced": true, "source": "cpheeo_t35",
+              "note": "Land requirement 2 ha for 50 TPD, i.e. 20,000 m2 per 50,000 kg/day. Maturation about 8 weeks, no odour issues, temperature sensitive (30-40 C)."},
+    "windrow": {"label": "Windrow composting", "kg_per_day_per_m2": 6.25, "sourced": true, "source": "cpheeo_t35",
+                "note": "Land requirement 8 ha for 500 TPD, i.e. 80,000 m2 per 500,000 kg/day. Maturation about 8 weeks; odour if turning is inadequate. Norm is for large plants; small park sites will reach less."}
+  },
+  "default_method": "vermi",
+
+  "share": {
+    "_note": "Share of each park's area set aside for composting. Smaller parks set aside a larger share so the site stays workable; larger parks a smaller share. Unsourced planning assumption agreed with the project lead.",
+    "tiers": [
+      {"below_m2": 2000, "pct": 5},
+      {"below_m2": 5000, "pct": 4},
+      {"below_m2": 10000, "pct": 3},
+      {"below_m2": 20000, "pct": 2},
+      {"below_m2": null, "pct": 1}
+    ],
+    "average_pct": 3,
+    "min_pct": 1,
+    "max_pct": 5,
+    "sourced": false
+  },
+
+  "min_site_m2": {"value": 10, "sourced": false, "note": "Smaller sites are not shown as usable."},
+  "catchment_radius_m": {"value": 300, "sourced": false, "note": "Road distance from a building to the park site: walkable for residents, a short detour for vehicles."},
+  "resident_dropoff_pct": {"value": 30, "sourced": false, "note": "Share of the wet waste allocated to a park that residents carry there themselves; collection vehicles bring the rest."},
+  "compost_yield_pct": {"value": 25, "sourced": false, "note": "Finished compost as a share of wet waste input by weight (commonly quoted 20-30%)."},
+  "park_unload_min": {"value": 5, "sourced": false, "note": "Time for a collection vehicle to unload wet waste at a park site."},
+
+  "home_compost_share": {
+    "_note": "Share of a building's wet waste composted on site, from the surveyor's answer, when no kg/day figure is recorded. Unsourced planning assumption.",
+    "all": 1.0, "most": 0.75, "some": 0.4, "sourced": false
+  },
+  "home_compost_methods": {"pit": "Compost pit", "bin": "Compost bin / pot", "aerobic": "Aerobic composting unit", "biogas": "Biogas unit"},
+
+  "excluded_access": ["private", "no"]
+}

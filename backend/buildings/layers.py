@@ -72,6 +72,20 @@ def landuse(pilot_key: str) -> gpd.GeoDataFrame:
     return gdf[gdf.geometry.geom_type.isin(["Polygon", "MultiPolygon"])].reset_index(drop=True)
 
 
+PARK_COLS = ["leisure", "name", "access", "operator"]
+
+
+@lru_cache(maxsize=4)
+def parks(pilot_key: str) -> gpd.GeoDataFrame:
+    """Parks and gardens with their access tags (to tell public from private)."""
+    poly = boundary(pilot_key)
+    gdf = cached_layer(
+        _dir(pilot_key) / "parks.geojson",
+        lambda: _tidy(ox.features_from_polygon(poly, tags={"leisure": ["park", "garden"]}), PARK_COLS),
+    )
+    return gdf[gdf.geometry.geom_type.isin(["Polygon", "MultiPolygon"])].reset_index(drop=True)
+
+
 @lru_cache(maxsize=4)
 def pois(pilot_key: str) -> gpd.GeoDataFrame:
     poly = boundary(pilot_key)
