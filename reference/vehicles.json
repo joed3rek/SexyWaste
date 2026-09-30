@@ -1,0 +1,396 @@
+{
+  "_about": "Reference library of waste collection vehicle classes for the Route Builder. Every figure carries a source. 'sourced': false marks a figure that could not be sourced and is an editable planning assumption. Values are editable in the UI; edits are saved separately and never overwrite this file.",
+  "_compiled": "2026-09-30",
+  "standards_note": {
+    "bis_standards_exist": true,
+    "summary": "BIS standards exist but are dated (1986-1989) and give only broad ranges. None covers electric or CNG three-wheelers, compartmentalised bodies or minimum road width. IS 12662 (Part 1):1989 'Guidelines for use of vehicles for collection of municipal solid wastes' gives payload 1 to 1.5 tonnes for short range small capacity vehicles, pedal tricycle containers of 0.2 to 0.25 m3, and notes compaction from 125-150 kg/m3 to about 500 kg/m3. IS 11625:1986 (guide for collection and transportation of solid wastes) and IS 12647:1989 (collection equipment) also exist. No current BIS standard for refuse collection vehicle capacity was found.",
+    "sources": [
+      "IS 12662 (Part 1):1989",
+      "IS 11625:1986",
+      "IS 12647:1989"
+    ]
+  },
+  "sources": {
+    "cpheeo": {
+      "title": "CPHEEO Municipal Solid Waste Management Manual, Part II (MoUD with GIZ). Copy consulted is the May 2014 edition of the manual later issued as the 2016 manual; confirm page references against the 2016 print.",
+      "url": "https://www.nswai.org/docs/municipal%20solid%20waste%20management.pdf"
+    },
+    "is12662": {
+      "title": "IS 12662 (Part 1):1989 Guidelines for use of vehicles for collection of municipal solid wastes",
+      "url": "https://law.resource.org/pub/in/bis/S02/is.12662.1.1989.html"
+    },
+    "bajaj_maxima_c": {
+      "title": "Bajaj Auto, Maxima C specifications (manufacturer)",
+      "url": "https://www.bajajauto.com/three-wheelers/maxima-c/specifications"
+    },
+    "maxima_c_aggregator": {
+      "title": "TrucksBuses, Bajaj Maxima C CNG specifications (aggregator)",
+      "url": "https://www.trucksbuses.com/3-wheeler/load/bajaj-maxima-c-cng/specifications"
+    },
+    "greenassets_ev_hopper": {
+      "title": "Green Assets, Electric garbage hopper tipper 1.2 cu m on Euler HiLoad EV (body builder)",
+      "url": "https://www.greenassets.in/product-page/e-vehicle-mounted-close-garbage-hopper-tipper-1-2-cum"
+    },
+    "treo_zor": {
+      "title": "TractorJunction, Mahindra Treo Zor specifications (aggregator)",
+      "url": "https://trucks.tractorjunction.com/en/mahindra-truck/treo-zor"
+    },
+    "e3w_comparison": {
+      "title": "TrucksDekho, Mahindra Treo Zor vs Piaggio Ape E-Xtra vs Euler HiLoad (aggregator)",
+      "url": "https://trucks.cardekho.com/en/news/detail/mahindra-treo-zor-vs-piaggio-ape-e-xtra-vs-euler-hiload-specs-comparison-1712.html"
+    },
+    "gem_tata_ace_tipper": {
+      "title": "GeM listing, Tata Ace Gold 2.5 cu m garbage hopper tipper (government procurement listing)",
+      "url": "https://mkp.gem.gov.in/hopper-tipper-dumper-version-2/tata-ace-gold-2-5-cu-m-garbage/p-5116877-66240597800-cat.html"
+    },
+    "tata_ace_wiki": {
+      "title": "Wikipedia, Tata Ace (overall width of the base vehicle)",
+      "url": "https://en.wikipedia.org/wiki/Tata_Ace"
+    },
+    "al_6w_tippers": {
+      "title": "91trucks, Ashok Leyland 6 wheeler tipper payload ranges (aggregator)",
+      "url": "https://www.91trucks.com/blog/ashok-leyland-tipper-6-wheeler-price"
+    },
+    "tata_1618_compactor": {
+      "title": "IndiaMART dealer listing, Tata LPT 1618 refuse compactor 14 cu m (dealer)",
+      "url": "https://www.indiamart.com/proddetail/tata-lpt-1618-refuse-compactor-13628284748.html"
+    }
+  },
+  "stream_densities_kg_m3": {
+    "_note": "Loose (uncompacted) bulk density per stream, used to convert kg to body volume. Assumptions, editable.",
+    "wet": {
+      "value": 500,
+      "sourced": false,
+      "note": "Assumed. CPHEEO gives 450-500 kg/m3 for Indian MSW overall (Part I, section 1.4.2.3.3); wet waste is taken at the upper end.",
+      "source": "cpheeo"
+    },
+    "dry": {
+      "value": 150,
+      "sourced": true,
+      "note": "Low density material such as paper and plastics: 125-150 kg/m3 before compaction.",
+      "source": "is12662"
+    },
+    "sanitary": {
+      "value": 250,
+      "sourced": false,
+      "note": "Unsourced planning assumption."
+    },
+    "special": {
+      "value": 300,
+      "sourced": false,
+      "note": "Unsourced planning assumption."
+    },
+    "mixed_msw": {
+      "value": 475,
+      "sourced": true,
+      "note": "Indian MSW typically 450-500 kg/m3.",
+      "source": "cpheeo"
+    },
+    "compacted_max": {
+      "value": 850,
+      "sourced": true,
+      "note": "Rear loading compactors compress waste to 800-900 kg/m3 (Part II, section 2.3.11.3).",
+      "source": "cpheeo"
+    }
+  },
+  "classes": [
+    {
+      "key": "e_loader_3w",
+      "label": "E-loader three-wheeler",
+      "tier": "primary",
+      "fuel": "electric",
+      "icon": "icons/e_loader_3w.svg",
+      "body_volume_m3": {
+        "value": 1.2,
+        "sourced": true,
+        "source": "greenassets_ev_hopper",
+        "note": "Closed hopper in two partitions of 0.6 m3 each (dry and wet) on Euler HiLoad EV."
+      },
+      "payload_kg": {
+        "value": 550,
+        "range": [
+          506,
+          688
+        ],
+        "sourced": true,
+        "source": "e3w_comparison",
+        "note": "Treo Zor 550 kg, Piaggio Ape E-Xtra FX 506 kg, Euler HiLoad 688 kg (aggregator figures). The garbage body builder lists 550 kg on the HiLoad."
+      },
+      "compaction_ratio": {
+        "value": 1.0,
+        "sourced": true,
+        "source": "cpheeo",
+        "note": "No compaction; CPHEEO notes compactors are not used for primary collection (Table 2.3)."
+      },
+      "compartments": {
+        "value": 2,
+        "sourced": true,
+        "source": "greenassets_ev_hopper",
+        "note": "Wet and dry partitions. Also required by SWM Rules 2026 r. 8(h)(iv)."
+      },
+      "vehicle_width_m": {
+        "value": 1.5,
+        "sourced": false,
+        "note": "Unsourced for the EV models; comparable CNG three-wheeler is 1.493 m (Bajaj)."
+      },
+      "min_road_width_m": {
+        "value": 2.5,
+        "sourced": false,
+        "note": "Unsourced planning assumption: vehicle width plus about 1 m for manoeuvring and passing."
+      },
+      "service": {
+        "base_min_per_stop": 1.0,
+        "kg_per_min": 20,
+        "min_minutes": 1,
+        "max_minutes": 5,
+        "sourced": false,
+        "note": "Unsourced planning assumption. Per-building service time = base + kg collected / kg_per_min, clamped to 1-5 minutes."
+      }
+    },
+    {
+      "key": "cng_3w",
+      "label": "CNG three-wheeler",
+      "tier": "primary",
+      "fuel": "CNG",
+      "icon": "icons/cng_3w.svg",
+      "body_volume_m3": {
+        "value": 1.2,
+        "sourced": false,
+        "note": "Unsourced. Assumed same garbage body as the e-loader. The flat cargo deck is 1.65 x 1.425 m with 0.275 m sides (aggregator)."
+      },
+      "payload_kg": {
+        "value": 430,
+        "range": [
+          430,
+          619
+        ],
+        "sourced": true,
+        "source": "bajaj_maxima_c",
+        "note": "DECIDED 430 kg. Manufacturer page gives GVW 986 kg and kerb 556 kg for the CNG Maxima C, implying about 430 kg; an aggregator lists 619 kg (GVW 1250 kg). The manufacturer figure is used because it is the primary source and a steel garbage body adds weight that the bare chassis payload does not include. Editable if a fleet operator's registered payload is available."
+      },
+      "compaction_ratio": {
+        "value": 1.0,
+        "sourced": true,
+        "source": "cpheeo",
+        "note": "No compaction for primary vehicles."
+      },
+      "compartments": {
+        "value": 2,
+        "sourced": false,
+        "note": "Assumed wet and dry partitions, as required by SWM Rules 2026 r. 8(h)(iv)."
+      },
+      "vehicle_width_m": {
+        "value": 1.493,
+        "sourced": true,
+        "source": "bajaj_maxima_c"
+      },
+      "min_road_width_m": {
+        "value": 2.5,
+        "sourced": false,
+        "note": "Unsourced planning assumption: vehicle width plus about 1 m."
+      },
+      "service": {
+        "base_min_per_stop": 1.0,
+        "kg_per_min": 20,
+        "min_minutes": 1,
+        "max_minutes": 5,
+        "sourced": false,
+        "note": "Unsourced planning assumption. Per-building service time = base + kg collected / kg_per_min, clamped to 1-5 minutes."
+      }
+    },
+    {
+      "key": "mini_tipper",
+      "label": "Mini tipper (EV, CNG or diesel), 1-3 m3",
+      "tier": "primary",
+      "fuel": "EV / CNG / diesel",
+      "fuel_options": [
+        "electric",
+        "CNG",
+        "diesel"
+      ],
+      "icon": "icons/mini_tipper.svg",
+      "body_volume_m3": {
+        "value": 2.5,
+        "range": [
+          1.0,
+          3.0
+        ],
+        "sourced": true,
+        "source": "gem_tata_ace_tipper",
+        "note": "GeM listing for a 2.5 m3 garbage hopper tipper on Tata Ace Gold. CPHEEO recommends up to 3 m3 for door-to-door collection (Part II, 2.3.4.3)."
+      },
+      "payload_kg": {
+        "value": 750,
+        "range": [
+          600,
+          900
+        ],
+        "sourced": true,
+        "source": "gem_tata_ace_tipper",
+        "note": "750 kg on the GeM listing. CPHEEO gives 600-900 kg per trip for LCV mini trucks with hydraulic tipping (Part II, 2.3.4.3)."
+      },
+      "compaction_ratio": {
+        "value": 1.0,
+        "sourced": true,
+        "source": "cpheeo",
+        "note": "No compaction for primary vehicles."
+      },
+      "compartments": {
+        "value": 2,
+        "sourced": true,
+        "source": "cpheeo",
+        "note": "CPHEEO: a central removable partition for segregated components (Part II, 2.3.4.3)."
+      },
+      "vehicle_width_m": {
+        "value": 1.5,
+        "sourced": true,
+        "source": "tata_ace_wiki",
+        "note": "Base Tata Ace about 1.5 m; the tipper body may differ."
+      },
+      "min_road_width_m": {
+        "value": 3.0,
+        "sourced": false,
+        "note": "Unsourced planning assumption. CPHEEO says the vehicle suits lanes narrower than 5 m (Part II, 2.3.4.3) but gives no minimum."
+      },
+      "service": {
+        "base_min_per_stop": 1.0,
+        "kg_per_min": 25,
+        "min_minutes": 1,
+        "max_minutes": 5,
+        "sourced": false,
+        "note": "Unsourced planning assumption. Per-building service time = base + kg collected / kg_per_min, clamped to 1-5 minutes."
+      }
+    },
+    {
+      "key": "rear_loader_compactor",
+      "label": "Rear-loader compactor",
+      "tier": "secondary",
+      "fuel": "diesel",
+      "fuel_options": [
+        "diesel",
+        "CNG"
+      ],
+      "icon": "icons/rear_loader_compactor.svg",
+      "body_volume_m3": {
+        "value": 9,
+        "range": [
+          5,
+          14
+        ],
+        "sourced": true,
+        "source": "cpheeo",
+        "note": "CPHEEO sizes in India: small 5-6 m3, medium 8-10 m3, large 12-14 m3 (Part II, 2.3.11.3). Default is medium."
+      },
+      "payload_kg": {
+        "value": 7250,
+        "range": [
+          4500,
+          12000
+        ],
+        "sourced": true,
+        "source": "cpheeo",
+        "note": "Small 4.5-5.5 t, medium 7-7.5 t, large 10-12 t per trip (Part II, 2.3.11.3)."
+      },
+      "compaction_ratio": {
+        "value": 2.5,
+        "sourced": true,
+        "source": "cpheeo",
+        "note": "Compaction ratio as high as 2.5:1 is achievable (Part I, 1.4.2.3.3); compacts to 800-900 kg/m3 (Part II, 2.3.11.3)."
+      },
+      "compartments": {
+        "value": 1,
+        "sourced": false,
+        "note": "Assumed single body; each trip should carry one stream to keep streams segregated (SWM r. 8(h)(v)-(vi))."
+      },
+      "vehicle_width_m": {
+        "value": 2.5,
+        "sourced": false,
+        "note": "Unsourced. Typical medium truck chassis width."
+      },
+      "min_road_width_m": {
+        "value": 5.0,
+        "sourced": false,
+        "note": "Unsourced planning assumption."
+      },
+      "service": {
+        "base_min_per_stop": 2.0,
+        "kg_per_min": 60,
+        "min_minutes": 1,
+        "max_minutes": 5,
+        "sourced": false,
+        "note": "Unsourced planning assumption. Per-building service time = base + kg collected / kg_per_min, clamped to 1-5 minutes."
+      }
+    },
+    {
+      "key": "six_wheel_tipper",
+      "label": "Six-wheel tipper",
+      "tier": "secondary",
+      "fuel": "diesel",
+      "icon": "icons/six_wheel_tipper.svg",
+      "body_volume_m3": {
+        "value": 8,
+        "sourced": false,
+        "note": "Unsourced. CPHEEO lists tipper trucks without specifying volume."
+      },
+      "payload_kg": {
+        "value": 6500,
+        "range": [
+          5000,
+          7000
+        ],
+        "sourced": true,
+        "source": "al_6w_tippers",
+        "note": "Ashok Leyland Ecomet 1015 to 1415 and Boss 1115 about 5-7 t (aggregator). Manufacturer confirmation pending."
+      },
+      "compaction_ratio": {
+        "value": 1.0,
+        "sourced": true,
+        "source": "is12662",
+        "note": "Non-compactor."
+      },
+      "compartments": {
+        "value": 1,
+        "sourced": false,
+        "note": "Assumed single body, one stream per trip."
+      },
+      "vehicle_width_m": {
+        "value": 2.4,
+        "sourced": false,
+        "note": "Unsourced. Typical medium truck width."
+      },
+      "min_road_width_m": {
+        "value": 5.0,
+        "sourced": false,
+        "note": "Unsourced planning assumption."
+      },
+      "service": {
+        "base_min_per_stop": 2.0,
+        "kg_per_min": 40,
+        "min_minutes": 1,
+        "max_minutes": 5,
+        "sourced": false,
+        "note": "Unsourced planning assumption. Per-building service time = base + kg collected / kg_per_min, clamped to 1-5 minutes."
+      }
+    }
+  ],
+  "cpheeo_service_norms": {
+    "_note": "CPHEEO Part II Table 2.3, estimates for deployment of vehicles and manpower for primary collection. For sanity checks of fleet sizing.",
+    "tricycle_households": {
+      "congested": 300,
+      "medium_density": 250,
+      "scattered": 200
+    },
+    "lcv_500_700kg_households": 1000,
+    "lcv_over_700kg_households": [
+      1500,
+      2000
+    ],
+    "crew": "LCV: 1 driver and 2 labour",
+    "note": "Compactors should not be used for primary collection."
+  },
+  "collection_speed_kmph": {
+    "value": 4,
+    "sourced": false,
+    "note": "Unsourced assumption: vehicle speed while collecting along a street, added as segment length / speed to each point's service time."
+  }
+}

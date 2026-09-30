@@ -1,0 +1,110 @@
+{
+  "description": "Registry of regulatory and guidance documents the platform follows. Every rule-driven threshold, term and flow in the code must come from a document listed here.",
+  "documents": [
+    {
+      "id": "swm_rules_2026",
+      "title": "Solid Waste Management Rules, 2026",
+      "issuer": "Ministry of Environment, Forest and Climate Change (MoEFCC), Government of India",
+      "instrument": "S.O. 388(E), Gazette of India Extraordinary, Part II, Section 3(ii), No. 360",
+      "notified_on": "2026-01-27",
+      "published_on": "2026-01-28",
+      "in_force_from": "2026-04-01",
+      "supersedes": "Solid Waste Management Rules, 2016",
+      "jurisdiction": "India (all urban and rural local bodies)",
+      "authoritative_language_used": "English text of the notification",
+      "file": "swm_rules_2026.json",
+      "human_readable": "docs/regulations/swm-rules-2026.md",
+      "status": "in force"
+    },
+    {
+      "id": "cnd_rules_2025",
+      "title": "Environment (Construction and Demolition) Waste Management Rules, 2025",
+      "issuer": "MoEFCC",
+      "instrument": "G.S.R. 219(E), 2 April 2025",
+      "in_force_from": "2026-04-01",
+      "file": "cnd_rules_2025.json",
+      "human_readable": "docs/regulations/related-rules.md",
+      "status": "in force"
+    },
+    {
+      "id": "bmw_rules_2016",
+      "title": "Bio-Medical Waste Management Rules, 2016",
+      "issuer": "MoEFCC",
+      "instrument": "G.S.R. 343(E), 28 March 2016",
+      "in_force_from": "2016-03-28",
+      "file": "bmw_rules_2016.json",
+      "human_readable": "docs/regulations/related-rules.md",
+      "status": "in force; later amendments not in library (to verify)"
+    },
+    {
+      "id": "ewaste_guidelines_2016",
+      "title": "CPCB Implementation Guidelines for E-Waste (Management) Rules, 2016",
+      "issuer": "CPCB",
+      "instrument": "Guidelines under G.S.R. 338(E), 2016",
+      "in_force_from": "2016-10-01",
+      "file": "ewaste_guidelines_2016.json",
+      "human_readable": "docs/regulations/related-rules.md",
+      "status": "guidance for the superseded 2016 rules; see E-Waste (Management) Rules, 2022 (kept for reference)",
+      "superseded_by": "ewaste_rules_2022"
+    },
+    {
+      "id": "batteries_rules_2001",
+      "title": "Batteries (Management and Handling) Rules, 2001 (as amended 2010)",
+      "issuer": "MoEF",
+      "instrument": "S.O. 432(E), 16 May 2001",
+      "in_force_from": "2001-05-16",
+      "file": "batteries_rules_2001.json",
+      "human_readable": "docs/regulations/related-rules.md",
+      "status": "superseded by Battery Waste Management Rules, 2022 (kept for reference)",
+      "superseded_by": "battery_waste_rules_2022"
+    },
+    {
+      "id": "howm_rules_2016",
+      "title": "Hazardous and Other Wastes (Management and Transboundary Movement) Rules, 2016",
+      "issuer": "MoEFCC",
+      "instrument": "G.S.R. 395(E), 4 April 2016",
+      "in_force_from": "2016-04-04",
+      "file": "howm_rules_2016.json",
+      "human_readable": "docs/regulations/related-rules.md",
+      "status": "in force; later amendments not in library (to verify)"
+    },
+    {
+      "id": "pwm_amendments_2021_2022",
+      "title": "Plastic Waste Management (Amendment) Rules, 2021 and (Second Amendment) Rules, 2022",
+      "issuer": "MoEFCC",
+      "instrument": "G.S.R. 571(E), 12 Aug 2021; G.S.R. 522(E), 6 Jul 2022",
+      "in_force_from": "2021-08-12",
+      "file": "pwm_amendments_2021_2022.json",
+      "human_readable": "docs/regulations/related-rules.md",
+      "status": "amendments only; principal 2016 rules not in library"
+    },
+    {
+      "id": "battery_waste_rules_2022",
+      "title": "Battery Waste Management Rules, 2022 (as amended to 2025)",
+      "issuer": "MoEFCC",
+      "instrument": "S.O. 3984(E), 22 Aug 2022; S.O. 958(E), 24 Feb 2025",
+      "in_force_from": "2022-08-24",
+      "file": "battery_waste_rules_2022.json",
+      "human_readable": "docs/regulations/related-rules.md",
+      "status": "in force"
+    },
+    {
+      "id": "ewaste_rules_2022",
+      "title": "E-Waste (Management) Rules, 2022",
+      "issuer": "MoEFCC",
+      "instrument": "G.S.R. 801(E), 2 Nov 2022",
+      "in_force_from": "2023-04-01",
+      "file": "ewaste_rules_2022.json",
+      "human_readable": "docs/regulations/related-rules.md",
+      "status": "in force"
+    }
+  ],
+  "planned": [
+    "CPCB guidelines issued under the SWM Rules 2026 (EBWGR norms, buffer zones, BWG generation norms, legacy waste)",
+    "MoHUA / CPHEEO Manual on Municipal Solid Waste Management, 2016",
+    "Greater Bengaluru Authority / BBMP solid waste management bye-laws",
+    "Plastic Waste Management Rules, 2016 (principal rules, G.S.R. 320(E)) and amendments after July 2022. Still needed: the file provided was the 2021 amendment again.",
+    "Battery Waste Management Rules amendments of October 2023, March 2024, June 2024 and December 2024"
+  ],
+  "routing_scope_note": "Only the four SWM streams (wet, dry, sanitary, special care) enter municipal door-to-door routes. Bio-medical, C&D, e-waste, lead acid batteries and industrial hazardous waste move through their own channels; see each document's routing_implications."
+}

@@ -1,0 +1,34 @@
+{
+  "id": "ewaste_guidelines_2016",
+  "title": "Implementation Guidelines for E-Waste (Management) Rules, 2016",
+  "citation": "CPCB, HWM Division. Guidelines under E-Waste (Management) Rules, 2016 (G.S.R. 338(E), 23 March 2016, effective 1 October 2016)",
+  "document_type": "Guidelines (not the rules themselves)",
+  "source_file": "data/regulations/ewaste.pdf",
+  "currency": "SUPERSEDED. The 2016 rules were replaced by the E-Waste (Management) Rules, 2022 (G.S.R. 801(E), in force 1 April 2023), which the library now holds as ewaste_rules_2022.",
+  "scope": {
+    "applies_to": "Producers, consumers, bulk consumers, collection centres, dismantlers and recyclers of electrical and electronic equipment in Schedule I: IT and telecom equipment, and consumer electricals and electronics including fluorescent and other mercury-containing lamps."
+  },
+  "key_points": [
+    {
+      "section": "9.1",
+      "text": "Consumers should channelise e-waste through collection centres or dealers of authorised producers, dismantlers or recyclers, or the producer's take-back service, and should not throw e-waste in municipal bins."
+    },
+    {
+      "section": "9.1",
+      "text": "End-of-life fluorescent and other mercury-containing lamps are not to go in the municipal bin; hand them, properly packed and upright, to the producer take-back or an authorised collection centre."
+    },
+    {
+      "section": "9.2",
+      "text": "Bulk consumers hand e-waste only to producer take-back or authorised dismantlers or recyclers, and keep special bins for intact end-of-life lamps."
+    },
+    {
+      "section": "1.0",
+      "text": "EPR collection targets for producers rise from 30% of estimated generation in the first two years to 70% from the seventh year."
+    }
+  ],
+  "routing_implications": {
+    "in_municipal_door_to_door_routes": false,
+    "summary": "E-waste goes through producer take-back and authorised collection centres, not municipal routes. Under SWM Rules 2026 r. 9(7)(ii), a registered MRF may act as a deposition centre for e-waste for onward channelisation.",
+    "overlap_with_swm": "SWM Rules 2026 r. 3(1)(zx) lists CFLs, bulbs and tube lights as household special care waste collected via deposition centres (r. 39(48)). Treat lamps at deposition centres or MRFs as e-waste to be handed to the producer channel."
+  }
+}

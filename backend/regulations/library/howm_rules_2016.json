@@ -1,0 +1,24 @@
+{
+  "id": "howm_rules_2016",
+  "title": "Hazardous and Other Wastes (Management and Transboundary Movement) Rules, 2016",
+  "citation": "G.S.R. 395(E), MoEFCC, 4 April 2016",
+  "notified_on": "2016-04-04",
+  "supersedes": "Hazardous Wastes (Management, Handling and Transboundary Movement) Rules, 2008",
+  "source_file": "data/regulations/hazard waste.pdf",
+  "currency": "TO VERIFY: the provided file is the original 2016 text; later amendments are not included.",
+
+  "scope": {"rule": "2", "applies_to": "Management of hazardous and other wastes specified in the Schedules.",
+            "excludes": ["waste-water and exhaust gases", "ship wastes beyond 5 km of baseline", "radio-active wastes", "bio-medical wastes", "wastes covered under the municipal solid waste rules"]},
+
+  "key_points": [
+    {"rule": "17", "text": "Packaging and labelling of hazardous waste containers (Form 8)."},
+    {"rule": "18", "text": "Transport per these rules, Motor Vehicles Act rules and CPCB guidelines; the occupier gives the transporter Form 9 information. Inter-state transport for disposal needs NOCs from both SPCBs."},
+    {"rule": "19", "text": "Manifest (movement document) system in Form 10, seven colour-coded copies, for movement within the country."},
+    {"rule": "Schedule", "text": "Includes 'Y46 Wastes collected from household/municipal waste' and 'Y47 Residues arising from the incineration of household wastes' in the list of other wastes."}
+  ],
+
+  "routing_implications": {
+    "in_municipal_door_to_door_routes": false,
+    "summary": "Industrial hazardous waste moves under manifest to authorised treatment, storage and disposal facilities (TSDF), not municipal routes. Household hazardous items are SWM special care waste. SWM Rules 2026 Schedule III sends incineration ash with toxic metals above HOWM limits to a hazardous waste TSDF."
+  }
+}

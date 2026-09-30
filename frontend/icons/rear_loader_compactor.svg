@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 40" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-label="Rear-loader compactor">
+  <path d="M3 28V15l4-7h8v20"/><path d="M15 9h36l8 5v14H15z"/><path d="M51 9v19"/>
+  <path d="M22 14h24M22 19h24M22 24h24" stroke-width="1.4"/>
+  <circle cx="10" cy="31" r="4"/><circle cx="38" cy="31" r="4"/><circle cx="48" cy="31" r="4"/>
+</svg>

@@ -1,0 +1,36 @@
+{
+  "id": "cnd_rules_2025",
+  "title": "Environment (Construction and Demolition) Waste Management Rules, 2025",
+  "citation": "G.S.R. 219(E), MoEFCC, 2 April 2025",
+  "notified_on": "2025-04-02",
+  "in_force_from": "2026-04-01",
+  "supersedes": "Construction and Demolition Waste Management Rules, 2016 (G.S.R. 445(E))",
+  "source_file": "data/regulations/C&D_rules_2025.pdf",
+  "currency": "Current. Referenced by SWM Rules 2026, r. 5(1)(d).",
+
+  "scope": {"rule": "2", "applies_to": "All construction, demolition, remodelling, renovation and repair of any structure.",
+            "excludes": ["Atomic Energy Act wastes", "defence and strategic projects", "waste from natural disasters or war", "waste covered by other sector-specific rules"]},
+
+  "definitions": [
+    {"term": "construction and demolition waste", "rule": "3(1)(g)", "text": "Waste generated due to construction, demolition, remodeling, renovation, repair and maintenance activities; comprises soil, sand and gravel, bricks and masonry, concrete, metal, wood, plastic, ceramic and such other items."},
+    {"term": "collection points", "rule": "3(1)(e)", "text": "Designated places in the jurisdiction of the local authority where waste generators, other than producers, are required to deposit their construction and demolition waste."},
+    {"term": "intermediate waste storage facility", "rule": "3(1)(m)", "text": "A place in the jurisdiction of the local authority, operated by the authority or an authorised operator, where C&D waste can be stored to facilitate its management."},
+    {"term": "producer", "rule": "3(1)(q)", "text": "A waste generator who is occupier or in charge of a building or building complex project having a built-up area of 20,000 square meters and above.", "threshold_built_up_m2": 20000},
+    {"term": "authorised agency", "rule": "3(1)(b)", "text": "An agency authorised by the local authority for collection or transportation or both of C&D waste."},
+    {"term": "legacy waste", "rule": "3(1)(n)", "text": "Orphan and untreated C&D waste lying in the jurisdiction of the local authority on the date of commencement."}
+  ],
+
+  "duties": [
+    {"who": "waste generator", "rule": "9(1)", "text": "Segregate into material streams; store; transport entire waste to a collection point or intermediate waste storage facility, or hand over to an authorised agency or recycler; prevent air pollution and littering."},
+    {"who": "producer (>= 20,000 m2 built-up)", "rule": "4(1), 9(2)-(5)", "text": "Meet EPR recycling targets (First Schedule), register on the CPCB portal, prepare an integrated waste management plan approved by the local authority, inform the local authority before demolition."},
+    {"who": "local or development authority", "rule": "16(2)", "text": "Set up collection points and transport waste to registered recyclers, collecting charges; establish processing or intermediate storage facilities within a year of notification; manage legacy waste; submit an annual report to the SPCB."},
+    {"who": "collection point / intermediate storage operator", "rule": "11", "text": "Register on the portal; half-yearly data by 15 October and 15 April; annual return by 30 May."}
+  ],
+
+  "routing_implications": {
+    "in_municipal_door_to_door_routes": false,
+    "summary": "C&D waste is not one of the four SWM streams. It is carried by the generator or an authorised agency to C&D collection points or intermediate storage facilities, not by door-to-door vehicles.",
+    "terminology_warning": "'Collection point' in these rules means a C&D deposit site. In the Route Builder, the place where primary vehicles unload for secondary trucks is the SWM 'secondary storage point' (SWM r. 3(1)(zs)) and is labelled so to avoid confusion.",
+    "platform_use": "Buildings under construction are flagged 'C&D waste collection on request' and excluded from door-to-door routes."
+  }
+}

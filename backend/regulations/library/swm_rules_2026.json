@@ -1,0 +1,708 @@
+{
+  "id": "swm_rules_2026",
+  "title": "Solid Waste Management Rules, 2026",
+  "citation": "S.O. 388(E), MoEFCC, Gazette of India Extraordinary, 28 January 2026",
+  "in_force_from": "2026-04-01",
+  "notified_on": "2026-01-27",
+  "gazette_published_on": "2026-01-28",
+  "text_used": "English version. Where the Hindi and English texts differ, see 'text_discrepancies'.",
+  "scope": {
+    "rule": "2",
+    "applies_to": "Every urban and rural local body and all entities in their jurisdiction, including government, private and PPP entities, notified areas, industrial townships, SEZs, food parks, Indian Railways areas, airports, airbases, ports, defence establishments, places of pilgrimage and every domestic, institutional, commercial and other non-residential solid waste generator.",
+    "excludes": [
+      "industrial waste",
+      "hazardous waste",
+      "hazardous chemicals",
+      "bio-medical waste",
+      "e-waste",
+      "battery waste",
+      "radio-active waste"
+    ],
+    "excluded_because": "Covered by separate rules under the Environment (Protection) Act, 1986."
+  },
+  "waste_streams": {
+    "source_segregation_rule": "5(1)(b)",
+    "note": "Every waste generator shall segregate and store waste in four separate streams at source.",
+    "streams": [
+      {
+        "key": "wet",
+        "official_term": "wet waste",
+        "rule": "3(1)(zzl)",
+        "definition": "Organic waste including kitchen waste, food waste, vegetable waste, meat waste, fruits waste, flower waste, and such similar waste and biodegradable waste.",
+        "public_bin_colour": "green",
+        "bin_rule": "39(51)",
+        "destination": "Registered wet waste processing facility (composting, bio-methanation or other approved technology); on-site processing preferred.",
+        "destination_rules": [
+          "8(f)",
+          "39(23)",
+          "39(45)(a)"
+        ]
+      },
+      {
+        "key": "dry",
+        "official_term": "dry waste",
+        "rule": "3(1)(s)",
+        "definition": "Waste other than wet waste, sanitary waste, special care waste and includes recyclable waste and non-recyclable waste.",
+        "public_bin_colour": "blue",
+        "bin_rule": "39(51)",
+        "destination": "Registered Material Recovery Facility (MRF) or processing facility.",
+        "destination_rules": [
+          "8(f)",
+          "9",
+          "39(47)"
+        ]
+      },
+      {
+        "key": "sanitary",
+        "official_term": "sanitary waste",
+        "rule": "3(1)(zp)",
+        "definition": "Waste comprising of used diapers, sanitary towels or napkins, tampons, condoms, incontinence sheets and any other similar waste.",
+        "public_bin_colour": "red",
+        "bin_rule": "39(51)",
+        "bin_note": "Red bins may be placed in public toilets if required.",
+        "handling_at_source": "Wrap securely in pouches from the brand owner or suitable wrapping and place in a separate sanitary waste bin.",
+        "handling_rule": "5(1)(c)",
+        "destination": "Registered recycler or processor, dedicated incinerator, or common Bio-medical Waste Treatment Facility.",
+        "destination_rules": [
+          "8(f)",
+          "39(2)(xii)"
+        ]
+      },
+      {
+        "key": "special",
+        "official_term": "special care waste",
+        "rule": "3(1)(zx)",
+        "definition": "Discarded paint drums, pesticide cans or containers or bottles, CFL or bulbs, tube lights, expired medicines, broken mercury thermometers, waste batteries, used or waste needles and syringes and contaminated gauze, or any other waste notified by CPCB from time to time, generated at the household level.",
+        "public_bin_colour": null,
+        "destination": "Deposition centre, then registered recycler, processor or incinerator.",
+        "destination_rules": [
+          "8(f)",
+          "39(48)"
+        ],
+        "deposition_centre_norm": {
+          "one_centre_per_km2": 5,
+          "rule": "39(48)",
+          "text": "One centre for the area of five square kilometres or part thereof; the local body shall notify the timings for receiving special care waste."
+        }
+      }
+    ],
+    "other_streams_kept_separate": [
+      {
+        "key": "horticulture",
+        "official_term": "horticultural waste",
+        "rule": "3(1)(y)",
+        "definition": "Plant-based waste from parks, gardens, traffic islands, road medians etc. including grass and wood clippings, weeds, pruning, branches, twigs, wood chipping, straw or dead leaves and tree trimmings, which cannot be accommodated in the daily collection system for wet waste.",
+        "handling_rules": [
+          "5(1)(e)",
+          "39(22)"
+        ]
+      },
+      {
+        "key": "c_and_d",
+        "official_term": "construction and demolition waste",
+        "rule": "5(1)(d)",
+        "handling": "Store separately on own premises and dispose as per the Environment (Construction and Demolition) Waste Management Rules, 2025."
+      },
+      {
+        "key": "street_sweeping",
+        "official_term": "inerts",
+        "rule": "3(1)(z)",
+        "definition": "Wastes which are non bio-degradable, non-recyclable or non-combustible street sweeping or dust and silt removed from the surface drains.",
+        "handling_rules": [
+          "39(16)",
+          "39(21)",
+          "39(33)"
+        ],
+        "note": "Road sweeping dust must not be mixed with wet waste (39(33))."
+      },
+      {
+        "key": "bio_medical",
+        "official_term": "bio-medical waste",
+        "rule": "5(1)(k)",
+        "handling": "Must not be mixed with solid waste; managed under the Bio-medical Waste Management Rules, 2016."
+      }
+    ],
+    "dry_waste_fractions": {
+      "note": "Fractions are sub-categories of the dry waste stream, not streams. Dry waste is sorted into fractions at the MRF.",
+      "rule": "3(1)(zw)",
+      "named_in_rules": [
+        "paper including paperboard",
+        "plastic",
+        "metal",
+        "glass"
+      ],
+      "fractions": [
+        {
+          "key": "paper",
+          "label": "Paper and paperboard"
+        },
+        {
+          "key": "plastic",
+          "label": "Plastic"
+        },
+        {
+          "key": "metal",
+          "label": "Metal"
+        },
+        {
+          "key": "glass",
+          "label": "Glass"
+        },
+        {
+          "key": "wood",
+          "label": "Wood"
+        },
+        {
+          "key": "rubber",
+          "label": "Rubber"
+        },
+        {
+          "key": "other_and_rejects",
+          "label": "Other and rejects"
+        }
+      ]
+    },
+    "separately_regulated": [
+      {
+        "key": "e_waste",
+        "official_term": "e-waste",
+        "governed_by": "E-Waste (Management) Rules, 2022 (library id ewaste_rules_2022)",
+        "excluded_rule": "2",
+        "mrf_role": "A registered MRF may act as a deposition centre for e-waste for onward channelisation (r. 9(7)(ii)).",
+        "note": "Not one of the four source-segregated streams."
+      }
+    ]
+  },
+  "generator_types": {
+    "waste_generator": {
+      "rule": "3(1)(zzh)",
+      "definition": "Every person or group of persons, every residential premises and non-residential establishments including Indian Railways, defence establishments, which generate solid waste."
+    },
+    "bulk_waste_generator": {
+      "rule": "3(1)(i)",
+      "definition": "Covers the entities listed below if they satisfy at least one of the criteria.",
+      "criteria_any_one": [
+        {
+          "key": "floor_area_m2",
+          "operator": ">=",
+          "value": 20000,
+          "text": "buildings with floor area of 20,000 sq.m. or above"
+        },
+        {
+          "key": "water_litres_per_day",
+          "operator": ">=",
+          "value": 40000,
+          "text": "water consumption of 40,000 litres per day"
+        },
+        {
+          "key": "waste_kg_per_day",
+          "operator": ">=",
+          "value": 100,
+          "text": "solid waste generation of 100 kg per day"
+        }
+      ],
+      "entity_groups": {
+        "institutional": [
+          "Central or State Government departments or undertakings",
+          "local bodies",
+          "public sector undertakings or private companies",
+          "schools, colleges, universities, other educational institutions",
+          "community places or like"
+        ],
+        "commercial": [
+          "commercial establishments including railways, bus stations or depots, airports, ports",
+          "industrial units and industrial areas",
+          "malls, multiplexes",
+          "hotels",
+          "hospitals, nursing homes",
+          "hostels",
+          "wholesale markets including Mandis for agricultural and horticultural produce, fish and meat",
+          "stadium, sports complexes",
+          "community halls, convention halls, auditorium",
+          "marriage or banquet halls",
+          "conference centres, Expo centres, exhibition areas",
+          "tourist spots"
+        ],
+        "residential": [
+          "residential societies"
+        ]
+      },
+      "duties_rule": "6",
+      "duties": [
+        {
+          "rule": "6(a)",
+          "text": "Register with the local body through the centralised online portal."
+        },
+        {
+          "rule": "6(b)",
+          "text": "Arrange collection and hand-over of dry, sanitary and special care waste to the local body or its authorised agency."
+        },
+        {
+          "rule": "6(c)",
+          "text": "Collect and process wet and horticulture waste in a decentralised manner (composting, bio-methanation or other approved technology)."
+        },
+        {
+          "rule": "6(d)",
+          "text": "New BWGs must set up wet waste processing of adequate capacity. Existing BWGs unable to do so get an exemption and must procure Extended Bulk Waste Generator Responsibility (EBWGR) certificates equal to their full wet waste."
+        },
+        {
+          "rule": "6(e)-(f)",
+          "text": "Fulfil EBWGR obligations for wet waste processing and environmentally sound management of dry, special care and sanitary waste, procuring EBWGR certificates from the local body."
+        },
+        {
+          "rule": "6(g)",
+          "text": "Not engage with any entity not registered under these rules."
+        },
+        {
+          "rule": "6(h)",
+          "text": "File annual returns on the centralised portal by 30 June every year."
+        },
+        {
+          "rule": "6(i)",
+          "text": "Give residual waste and inerts from decentralised processing to authorised collectors."
+        }
+      ],
+      "identification_by_ulb": {
+        "rule": "39(36)",
+        "text": "ULBs identify BWGs through detailed survey, update the list on the portal every year by 1 April, and geo-tag them. ULBs map all BWGs, hotels, roadside eateries, commercial or institutional premises generating organic and bulk waste."
+      }
+    },
+    "large_premises_segregation_duty": {
+      "rule": "5(2)",
+      "applies_to": "All gated communities and institutions with more than 5,000 sq.m. area, and all resident welfare associations, market associations, hotels and restaurants.",
+      "area_threshold_m2": 5000,
+      "deadline": "Within one year from the date of notification in the Official Gazette.",
+      "duties": "Ensure segregation at source, facilitate collection in separate streams, hand recyclables to authorised waste pickers or recyclers, and process biodegradable waste within the premises through composting or bio-methanation as far as possible. Residual waste goes to the collector or agency directed by the local body."
+    },
+    "development_plan_space": {
+      "rule": "35(2)(xiv)",
+      "text": "Group housing, commercial, institutional or other non-residential complexes exceeding 200 dwellings or plot area exceeding 5,000 sq.m. must have separate space demarcated for segregation, storage and decentralised processing of solid waste.",
+      "dwelling_threshold": 200,
+      "plot_area_threshold_m2": 5000
+    },
+    "events": {
+      "rule": "5(1)(j)",
+      "text": "No event of more than 100 persons at an unlicensed place without intimating the local body at least three working days in advance; organiser ensures segregation and hand-over."
+    },
+    "street_vendors": {
+      "rule": "5(1)(g)",
+      "text": "Keep suitable containers and deposit waste at the storage depot, container or vehicle notified by the local body."
+    }
+  },
+  "collection_and_transport": {
+    "door_to_door": {
+      "rule": "39(4)",
+      "text": "ULBs arrange door-to-door collection of segregated wet, dry, sanitary and special care waste from all households including slums and informal settlements, commercial, institutional and other non-residential premises, multi-storey buildings, large commercial complexes, malls and housing complexes."
+    },
+    "door_to_door_definition": {
+      "rule": "3(1)(r)",
+      "text": "Collection from the door step, including from the entry gate or a designated ground-floor location in housing societies, multi-storied buildings, apartments and large complexes."
+    },
+    "primary_collection": {
+      "rule": "3(1)(zh)",
+      "text": "Collection of segregated waste from source to secondary storage points or secondary transfer stations or like."
+    },
+    "vehicles": {
+      "rule": "8(h)(iv)-(vi)",
+      "text": "Vehicles of appropriate size and capacity with separate compartments for wet and dry waste, and arrangements for separate collection of sanitary, special care and horticultural or agricultural waste. No intermixing during collection and transport; streams stay segregated until the designated facility."
+    },
+    "covered_compartmentalised": {
+      "rule": "39(46)",
+      "text": "Collect and transport in compartmentalised and covered vehicles so that segregated waste is not mixed."
+    },
+    "vehicle_tracking": {
+      "rule": "8(h)(ix)",
+      "population_threshold": 50000,
+      "text": "Fleet must have tracking devices in cities with population above 50,000."
+    },
+    "central_control_room": {
+      "rule": "39(34)",
+      "population_threshold": 500000,
+      "text": "ULBs above five lakh population establish central control rooms with GPS tracking of collection vehicles and mapping of SWM infrastructure, as per Schedule I."
+    },
+    "regular_intervals": {
+      "rule": "8(h)(iii)",
+      "text": "Collection from waste generators is carried out at regular intervals."
+    },
+    "markets_daily": {
+      "rule": "39(19)",
+      "text": "Waste from vegetable, fruit, flower, meat, poultry and fish markets is collected on a day-to-day basis; decentralised compost or bio-methanation plants promoted in or near markets."
+    },
+    "public_places_schedule": {
+      "rule": "39(13)",
+      "text": "Waste from public places collected on a schedule uploaded to the portal."
+    },
+    "street_sweeping": {
+      "rule": "39(16)",
+      "text": "Street sweeping waste collected separately and regularly depending on population density, commercial activity and local situation."
+    },
+    "leaves_not_burnt": {
+      "rule": "39(15)",
+      "text": "Street sweepers must not burn tree leaves; store separately and hand over."
+    },
+    "gvp_mapping": {
+      "rule": "15(1)",
+      "deadline": "2026-10-31",
+      "text": "All existing dumpsites or garbage vulnerable points to be geographically mapped and assessed for accumulation by 31 October 2026; published on the portal and the local body website."
+    }
+  },
+  "facilities": {
+    "material_recovery_facility": {
+      "rule": "3(1)(ze)",
+      "definition": "A facility where solid waste other than wet waste and horticulture waste can be temporarily stored by the local body or any authorised entity to facilitate segregation and sorting of collected waste including biodegradable and compostable plastic, and transfer of recyclables and non-recyclables to authorised recyclers or waste processors.",
+      "duties_rule": "9",
+      "reporting": "Quarterly report on waste received, sorted and channelised, by the 15th of the first month of the next quarter (9(4)); monthly reporting on the portal (39(44)).",
+      "services": "May act as uptake point for EPR obligations, deposition centre for e-waste, special care and sanitary waste, and drop-off centre (9(7)).",
+      "sorting_definition": {
+        "rule": "3(1)(zw)",
+        "text": "Separating various components and categories of recyclables and non-recyclables such as paper including paperboard, plastic, metal, glass, etc."
+      }
+    },
+    "transfer_station": {
+      "rule": "3(1)(zzc)",
+      "definition": "A facility created to receive solid waste from collection areas and transport in bulk in covered vehicles or containers to waste processing and, or, disposal facilities."
+    },
+    "secondary_storage": {
+      "rule": "3(1)(zs)",
+      "definition": "Temporary containment of solid waste after collection at secondary waste storage depots or material recovery facilities or bins for onward transportation to the processing or disposal facility."
+    },
+    "decentralised_processing": {
+      "rule": "3(1)(p)",
+      "definition": "Establishment of dispersed facilities for maximising processing of wet or horticulture waste, and segregation and sorting of dry, sanitary and special care waste closest to the source of generation so as to optimise transportation.",
+      "preference_rules": [
+        "39(23)",
+        "39(45)"
+      ]
+    },
+    "processing_technologies": {
+      "rule": "39(45)",
+      "biodegradable": [
+        "bio-methanation",
+        "microbial composting",
+        "vermi-composting",
+        "anaerobic digestion",
+        "other bio-stabilisation"
+      ],
+      "combustible": [
+        "refuse derived fuel",
+        "feedstock to solid waste based power plants",
+        "cement kilns or other furnaces (after CPCB approval)"
+      ]
+    },
+    "sanitary_landfill": {
+      "rule": "14(4)",
+      "allowed": "Only non-usable, non-recyclable, non-biodegradable, non-combustible, non-energy recoverable dry waste, non-reactive inert waste, pre-processing rejects and residues from processing facilities.",
+      "prohibited": [
+        "wet waste",
+        "construction and demolition waste"
+      ],
+      "high_calorific_rule": {
+        "rule": "13(1)",
+        "kcal_per_kg": 1500,
+        "text": "Non-recyclable waste of 1,500 kcal/kg or more shall not be landfilled; use for energy or RDF only."
+      }
+    },
+    "buffer_zone": {
+      "rule": "3(1)(h)",
+      "capacity_tpd_threshold": 5,
+      "text": "Buffer zone around processing and disposal facilities above 5 tonnes per day, within the facility's allotted area; size per CPCB guidelines."
+    },
+    "authorisation_threshold": {
+      "rule": "39(25)",
+      "tpd": 5,
+      "text": "ULBs apply in Form I to the SPCB for authorisation of processing, treatment or disposal facilities above five tonnes per day."
+    }
+  },
+  "refuse_derived_fuel": {
+    "rule": "11",
+    "grades": [
+      {
+        "fraction": "Segregated Combustible Fraction or agri-residue",
+        "kcal_per_kg_net": ">1500",
+        "use": "Waste to energy plants or industries with boilers",
+        "radius_km": 100
+      },
+      {
+        "fraction": "RDF Grade I",
+        "kcal_per_kg_net": ">4500",
+        "use": "Direct co-processing in cement kilns",
+        "radius_km": 400
+      },
+      {
+        "fraction": "RDF Grade II",
+        "kcal_per_kg_net": "3750-4500",
+        "use": "Direct co-processing in cement kilns",
+        "radius_km": 400
+      },
+      {
+        "fraction": "RDF Grade III",
+        "kcal_per_kg_net": "3000-3750",
+        "use": "Co-processing directly or after processing with other waste materials in cement kilns",
+        "radius_km": 400
+      }
+    ],
+    "fuel_substitution_schedule": [
+      "At least 6% of fuel intake from commencement",
+      "At least 10% after three years",
+      "At least 15% after six years"
+    ]
+  },
+  "ebwgr_certificates": {
+    "rule": "10",
+    "formula": "EBWGR certificates (kg) = quantity of solid waste collected, transported and sent to registered processors or recyclers by the local body (kg)",
+    "issued_by": "Local body only, on the centralised online portal",
+    "wet_waste_condition": "Only after the registered wet waste facility reports quantity received and processed on the portal.",
+    "validity_years": 3,
+    "issuance_scheme_rule": "39(38)"
+  },
+  "ulb_action_plan": {
+    "rule": "39(2)",
+    "deadline": "Within one year from notification of the State policy and strategy, in the CPCB proforma.",
+    "elements": [
+      "Total waste generation with ward-wise break up",
+      "Five-year projection for waste generation",
+      "Ward-wise collection (including special care waste) and transportation plan",
+      "Ward-wise mapping of solid waste management infrastructure",
+      "Ward-wise mapping of market places and community service infrastructure (bus stands, railway stations, places of religious significance)",
+      "Mapping of bio-medical waste occupiers",
+      "Plan for collection and transportation from garbage vulnerable points and littering hot spots",
+      "Mapping of solid waste ingress points in water bodies and barriers",
+      "Schedule for cleaning surface water bodies and drains of floating waste",
+      "Schedule for street sweeping and placement of waste bins",
+      "Mapping of vacant plots vulnerable to open dumping",
+      "Plan for sanitary waste management",
+      "Plan for special care waste",
+      "Infrastructure requirement for collection, transport, segregation, storage, processing, recycling and disposal"
+    ]
+  },
+  "digital_obligations": {
+    "geo_tagging": {
+      "rules": [
+        "39(8)",
+        "41(8)"
+      ],
+      "text": "Geo-tagging of SWM infrastructure and facilities."
+    },
+    "monthly_reporting": {
+      "rule": "39(40)",
+      "text": "ULBs report waste generation and collection monthly on the CPCB centralised portal."
+    },
+    "ward_generation_accounting": {
+      "rule": "39(39)",
+      "text": "Annual ward-wise waste generation based on average generation by different establishments."
+    },
+    "ward_personnel_database": {
+      "rule": "39(53)",
+      "text": "Ward-wise database of all personnel including informal waste pickers."
+    },
+    "grievance_redressal": {
+      "rule": "39(35)",
+      "text": "Online grievance redressal within one year of notification."
+    },
+    "centralised_portal": {
+      "rule": "16",
+      "text": "CPCB portal for registration and returns; dashboard of waste generated, collected, processed and landfilled at national, state and district level."
+    }
+  },
+  "reporting_calendar": [
+    {
+      "what": "BWG annual return (EBWGR)",
+      "by": "30 June",
+      "rule": "6(h)"
+    },
+    {
+      "what": "Processing facility quarterly return",
+      "by": "15th of first month of next quarter",
+      "rule": "7(c)"
+    },
+    {
+      "what": "Processing facility annual return (Form III)",
+      "by": "30 June",
+      "rule": "7(c), 20(1)"
+    },
+    {
+      "what": "Collector / concessionaire quarterly return",
+      "by": "15th of first month of next quarter",
+      "rule": "8(g)"
+    },
+    {
+      "what": "MRF quarterly report",
+      "by": "15th of first month of next quarter",
+      "rule": "9(4)"
+    },
+    {
+      "what": "MRF monthly portal reporting",
+      "by": "Monthly",
+      "rule": "39(44)"
+    },
+    {
+      "what": "ULB monthly generation and collection",
+      "by": "Monthly",
+      "rule": "39(40)"
+    },
+    {
+      "what": "BWG list update",
+      "by": "1 April",
+      "rule": "39(36)"
+    },
+    {
+      "what": "ULB infrastructure inventory update",
+      "by": "31 March",
+      "rule": "39(20)"
+    },
+    {
+      "what": "ULB annual report (Form IV)",
+      "by": "30 June",
+      "rule": "39(27), 20(2)"
+    },
+    {
+      "what": "SPCB annual report to CPCB (Form V)",
+      "by": "31 July",
+      "rule": "20(4)"
+    },
+    {
+      "what": "CPCB consolidated report",
+      "by": "31 August",
+      "rule": "20(5)"
+    },
+    {
+      "what": "Legacy dumpsite biomining progress",
+      "by": "30th of first month of next quarter",
+      "rule": "15(2)"
+    }
+  ],
+  "key_deadlines": [
+    {
+      "date": "2026-04-01",
+      "what": "Rules come into force",
+      "rule": "1(2)"
+    },
+    {
+      "date": "2026-10-01",
+      "what": "CPCB portal for registration and returns (six months from commencement)",
+      "rule": "16(1)"
+    },
+    {
+      "date": "2026-10-31",
+      "what": "Geo-mapping of all dumpsites and garbage vulnerable points",
+      "rule": "15(1)"
+    },
+    {
+      "date": "2027-01-28",
+      "what": "Large premises segregation and on-site processing (one year from notification)",
+      "rule": "5(2)"
+    },
+    {
+      "date": "2027-03-31",
+      "what": "ULB bye-laws incorporating these rules",
+      "rule": "39(5)"
+    },
+    {
+      "date": "2027-10-01",
+      "what": "Schedule I timeline for million-plus cities such as Bengaluru (eighteen months from commencement, English text)",
+      "rule": "Schedule I"
+    }
+  ],
+  "schedule_i_timelines": {
+    "rule": "Schedule I",
+    "urban": [
+      {
+        "population": "Million plus cities",
+        "months_from_commencement": 18
+      },
+      {
+        "population": "5-10 lakh",
+        "months_from_commencement": 24
+      },
+      {
+        "population": "All urban areas",
+        "months_from_commencement": 36
+      }
+    ],
+    "rural": [
+      {
+        "population": "20,000 and above",
+        "months_from_commencement": 18
+      },
+      {
+        "population": "10,000-20,000",
+        "months_from_commencement": 24
+      },
+      {
+        "population": "Up to 10,000",
+        "months_from_commencement": 36
+      }
+    ]
+  },
+  "landfill_siting": {
+    "rule": "Schedule II (A)(vii)",
+    "min_distance_m": {
+      "river": 100,
+      "pond": 200,
+      "highway": 200,
+      "habitation": 200,
+      "public_park": 200,
+      "water_supply_well": 200,
+      "airport_or_airbase": 20000
+    },
+    "not_permitted": [
+      "100-year flood plains",
+      "coastal regulation zone",
+      "wetland",
+      "critical habitat",
+      "eco-fragile areas"
+    ],
+    "design_life_years": "20-25",
+    "post_closure_care_years": 15
+  },
+  "waste_hierarchy": {
+    "rule": "3(1)(zzi)",
+    "order": [
+      "prevention",
+      "reduction",
+      "reuse",
+      "recycling",
+      "recovery",
+      "disposal"
+    ]
+  },
+  "text_discrepancies": [
+    {
+      "topic": "Schedule I urban timelines",
+      "english": "18 / 24 / 36 months",
+      "hindi": "6 / 12 / 18 months",
+      "used": "english",
+      "action": "Confirm with MoEFCC or CPCB before planning to a deadline."
+    },
+    {
+      "topic": "CPCB norms for waste-to-energy and CBG plants",
+      "english": "by 1 October 2026 (38(12))",
+      "hindi": "by 1 April 2026",
+      "used": "english"
+    },
+    {
+      "topic": "Rural onboarding on portal",
+      "english": "30 June 2026 (36(3)(viii))",
+      "hindi": "date garbled in text",
+      "used": "english"
+    },
+    {
+      "topic": "Rural state policy deadline",
+      "english": "31 September 2026 (24(iii)), a date that does not exist",
+      "hindi": "31 September 2026",
+      "used": "treat as 30 September 2026 pending clarification"
+    },
+    {
+      "topic": "C&D rules reference",
+      "english": "Environment (Construction and Demolition) Waste Management Rules, 2025",
+      "hindi": "C&D Waste Management Rules, 2016",
+      "used": "english"
+    },
+    {
+      "topic": "Fertiliser offtake reporting",
+      "english": "by 30 June every year (25(1)(iv))",
+      "hindi": "by 30 June 2024",
+      "used": "english"
+    }
+  ]
+}

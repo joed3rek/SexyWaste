@@ -1,0 +1,38 @@
+{
+  "id": "bmw_rules_2016",
+  "title": "Bio-Medical Waste Management Rules, 2016",
+  "citation": "G.S.R. 343(E), MoEFCC, 28 March 2016",
+  "notified_on": "2016-03-28",
+  "in_force_from": "2016-03-28",
+  "supersedes": "Bio-Medical Waste (Management and Handling) Rules, 1998",
+  "source_file": "data/regulations/Bio-medical_Waste_Management_Rules_2016.pdf",
+  "currency": "TO VERIFY: the provided file is the original 2016 text. Later amendments (believed to include 2018 and 2019) are not in the file.",
+
+  "scope": {"rule": "2(1)", "applies_to": "All persons who generate, collect, receive, store, transport, treat, dispose or handle bio-medical waste, including hospitals, nursing homes, clinics, dispensaries, veterinary institutions, laboratories, blood banks, health and vaccination camps and first aid rooms of schools."},
+
+  "definitions": [
+    {"term": "occupier", "rule": "3(m)", "text": "A person having administrative control over the institution and the premises generating bio-medical waste, including a hospital, nursing home, clinic, dispensary, veterinary institution, animal house, pathological laboratory, blood bank, health care facility and clinical establishment."}
+  ],
+
+  "key_rules": [
+    {"rule": "4(f)", "text": "Occupier shall not give treated bio-medical waste with municipal solid waste."},
+    {"rule": "7(2)", "text": "Occupier hands over segregated waste per Schedule I to a common bio-medical waste treatment facility (CBWTF)."},
+    {"rule": "7(3)", "text": "No on-site treatment facility where a CBWTF service is available within seventy-five kilometres.", "cbwtf_service_radius_km": 75},
+    {"rule": "8(1)", "text": "No untreated bio-medical waste shall be mixed with other wastes."},
+    {"rule": "8(5)-(6)", "text": "Transport only by the CBWTF operator in labelled vehicles meeting SPCB conditions and the Motor Vehicles Act."},
+    {"rule": "8(7)", "text": "Untreated human anatomical, animal anatomical, soiled and biotechnology waste not stored beyond forty-eight hours.", "max_storage_hours": 48}
+  ],
+
+  "colour_categories": [
+    {"colour": "Yellow", "content": "Human and animal anatomical waste, soiled waste, expired or discarded medicines, chemical waste, microbiology and lab waste", "treatment": "Incineration, plasma pyrolysis or deep burial; others as per Schedule I"},
+    {"colour": "Red", "content": "Contaminated recyclable waste: tubing, bottles, IV sets, catheters, urine bags, syringes without needles, gloves", "treatment": "Autoclave or microwave or hydroclave, then shredding; to authorised recyclers or energy recovery. Not to landfill."},
+    {"colour": "White (translucent)", "content": "Waste sharps including metals: needles, syringes with fixed needles, scalpels, blades", "treatment": "Autoclave or dry heat sterilisation, then shredding or encapsulation"},
+    {"colour": "Blue", "content": "Glassware and metallic body implants", "treatment": "Disinfection or autoclave, then recycling"}
+  ],
+
+  "routing_implications": {
+    "in_municipal_door_to_door_routes": false,
+    "summary": "Bio-medical waste is collected by the CBWTF operator, never by municipal door-to-door vehicles. Hospitals and clinics appear in municipal routes only for their general solid waste. SWM Rules 2026 r. 5(1)(k) repeats that it must not be mixed with solid waste.",
+    "household_overlap": "Used needles, syringes and expired medicines from households are SWM special care waste (SWM r. 3(1)(zx)), collected via deposition centres."
+  }
+}

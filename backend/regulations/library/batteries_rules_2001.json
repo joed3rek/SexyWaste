@@ -1,0 +1,38 @@
+{
+  "id": "batteries_rules_2001",
+  "title": "Batteries (Management and Handling) Rules, 2001 (as amended to 2010)",
+  "citation": "S.O. 432(E), MoEF, 16 May 2001; amended by S.O. 1002(E), 4 May 2010",
+  "notified_on": "2001-05-16",
+  "source_file": "data/regulations/battery management & handling rules 2001.pdf",
+  "currency": "SUPERSEDED. Replaced by the Battery Waste Management Rules, 2022 (S.O. 3984(E)), which the library now holds as battery_waste_rules_2022.",
+  "scope": {
+    "rule": "2",
+    "applies_to": "Manufacturers, importers, reconditioners, assemblers, dealers, recyclers, auctioneers, consumers and bulk consumers of lead acid batteries.",
+    "battery_definition": {
+      "rule": "3(e)",
+      "text": "Lead acid battery which is a source of electrical energy and contains lead metal."
+    }
+  },
+  "key_points": [
+    {
+      "rule": "3(f)",
+      "text": "Bulk consumer: government departments, undertakings, boards and companies purchasing one hundred or more batteries per annum."
+    },
+    {
+      "rule": "4",
+      "text": "Manufacturers, importers, assemblers and reconditioners collect back used batteries against new sales, set up collection centres, and send them only to registered recyclers."
+    },
+    {
+      "rule": "7",
+      "text": "Dealers take back used batteries against new sales with a discount and transport them safely to designated collection centres or registered recyclers."
+    },
+    {
+      "rule": "10(1)",
+      "text": "Consumers deposit used batteries only with the dealer, manufacturer, importer, assembler, registered recycler, reconditioner or designated collection centre."
+    }
+  ],
+  "routing_implications": {
+    "in_municipal_door_to_door_routes": false,
+    "summary": "Lead acid batteries return through the dealer take-back chain, not municipal routes. Household 'waste batteries' are SWM special care waste (SWM r. 3(1)(zx)) and go to deposition centres."
+  }
+}
