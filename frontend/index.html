@@ -13,58 +13,106 @@
 <body class="page">
   <header class="topbar">
     <a class="brand" href="index.html"><span class="logo" data-icon="logo"></span><span class="name">Urban Waste Intelligence</span></a>
-    <nav aria-label="Main">
+    <nav aria-label="Planning tools">
+      <a href="map.html?role=planner">Planner map</a>
       <a href="builder.html">Route builder</a>
       <a href="rules.html">Rules library</a>
     </nav>
   </header>
 
-  <main class="picker">
-    <div class="hero">
-      <p class="eyebrow">HSR Layout Sectors 1–7 pilot · Solid Waste Management Rules, 2026</p>
-      <h1>Waste collection planned building by building.</h1>
-      <p class="sub">Survey every building, estimate wet, dry, sanitary and special care waste, find bulk waste generators and plan door-to-door routes to the MRF.</p>
+  <main class="signin">
+    <p class="eyebrow">HSR Layout Sectors 1–7 pilot · Solid Waste Management Rules, 2026</p>
+    <h1>Sign in</h1>
+
+    <div id="current" class="card-box current" hidden>
+      <p>Signed in as <b id="currentName"></b> · <span id="currentRole"></span></p>
+      <div class="row">
+        <a id="continueBtn" class="btn block" href="#">Continue</a>
+        <button id="signOutBtn" type="button" class="secondary block">Sign out</button>
+      </div>
     </div>
 
-    <div class="section-title"><h2>Who are you?</h2></div>
-    <div class="roles">
-      <a class="role" href="map.html?role=surveyor">
-        <span class="icon" data-icon="survey"></span>
-        <h3>Surveyor</h3>
-        <p>Map of unsurveyed buildings. Tap a building to fill its card: use, units, water, on-site processing.</p>
-        <div class="foot"><span class="badge ok">Pilot ready</span><span class="go">Open →</span></div>
-      </a>
-      <a class="role" href="map.html?role=planner">
-        <span class="icon" data-icon="planner"></span>
-        <h3>Collection planner</h3>
-        <p>Generators by stream and quantity, bulk waste generators, and the route builder.</p>
-        <div class="foot"><span class="badge ok">Pilot ready</span><span class="go">Open →</span></div>
-      </a>
-      <a class="role soon" href="stub.html?role=generator">
-        <span class="icon" data-icon="household"></span>
-        <h3>Generator</h3>
-        <p>Household, RWA or institution: your building, your estimated waste and your compliance status.</p>
-        <div class="foot"><span class="badge">Coming next</span><span class="go">Preview →</span></div>
-      </a>
-      <a class="role soon" href="stub.html?role=recycler">
-        <span class="icon" data-icon="recycle"></span>
-        <h3>Recycler</h3>
-        <p>Formal or informal: dry fractions available by area, pickup requests and MRF drop-off.</p>
-        <div class="foot"><span class="badge">Coming next</span><span class="go">Preview →</span></div>
-      </a>
-      <a class="role soon" href="stub.html?role=ward">
-        <span class="icon" data-icon="ward"></span>
-        <h3>Ward officer</h3>
-        <p>Dashboard of survey coverage, bulk waste generators and compliance.</p>
-        <div class="foot"><span class="badge">Coming next</span><span class="go">Preview →</span></div>
-      </a>
-    </div>
+    <form id="signinForm" class="card-box" novalidate>
+      <fieldset class="choice-group">
+        <legend>Your role</legend>
+        <div id="roleChoices" class="choices"><p class="hint">Loading roles…</p></div>
+      </fieldset>
+      <label>Your name <input id="name" name="name" autocomplete="name" required /></label>
+      <fieldset id="sectorBox" class="choice-group" hidden>
+        <legend>Your sectors</legend>
+        <div id="sectorChoices" class="chips"></div>
+      </fieldset>
+      <p id="formError" class="warn" hidden></p>
+      <button type="submit" class="block lg">Sign in</button>
+      <p class="hint small">Pilot build: sign-in is not checked. Your role, name and sectors are kept in this browser and recorded with what you save, but they are not verified.</p>
+    </form>
 
-    <div class="footer-note">
-      <p class="hint">All waste quantities are estimates until replaced by weighed data.</p>
-      <p class="hint">Building footprints © OpenStreetMap contributors.</p>
-    </div>
+    <p class="hint small">All waste quantities are estimates until replaced by weighed data. Building footprints © OpenStreetMap contributors.</p>
   </main>
+
   <script src="ui.js"></script>
+  <script>
+    const PILOT = "hsr";
+    const $ = (id) => document.getElementById(id);
+    const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+    let ROLES = [];
+
+    function selectedRole() {
+      const r = document.querySelector('input[name="role"]:checked');
+      return r ? ROLES.find((x) => x.key === r.value) : null;
+    }
+
+    function updateFields() {
+      const role = selectedRole();
+      $("sectorBox").hidden = !role || role.jurisdiction !== "sector";
+    }
+
+    function showCurrent() {
+      const s = getSession();
+      const role = s && ROLES.find((x) => x.key === s.role);
+      $("current").hidden = !role;
+      if (!role) return;
+      $("currentName").textContent = s.name;
+      $("currentRole").textContent = role.label + (s.sectors?.length ? ` · ${s.sectors.join(", ")}` : "");
+      $("continueBtn").href = role.home;
+    }
+
+    (async () => {
+      try {
+        const [reg, sectors] = await Promise.all([apiFetch("/api/roles"), apiFetch(`/api/pilots/${PILOT}/sectors`)]);
+        ROLES = reg.roles;
+        $("roleChoices").innerHTML = ROLES.filter((r) => r.built).map((r) => `
+          <label class="choice"><input type="radio" name="role" value="${esc(r.key)}" />
+            <span><b>${esc(r.label)}</b><span class="muted small">${esc(r.description)}</span></span></label>`).join("");
+        $("sectorChoices").innerHTML = sectors.features.map((f) => f.properties.name).map((n) => `
+          <label class="chip"><input type="checkbox" name="sector" value="${esc(n)}" /><span>${esc(n)}</span></label>`).join("");
+        document.querySelectorAll('input[name="role"]').forEach((el) => el.addEventListener("change", updateFields));
+        const s = getSession();
+        if (s) {
+          $("name").value = s.name || "";
+          document.querySelector(`input[name="role"][value="${CSS.escape(s.role)}"]`)?.click();
+          (s.sectors || []).forEach((n) => { const c = document.querySelector(`input[name="sector"][value="${CSS.escape(n)}"]`); if (c) c.checked = true; });
+        }
+        showCurrent();
+      } catch (err) {
+        $("roleChoices").innerHTML = `<p class="warn">${esc(err.message)}</p>`;
+      }
+    })();
+
+    $("signinForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const role = selectedRole();
+      const name = $("name").value.trim();
+      const sectors = [...document.querySelectorAll('input[name="sector"]:checked')].map((c) => c.value);
+      const problem = !role ? "Choose your role." : !name ? "Enter your name." : role.jurisdiction === "sector" && !sectors.length ? "Choose at least one sector." : "";
+      $("formError").hidden = !problem;
+      $("formError").textContent = problem;
+      if (problem) return;
+      setSession({ role: role.key, name, sectors: role.jurisdiction === "sector" ? sectors : [], signed_in_at: new Date().toISOString() });
+      location.href = role.home;
+    });
+    $("signOutBtn").addEventListener("click", signOut);
+    $("signinForm").addEventListener("input", () => { $("formError").hidden = true; });
+  </script>
 </body>
 </html>

@@ -1,0 +1,47 @@
+{
+  "_about": "Every role in the platform. A role belongs to a module, is planned to use one login method, and is limited to a jurisdiction (city, ward or sector). 'built' marks roles with working screens. Login is a dummy for now: no PIN, password or OTP is checked.",
+  "modules": {
+    "planning": "Planning",
+    "operations": "Operations",
+    "processing": "Processing",
+    "governance": "Governance",
+    "public": "Public",
+    "system": "System"
+  },
+  "login_methods": {
+    "phone_pin": "Phone and PIN",
+    "phone_pin_icons": "Phone and PIN, icon-led",
+    "email_password": "Email and password",
+    "phone_otp": "Phone with OTP"
+  },
+  "roles": [
+    {"key": "surveyor", "label": "Surveyor", "module": "planning", "login": "phone_pin", "jurisdiction": "sector", "built": true, "home": "map.html?role=surveyor",
+     "description": "Visits buildings and records building use, use mix and collection basics."},
+    {"key": "survey_supervisor", "label": "Survey supervisor", "module": "planning", "login": "phone_pin", "jurisdiction": "sector", "built": true, "home": "stub.html?role=survey_supervisor",
+     "description": "Assigns sectors, spot-checks surveys and resolves map problems."},
+    {"key": "planner", "label": "Planner", "module": "planning", "login": "email_password", "jurisdiction": "city", "built": false, "home": "map.html?role=planner",
+     "description": "Reads the waste profile and designs collection cycles, routes and transfer stations."},
+    {"key": "fleet_workforce_manager", "label": "Fleet and workforce manager", "module": "planning", "login": "email_password", "jurisdiction": "city", "built": false,
+     "description": "Maintains the vehicle inventory, staff, shifts and PPE records."},
+    {"key": "driver", "label": "Driver", "module": "operations", "login": "phone_pin_icons", "jurisdiction": "ward", "built": false,
+     "description": "Sees the assigned route and navigation, nothing more."},
+    {"key": "collector", "label": "Collector (pourakarmika)", "module": "operations", "login": "phone_pin_icons", "jurisdiction": "ward", "built": false,
+     "description": "Starts the shift, confirms collection, and reports missed pickups, garbage vulnerable points and unsafe conditions."},
+    {"key": "operations_supervisor", "label": "Operations supervisor", "module": "operations", "login": "phone_pin", "jurisdiction": "ward", "built": false,
+     "description": "Runs the live command centre, reassigns routes and validates penalties."},
+    {"key": "collection_contractor", "label": "Collection contractor", "module": "operations", "login": "email_password", "jurisdiction": "ward", "built": false,
+     "description": "Sees performance on their contract."},
+    {"key": "facility_operator", "label": "MRF or DWCC operator", "module": "processing", "login": "phone_pin", "jurisdiction": "ward", "built": false,
+     "description": "Records incoming loads, sorting, rejects, downtime and incidents."},
+    {"key": "recycler", "label": "Recycler (formal or informal)", "module": "processing", "login": "phone_pin", "jurisdiction": "city", "built": false,
+     "description": "Records pickups, materials and volumes."},
+    {"key": "ward_officer", "label": "Ward officer", "module": "governance", "login": "email_password", "jurisdiction": "ward", "built": false,
+     "description": "Sees coverage, bulk waste generators, compliance and analytics for the ward."},
+    {"key": "trainer", "label": "Trainer", "module": "governance", "login": "email_password", "jurisdiction": "city", "built": false,
+     "description": "Assigns and tracks training modules."},
+    {"key": "generator", "label": "Generator (household, RWA, BWG)", "module": "public", "login": "phone_otp", "jurisdiction": "sector", "built": false,
+     "description": "Sees their building, schedule and status, and reports complaints."},
+    {"key": "admin", "label": "Admin", "module": "system", "login": "email_password", "jurisdiction": "city", "built": true, "home": "admin.html",
+     "description": "Manages users, roles and jurisdictions."}
+  ]
+}

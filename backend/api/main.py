@@ -11,12 +11,12 @@ import threading
 import time
 import uuid
 
-from fastapi import FastAPI, HTTPException, Response
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from backend import regulations
+from backend import auth, regulations
 from backend.buildings import generators
 from backend.buildings.layers import sectors as pilot_sectors
 from backend.config import FRONTEND_DIR, PILOTS, WASTE_STREAMS
@@ -32,6 +32,22 @@ def _pilot(pilot_key: str) -> str:
     if pilot_key not in PILOTS:
         raise HTTPException(404, f"Unknown pilot '{pilot_key}'")
     return pilot_key
+
+
+# ---------- Roles and the acting user (dummy login) ----------
+
+@app.get("/api/roles")
+def list_roles():
+    return auth.registry()
+
+
+@app.get("/api/auth/me")
+def who_am_i(request: Request):
+    """Echo the role and name the browser sent. Login is a dummy: nothing is verified."""
+    try:
+        return auth.actor(request.headers)
+    except KeyError as err:
+        raise HTTPException(400, str(err)) from err
 
 
 # ---------- Pilot building intelligence ----------

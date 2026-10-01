@@ -32,10 +32,45 @@ const NAV = [
 
 // JSON request to the app's API with a readable error. Without the Python server (for example on
 // GitHub Pages) the host answers with an HTML page instead of JSON.
-async function apiFetch(path, options) {
+// ---------- Sign-in (dummy login) ----------
+// The chosen role, typed name and sectors live in this browser only. Nothing is verified.
+
+const SESSION_KEY = "swm.session";
+
+function getSession() {
+  try {
+    return JSON.parse(localStorage.getItem(SESSION_KEY)) || null;
+  } catch {
+    return null;
+  }
+}
+
+function setSession(session) {
+  try {
+    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  } catch {
+    /* storage blocked: the session lasts until the page closes */
+  }
+}
+
+function signOut() {
+  try {
+    localStorage.removeItem(SESSION_KEY);
+  } catch {
+    /* ignore */
+  }
+  location.href = "index.html";
+}
+
+function sessionHeaders() {
+  const s = getSession();
+  return s ? { "X-SWM-Role": s.role, "X-SWM-User": encodeURIComponent(s.name || "") } : {};
+}
+
+async function apiFetch(path, options = {}) {
   let res;
   try {
-    res = await fetch(path, options);
+    res = await fetch(path, { ...options, headers: { ...sessionHeaders(), ...(options.headers || {}) } });
   } catch {
     throw new Error("Cannot reach the data server. Check your connection and try again.");
   }
@@ -85,10 +120,9 @@ function activeNavKey() {
   }
 
   if (location.hostname.endsWith("github.io")) {
-    // Pages that need the API cannot work here, so open them on the full app instead.
-    const page = location.pathname.split("/").pop();
-    if (FULL_APP_URL && /^(map|builder|rules)\.html$/.test(page)) {
-      location.replace(FULL_APP_URL + page + location.search);
+    // Every page needs the API (sign-in reads the role list), so open the full app instead.
+    if (FULL_APP_URL) {
+      location.replace(FULL_APP_URL + location.pathname.split("/").pop() + location.search);
       return;
     }
     const note = document.createElement("div");

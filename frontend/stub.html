@@ -13,7 +13,7 @@
 <body class="page with-rail">
   <nav id="appNav"></nav>
   <main class="doc">
-    <p><a href="index.html">← Choose another role</a></p>
+    <p><a href="index.html">← Back to sign in</a></p>
     <header class="page-head">
       <p><span class="badge">Coming next</span></p>
       <h1 id="title"></h1>
@@ -45,11 +45,19 @@
         deps: ["Surveys", "Bulk waste generator register (r. 39(36))", "Collection records"],
       },
     };
-    const r = ROLES[new URLSearchParams(location.search).get("role")] || ROLES.generator;
-    document.title = r.title;
-    document.getElementById("title").textContent = r.title;
-    document.getElementById("first").textContent = r.first;
-    document.getElementById("deps").innerHTML = r.deps.map((d) => `<li>${d}</li>`).join("");
+    ROLES.ward_officer = ROLES.ward;
+    const key = new URLSearchParams(location.search).get("role") || "generator";
+    function show(r) {
+      document.title = r.title;
+      document.getElementById("title").textContent = r.title;
+      document.getElementById("first").textContent = r.first;
+      document.getElementById("deps").innerHTML = r.deps.length ? r.deps.map((d) => `<li>${d}</li>`).join("") : "<li>To be defined with this role's section.</li>";
+    }
+    if (ROLES[key]) show(ROLES[key]);
+    else apiFetch("/api/roles").then((reg) => {
+      const r = reg.roles.find((x) => x.key === key) || reg.roles[0];
+      show({ title: r.label, first: r.description, deps: [] });
+    });
   </script>
 </body>
 </html>
