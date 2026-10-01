@@ -127,13 +127,29 @@ def street_graph(pilot_key: str):
     return Gu, seg
 
 
+def _street_name(v) -> str | None:
+    """A street name as text, or None when missing. Under pandas 3 a missing name arrives as a
+    float NaN, which is truthy and cannot be sorted together with strings."""
+    if v is None or (isinstance(v, float) and math.isnan(v)) or v is pd.NA:
+        return None
+    v = str(v).strip()
+    return v or None
+
+
 def _names_at_nodes(seg: gpd.GeoDataFrame) -> dict:
     at = {}
     for r in seg.itertuples():
-        if r.name:
-            at.setdefault(r.u, set()).add(r.name)
-            at.setdefault(r.v, set()).add(r.name)
+        name = _street_name(r.name)
+        if name:
+            at.setdefault(r.u, set()).add(name)
+            at.setdefault(r.v, set()).add(name)
     return at
+
+
+def _cross_streets(names_at: dict, node, name: str | None) -> list[str]:
+    """Other street names meeting at a node, sorted."""
+    names = {n for n in (_street_name(x) for x in names_at.get(node, set())) if n}
+    return sorted(names - {name}) if name else sorted(names)
 
 
 @lru_cache(maxsize=16)
@@ -154,7 +170,7 @@ def street_runs(pilot_key: str, max_len_m: float) -> tuple[pd.DataFrame, dict]:
         geoms = [seg_by_id.loc[c[0], "geometry"] for c in chain]
         merged = unary_union(geoms)
         line = merged if isinstance(merged, LineString) else linemerge(merged)
-        cross = [sorted((names_at.get(n, set()) - {name}) if name else names_at.get(n, set())) for n in (start_node, end_node)]
+        cross = [_cross_streets(names_at, n, name) for n in (start_node, end_node)]
         if name:
             ends = [c[0] if c else "dead end" for c in cross]
             label = f"{name}, {ends[0]}–{ends[1]}" if ends[0] != ends[1] else f"{name}, near {ends[0]}"
@@ -180,7 +196,7 @@ def street_runs(pilot_key: str, max_len_m: float) -> tuple[pd.DataFrame, dict]:
 
     group_key = seg["name"].fillna("~" + seg["road_class"])
     for key, grp in seg.groupby(group_key):
-        name = None if key.startswith("~") else key
+        name = None if str(key).startswith("~") else _street_name(key)
         H = nx.MultiGraph()
         for r in grp.itertuples():
             H.add_edge(r.u, r.v, key=r.seg_id, length=r.length_m)
@@ -300,7 +316,8 @@ def points_street_runs(pilot_key: str, surveys: dict, max_run_m: float = 150, ma
     runs, seg_to_run = street_runs(pilot_key, float(max_run_m))
     runs = runs.set_index("run_id")
     t = generator_table(pilot_key, surveys)
-    out = bwg_points(t, {sid: runs.loc[rid, "name"] for sid, rid in seg_to_run.items() if runs.loc[rid, "name"]})
+    run_names = {rid: _street_name(n) for rid, n in runs["name"].items()}
+    out = bwg_points(t, {sid: run_names[rid] for sid, rid in seg_to_run.items() if run_names[rid]})
     t = t[t["bwg_status"] != "bwg"].copy()
     t["run_id"] = t["seg_id"].map(seg_to_run)
     for run_id, grp in t.groupby("run_id"):

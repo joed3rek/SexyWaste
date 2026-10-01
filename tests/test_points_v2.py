@@ -100,3 +100,14 @@ def test_callers_cannot_change_cached_points():
     first[0]["service_min"] = 99
     again = P.collection_points("hsr", {}, "Sector 4")
     assert again[0]["kg"]["dry"] >= 0 and "service_min" not in again[0]
+
+
+def test_missing_street_names_are_ignored_under_pandas_2_and_3():
+    # pandas 3 delivers missing names as float NaN, which is truthy and cannot be sorted with strings.
+    import pandas as pd
+    seg = pd.DataFrame({"u": [1, 1, 1, 2], "v": [2, 3, 4, 5], "name": ["B Road", float("nan"), None, "A Street"]})
+    at = P._names_at_nodes(seg)
+    assert at[1] == {"B Road"}
+    assert P._cross_streets(at, 1, None) == ["B Road"]
+    assert P._cross_streets({1: {"B Road", float("nan"), "A Street"}}, 1, "A Street") == ["B Road"]
+    assert P._street_name(pd.NA) is None and P._street_name("  ") is None and P._street_name(" 7th Cross ") == "7th Cross"
