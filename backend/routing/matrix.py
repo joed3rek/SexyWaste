@@ -132,6 +132,13 @@ class RoutingService:
 
     t = time_s  # short alias used throughout the planner
 
+    def along_s(self, a: int, b: int) -> float:
+        """Time to drive the street a -> b itself when a and b are adjacent (a collection run),
+        else the shortest time. Against a one-way street there is no edge, so this is the detour."""
+        if self.G.has_edge(a, b):
+            return min(float(d[self.weight]) for d in self.G.get_edge_data(a, b).values())
+        return self.time_s(a, b)
+
     def dist_m(self, a: int, b: int) -> float:
         if a == b:
             return 0.0
@@ -156,11 +163,13 @@ class RoutingService:
     # ----- geometry -----
 
     def leg(self, a: int, b: int) -> tuple[list, float]:
-        """Coordinates and length (m) of the fastest path a -> b."""
+        """Coordinates and length (m) of the path a -> b: the street joining them when they are
+        adjacent (a vehicle collecting along a street drives it, not a faster parallel road),
+        otherwise the fastest path."""
         key = (a, b)
         if key not in self._paths:
             try:
-                path = nx.shortest_path(self.G, a, b, weight=self.weight)
+                path = [a, b] if self.G.has_edge(a, b) else nx.shortest_path(self.G, a, b, weight=self.weight)
             except nx.NetworkXNoPath:
                 path = [a, b] if a != b else [a]
             coords, length, _ = path_geometry(self.G, path)

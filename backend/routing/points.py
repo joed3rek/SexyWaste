@@ -179,6 +179,7 @@ def street_runs(pilot_key: str, max_len_m: float) -> tuple[pd.DataFrame, dict]:
             label = f"Unnamed street{f' off {near}' if near else ''}"
         widths = [seg_by_id.loc[c[0], "width_m"] for c in chain]
         runs.append({"run_id": run_id, "name": name, "label": label, "seg_ids": [c[0] for c in chain],
+                     "nodes": [int(first[1])] + [int(c[2]) for c in chain],
                      "length_m": float(sum(seg_by_id.loc[c[0], "length_m"] for c in chain)),
                      "min_width_m": float(min(widths)), "geometry": line})
         for c in chain:
@@ -306,7 +307,8 @@ def bwg_points(t: pd.DataFrame, seg_label: dict | None = None) -> list[dict]:
                  else f"Unnamed {r['use']} bulk waste generator on {street}")
         out.append(_point(f"BWG:{r['id']}", r["use"], g, label, 0.0, None, _to_lonlat(r["kx"], r["ky"]),
                           {"is_bwg": True, "wet_excluded": True, "wet_kg_excluded": round(float(r["wet"]), 1),
-                           "onsite_processing": r["onsite"] or "not_surveyed", "compliance": r["bwg_compliance"]}))
+                           "onsite_processing": r["onsite"] or "not_surveyed", "compliance": r["bwg_compliance"],
+                           "path_nodes": [int(r["edge_u"]), int(r["edge_v"])]}))
     return out
 
 
@@ -327,6 +329,7 @@ def points_street_runs(pilot_key: str, surveys: dict, max_run_m: float = 150, ma
         if isinstance(line, MultiLineString):
             line = max(line.geoms, key=lambda g: g.length)
         grp = grp.assign(pos=[line.project(Point(x, y)) for x, y in zip(grp["kx"], grp["ky"])])
+        seg_index = {sid: i for i, sid in enumerate(run["seg_ids"])}
         for use, g in grp.groupby("use"):
             g = g.sort_values("pos")
             chunks = [g.iloc[i:i + max_buildings] for i in range(0, len(g), max_buildings)]
@@ -335,9 +338,30 @@ def points_street_runs(pilot_key: str, surveys: dict, max_run_m: float = 150, ma
                 mid = line.interpolate(float(c["pos"].median()))
                 suffix = f" (part {n} of {len(chunks)})" if len(chunks) > 1 else ""
                 pid = f"A:{run_id}:{use}" + (f":{n}" if len(chunks) > 1 else "")
+                # The junctions along the stretch of street these buildings front, in street order:
+                # the vehicle drives this stretch to collect from them.
+                covered = [seg_index[sid] for sid in c["seg_id"]]
+                path = run["nodes"][min(covered):max(covered) + 2]
                 out.append(_point(pid, use, c, f"{run['label']}{suffix}", span, run["min_width_m"],
-                                  _to_lonlat(mid.x, mid.y), {"run_id": run_id, "run_length_m": round(float(run["length_m"]), 1)}))
+                                  _to_lonlat(mid.x, mid.y), {"run_id": run_id, "run_length_m": round(float(run["length_m"]), 1),
+                                                             "path_nodes": path}))
     return _merge_small(out, runs, int(min_buildings), float(merge_radius_m))
+
+
+def _join_paths(a: list, b: list) -> list:
+    """Join two street paths that meet at a junction, so the vehicle drives both in one pass.
+    Paths that do not meet are simply chained; the route fills the gap by the shortest way."""
+    if not a or not b:
+        return list(a or b)
+    if a[-1] == b[0]:
+        return a + b[1:]
+    if a[-1] == b[-1]:
+        return a + b[-2::-1]
+    if a[0] == b[-1]:
+        return b + a[1:]
+    if a[0] == b[0]:
+        return b[::-1] + a[1:]
+    return a + b
 
 
 def _merge_small(points: list[dict], runs: gpd.GeoDataFrame, min_buildings: int, radius_m: float) -> list[dict]:
@@ -370,6 +394,7 @@ def _merge_small(points: list[dict], runs: gpd.GeoDataFrame, min_buildings: int,
             best["kg"][s_] = round(best["kg"][s_] + sp["kg"][s_], 1)
         best["total_kg"] = round(sum(best["kg"].values()), 1)
         best["span_m"] = round(best["span_m"] + best_d, 1)
+        best["path_nodes"] = _join_paths(best.get("path_nodes", []), sp.get("path_nodes", []))
         best.setdefault("merged_from", []).append(sp["id"])
     return keep
 

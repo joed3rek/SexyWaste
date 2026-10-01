@@ -123,9 +123,26 @@ def _sector_points(inp: PlanInput) -> list[dict]:
             continue
         out.append({**p, "load": kg, "load_kg": sum(kg.values())})
     nodes = _nearest_nodes(inp.pilot, np.array([[p["lon"], p["lat"]] for p in out])) if out else []
+    known = _routing(inp.pilot).index
     for p, n in zip(out, nodes):
-        p["node"] = n
+        # The vehicle drives the point's stretch of street; `node` (its middle) stands for the
+        # point when placing stations and parks.
+        path = [int(x) for x in p.get("path_nodes") or [] if int(x) in known]
+        p["path"] = [x for i, x in enumerate(path) if i == 0 or x != path[i - 1]] or [n]
+        p["node"] = p["path"][len(p["path"]) // 2]
     return out
+
+
+def _ways(p: dict, times: RoutingService) -> list[tuple[list[int], float]]:
+    """Ways to drive a point's street: (junctions in driving order, seconds lost against the best way).
+    A two-way street can be driven from either end; a one-way street loses the detour against traffic,
+    so the optimiser takes it the right way round."""
+    path = p["path"]
+    if len(path) == 1 or path[0] == path[-1]:
+        return [(path, 0.0)]
+    ways = [(w, sum(times.along_s(a, b) for a, b in zip(w[:-1], w[1:]))) for w in (path, path[::-1])]
+    best = min(c for _, c in ways)
+    return [(w, c - best) for w, c in ways]
 
 
 def station_capacity_kg(secondary_fleet: list[dict], streams: list[str]) -> tuple[float, str]:
@@ -286,29 +303,42 @@ def _solve_group(pts: list[dict], station: int, t: dict, times: RoutingService, 
     if not pts:
         return [], []
     n = len(pts)
-    nodes = [station] + [p["node"] for p in pts] + [station]
-    tm = times.matrix(nodes).time_s.tolist()
+    # Each point's street can be driven either way: one routing node per way, of which one is visited.
+    ways = [_ways(p, times) for p in pts]
+    copies = [(i, w, extra) for i, ws in enumerate(ways) for w, extra in ws]
+    m = len(copies)
+    uniq = list(dict.fromkeys([station] + [w[0] for _, w, _ in copies] + [w[-1] for _, w, _ in copies]))
+    pos = {x: j for j, x in enumerate(uniq)}
+    tm = times.matrix(uniq).time_s
+    entry = [pos[station]] + [pos[w[0]] for _, w, _ in copies] + [pos[station]]
+    exit_ = [pos[station]] + [pos[w[-1]] for _, w, _ in copies] + [pos[station]]
+    of = [None] + [i for i, _, _ in copies] + [None]
     tot_kg = sum(p["load_kg"] for p in pts)
     tot_l = sum(_litres(p["load"], t["density"]) for p in pts)
     k = min(n, math.ceil(max(tot_kg / (0.9 * t["cap_kg"]), tot_l / (0.9 * t["cap_l"]))) + 2)
-    manager = pywrapcp.RoutingIndexManager(len(nodes), k, [0] * k, [n + 1] * k)
+    manager = pywrapcp.RoutingIndexManager(m + 2, k, [0] * k, [m + 1] * k)
     routing = pywrapcp.RoutingModel(manager)
-    svc = [0.0] + [P.service_minutes(p, t["key"], inp.streams) * 60 for p in pts] + [0.0]
-    cb = routing.RegisterTransitCallback(
-        lambda i, j: int(tm[manager.IndexToNode(i)][manager.IndexToNode(j)] + svc[manager.IndexToNode(i)]))
+    svc_pt = [P.service_minutes(p, t["key"], inp.streams) * 60 for p in pts]
+    # Leaving a node costs its service time (and any detour against a one-way street).
+    svc = [0.0] + [svc_pt[i] + extra for i, _, extra in copies] + [0.0]
+    arc = (tm[np.ix_(exit_, entry)] + np.array(svc)[:, None]).astype(np.int64).tolist()
+    cb = routing.RegisterTransitCallback(lambda i, j: arc[manager.IndexToNode(i)][manager.IndexToNode(j)])
     routing.SetArcCostEvaluatorOfAllVehicles(cb)
     for v in range(k):
         routing.SetFixedCostOfVehicle(int(inp.unload_min * 60), v)
     shift_s = int(inp.shift_h * 3600)
     routing.AddDimension(cb, 0, shift_s, True, "Time")
-    kg = [0] + [int(round(p["load_kg"])) for p in pts] + [0]
+    kg = [0] + [int(round(pts[i]["load_kg"])) for i, _, _ in copies] + [0]
     routing.AddDimensionWithVehicleCapacity(routing.RegisterUnaryTransitCallback(lambda i: kg[manager.IndexToNode(i)]),
                                             0, [int(t["cap_kg"])] * k, True, "Kg")
-    lit = [0] + [int(round(_litres(p["load"], t["density"]))) for p in pts] + [0]
+    lit = [0] + [int(round(_litres(pts[i]["load"], t["density"]))) for i, _, _ in copies] + [0]
     routing.AddDimensionWithVehicleCapacity(routing.RegisterUnaryTransitCallback(lambda i: lit[manager.IndexToNode(i)]),
                                             0, [int(t["cap_l"])] * k, True, "Litres")
-    for i in range(1, n + 1):
-        routing.AddDisjunction([manager.NodeToIndex(i)], shift_s * 100)
+    by_point = defaultdict(list)
+    for c, (i, _, _) in enumerate(copies, start=1):
+        by_point[i].append(manager.NodeToIndex(c))
+    for i in range(n):
+        routing.AddDisjunction(by_point[i], shift_s * 100)  # drive it one way; dropping is a last resort
     params = pywrapcp.DefaultRoutingSearchParameters()
     params.first_solution_strategy = routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC
     params.local_search_metaheuristic = routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH
@@ -320,11 +350,12 @@ def _solve_group(pts: list[dict], station: int, t: dict, times: RoutingService, 
         return [], pts
     trips, served = [], set()
     for v in range(k):
-        idx, seq = routing.Start(v), []
+        idx, seq, drive = routing.Start(v), [], []
         while not routing.IsEnd(idx):
             node = manager.IndexToNode(idx)
-            if 1 <= node <= n:
-                seq.append(node - 1)
+            if 1 <= node <= m:
+                seq.append(of[node])
+                drive.append(copies[node - 1][1])
             idx = sol.Value(routing.NextVar(idx))
         if not seq:
             continue
@@ -335,13 +366,14 @@ def _solve_group(pts: list[dict], station: int, t: dict, times: RoutingService, 
         for i in seq:
             if pts[i].get("park_vehicle_kg", 0) > 0:
                 park_kg[(pts[i]["park_node"], pts[i]["park_id"])] += pts[i]["park_vehicle_kg"]
-        park_stops, at, todo = [], pts[seq[-1]]["node"], set(park_kg)
+        park_stops, at, todo = [], drive[-1][-1], set(park_kg)
         while todo:
             nxt = min(todo, key=lambda k: times.t(at, k[0]))
             park_stops.append(nxt)
             todo.remove(nxt)
             at = nxt[0]
-        stops = [station] + [pts[i]["node"] for i in seq] + [k[0] for k in park_stops] + [station]
+        stops = [station] + [x for w in drive for x in w] + [k[0] for k in park_stops] + [station]
+        stops = [x for j, x in enumerate(stops) if j == 0 or x != stops[j - 1]]
         to_parks = sum(park_kg.values())
         to_station = dict(load)
         if "wet" in to_station:
@@ -351,11 +383,21 @@ def _solve_group(pts: list[dict], station: int, t: dict, times: RoutingService, 
                       "kg": round(sum(load.values()), 1), "kg_by_stream": {s: round(x, 1) for s, x in to_station.items()},
                       "park_drops": [{"park_id": k[1], "kg": round(park_kg[k], 1)} for k in park_stops],
                       "fill_pct": round(100 * max(sum(load.values()) / t["cap_kg"], _litres(load, t["density"]) / t["cap_l"])),
-                      "drive_s": sum(times.t(a, b) for a, b in zip(stops[:-1], stops[1:])),
-                      "service_s": sum(svc[i + 1] for i in seq), "unload_s": inp.unload_min * 60 + park_unload})
+                      "drive_s": _drive_between(station, drive, [k[0] for k in park_stops], times),
+                      "service_s": sum(svc_pt[i] for i in seq), "unload_s": inp.unload_min * 60 + park_unload})
     # Longest trips first leaves the short top-up trip for the end of the shift.
     trips.sort(key=lambda x: -x["kg"])
     return trips, [p for i, p in enumerate(pts) if i not in served]
+
+
+def _drive_between(station: int, drive: list[list[int]], parks: list[int], times: RoutingService) -> float:
+    """Driving time between streets: station to the first street, each street's end to the next
+    street's start, then the parks and back to the station. Driving along a street is part of
+    its service time (at collection speed), so it is not counted again here."""
+    legs = [station] + [x for w in drive for x in (w[0], w[-1])] + parks + [station]
+    # Leg 2j+1 -> 2j+2 runs along street j.
+    along = {2 * j + 1 for j in range(len(drive))}
+    return sum(times.t(a, b) for j, (a, b) in enumerate(zip(legs[:-1], legs[1:])) if j not in along)
 
 
 def _sweep(pts: list[dict], centre: tuple[float, float], shares: list[float]) -> list[list[dict]]:
@@ -789,6 +831,15 @@ def plan(inp: PlanInput, progress=None) -> dict:
                     "kg_to_mrf": round(sum(x["kg"] for x in base_st), 1)}
 
     report("Drawing routes", 0.94)
+    # Where door-to-door vehicle time goes, summed over all vehicles.
+    split = defaultdict(float)
+    for v in vehicles:
+        for tr in v["trips"]:
+            split["collecting"] += tr["service_s"]
+            split["driving"] += tr["drive_s"] + tr["reposition_s"]
+            split["unloading"] += tr["unload_s"]
+        split["driving"] += v["return_s"]
+
     # Geometry and tidy output.
     trip_no = 0
     for v in vehicles:
@@ -890,6 +941,8 @@ def plan(inp: PlanInput, progress=None) -> dict:
             "bwg_wet_excluded_kg": bwg_wet,
             "time_to_complete_min": round(overall, 1), "shift_min": inp.shift_h * 60,
             "within_shift": overall <= inp.shift_h * 60,
+            "primary_time_split_min": {k: round(x / 60, 1) for k, x in split.items()},
+            "last_haul_min": round(last_haul, 1),
             "vehicles_over_shift": [v["id"] for v in vehicles if not v["within_shift"]]
                                    + [t["id"] for t in trucks if t["total_min"] > inp.shift_h * 60],
             "composting": {
@@ -926,3 +979,91 @@ def plan(inp: PlanInput, progress=None) -> dict:
             f"Compost produced is assumed to be {yield_pct}% of the wet waste received.",
         ] if park_on else []),
     }
+
+
+# ---------- Fleet sizing ----------
+
+def _resize(rows: list[dict], total: int) -> list[dict]:
+    """Share `total` vehicles over the rows in proportion to their current counts (largest remainder)."""
+    base = sum(int(r["count"]) for r in rows)
+    want = [total * int(r["count"]) / base for r in rows]
+    out = [int(w) for w in want]
+    for i in sorted(range(len(rows)), key=lambda i: want[i] - out[i], reverse=True)[:total - sum(out)]:
+        out[i] += 1
+    return [{**r, "count": c} for r, c in zip(rows, out) if c > 0]
+
+
+def _count(rows: list[dict]) -> int:
+    return sum(int(r["count"]) for r in rows)
+
+
+def suggest_fleet(inp: PlanInput, target_h: float, progress=None, rounds: int = 4) -> dict:
+    """Find the smallest fleet, keeping the chosen vehicle types and their mix, whose plan finishes
+    within `target_h` hours. Each round runs the full optimiser and rescales the tier that is too
+    slow (door-to-door vehicles, or trucks) by how far over or under the target it ran.
+    Returns the fleet, its plan, every round tried, and advice on what limits the time."""
+    report = progress or (lambda stage, frac: None)
+    target = target_h * 60
+    primary = [dict(r) for r in inp.primary_fleet if int(r.get("count", 0)) > 0]
+    secondary = [dict(r) for r in inp.secondary_fleet if int(r.get("count", 0)) > 0]
+    if not primary:
+        raise ValueError("Add at least one primary vehicle")
+    tried, plans, best, seen = [], [], None, set()
+    for i in range(rounds):
+        key = (tuple((r["type"], r["count"]) for r in primary), tuple((r["type"], r["count"]) for r in secondary))
+        if key in seen:
+            break
+        seen.add(key)
+
+        def rep(stage, frac, i=i):
+            report(f"Round {i + 1}: {stage[:1].lower()}{stage[1:]}", (i + frac) / rounds)
+        r = plan(PlanInput(**{**inp.__dict__, "primary_fleet": primary, "secondary_fleet": secondary}), rep)
+        plans.append(r)
+        s = r["summary"]
+        total = s["time_to_complete_min"]
+        ok = total <= target and not s["uncollected_points"]
+        tried.append({"primary_fleet": primary, "secondary_fleet": secondary, "time_min": total,
+                      "primary_min": r["primary"]["time_min"], "secondary_min": r["secondary"]["time_min"], "fits": ok})
+        if ok and (best is None or _count(primary) + _count(secondary) < _count(best[0]) + _count(best[1])):
+            best = (primary, secondary, r)
+        # Door-to-door work must end in time for the last truck haul; trucks shuttle meanwhile.
+        p_goal = max(30.0, target - s["last_haul_min"]) if secondary else target
+        p_scale = r["primary"]["time_min"] / p_goal
+        s_scale = r["secondary"]["time_min"] / target if secondary else 0
+        n_p = max(1, math.ceil(_count(primary) * p_scale * (1.08 if p_scale > 1 else 1.0)))
+        n_s = max(1, math.ceil(_count(secondary) * s_scale * (1.05 if s_scale > 1 else 1.0))) if secondary else 0
+        if ok:  # within target: try one size smaller on the tier with the most slack
+            n_p = min(n_p, _count(primary))
+            n_s = min(n_s, _count(secondary))
+            if (n_p, n_s) == (_count(primary), _count(secondary)):
+                break
+        n_p = min(n_p, 200)
+        n_s = min(n_s, 50)
+        primary = _resize(primary, n_p)
+        secondary = _resize(secondary, n_s) if secondary else []
+    if best is None:  # nothing fitted: return the fastest plan found
+        fastest = min(range(len(tried)), key=lambda k: tried[k]["time_min"])
+        best = (tried[fastest]["primary_fleet"], tried[fastest]["secondary_fleet"], plans[fastest])
+    primary, secondary, r = best
+    report("Done", 1.0)
+    return {"target_h": target_h, "fits": r["summary"]["time_to_complete_min"] <= target,
+            "primary_fleet": primary, "secondary_fleet": secondary, "rounds": tried,
+            "advice": _fleet_advice(r, target), "result": r}
+
+
+def _fleet_advice(r: dict, target: float) -> list[dict]:
+    """What limits the time, worded on the page from these codes and numbers."""
+    s = r["summary"]
+    split = s["primary_time_split_min"]
+    total = sum(split.values()) or 1
+    out = [{"code": "time_split", **{k: round(100 * v / total) for k, v in split.items()}}]
+    over = [x["id"] for x in r["stations"] if x["kg"] > r["station_capacity_kg"]]
+    if over:
+        out.append({"code": "stations_over_capacity", "stations": over})
+    elif split.get("driving", 0) / total < 0.15:
+        out.append({"code": "stations_little_effect", "driving_pct": round(100 * split.get("driving", 0) / total)})
+    if r["secondary"]["trucks"] and r["secondary"]["time_min"] >= r["primary"]["time_min"] + s["last_haul_min"]:
+        out.append({"code": "trucks_limit", "truck_min": r["secondary"]["time_min"]})
+    if s["time_to_complete_min"] > target:
+        out.append({"code": "not_reached", "time_min": s["time_to_complete_min"]})
+    return out

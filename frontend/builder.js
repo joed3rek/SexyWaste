@@ -146,15 +146,24 @@ map.on("load", async () => {
     map.addSource("haul", { type: "geojson", data: empty });
     map.addLayer({ id: "haul-casing", type: "line", source: "haul", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#ffffff", "line-width": 10, "line-opacity": 0.9 } });
     map.addLayer({ id: "haul", type: "line", source: "haul", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#7c2d12", "line-width": 6 } });
+    // Hovering a collection point highlights its plots and the stretch of street driven for it.
+    map.addSource("plots", { type: "geojson", data: empty });
+    map.addLayer({ id: "plots-fill", type: "fill", source: "plots", paint: { "fill-color": ["get", "color"], "fill-opacity": 0.55 } });
+    map.addLayer({ id: "plots-line", type: "line", source: "plots", paint: { "line-color": "#0b0b0c", "line-width": 1.2 } });
+    map.addSource("street", { type: "geojson", data: empty });
+    map.addLayer({ id: "street", type: "line", source: "street", layout: { "line-cap": "round", "line-join": "round" },
+      paint: { "line-color": ["get", "color"], "line-width": 7, "line-opacity": 0.6 } });
     map.addSource("points", { type: "geojson", data: empty });
     map.addLayer({ id: "points", type: "circle", source: "points", paint: {
       "circle-radius": ["interpolate", ["linear"], ["get", "kg"], 0, 2.5, 100, 5, 500, 9],
       "circle-color": ["coalesce", ["get", "color"], "#64748b"], "circle-stroke-color": "#fff", "circle-stroke-width": 1, "circle-opacity": 0.9 } });
-    map.on("mouseenter", "points", (e) => {
+    map.on("mousemove", "points", (e) => {
       const p = e.features[0].properties;
       popup.setLngLat(e.lngLat).setHTML(`<b>${esc(p.label)}</b><br>${esc(p.use)} · ${fmt(p.buildings)} buildings · ${fmt(p.kg, 1)} kg/day (est.)${p.station ? `<br>→ ${esc(p.station)}` : ""}`).addTo(map);
+      highlightPoint(p.id, p.color);
     });
-    map.on("mouseleave", "points", () => popup.remove());
+    map.on("mouseleave", "points", () => { popup.remove(); highlightPoint(null); });
+    loadPlots();
     await selectSector();
   } catch (err) {
     $("status").textContent = `Error: ${err.message}`;
@@ -180,10 +189,33 @@ async function selectSector() {
   await Promise.all([suggest(), loadParks()]);
 }
 
+// Building footprints by id, loaded once, for highlighting a point's plots.
+const plots = new Map();
+async function loadPlots() {
+  try {
+    const fc = await api(`/api/pilots/${PILOT}/buildings`);
+    fc.features.forEach((f) => plots.set(f.properties.id, f.geometry));
+  } catch (err) {
+    console.warn("Building footprints unavailable", err);
+  }
+}
+
+let highlighted = null;
+function highlightPoint(id, color) {
+  if (id === highlighted) return;
+  highlighted = id;
+  const p = id && state.points.find((x) => x.id === id);
+  const c = color || "#f59e0b";
+  map.getSource("plots").setData({ type: "FeatureCollection", features: !p ? [] : p.building_ids
+    .filter((b) => plots.has(b)).map((b) => ({ type: "Feature", geometry: plots.get(b), properties: { color: c } })) });
+  map.getSource("street").setData({ type: "FeatureCollection", features: p?.street?.length > 1
+    ? [{ type: "Feature", geometry: { type: "LineString", coordinates: p.street }, properties: { color: c } }] : [] });
+}
+
 function drawPoints(assign) {
   map.getSource("points").setData({ type: "FeatureCollection", features: state.points.map((p) => ({
     type: "Feature", geometry: { type: "Point", coordinates: [p.lon, p.lat] },
-    properties: { label: p.label, use: p.use, buildings: p.buildings, kg: p.total_kg, station: assign?.[p.id]?.station || "", color: assign?.[p.id]?.color || null },
+    properties: { id: p.id, label: p.label, use: p.use, buildings: p.buildings, kg: p.total_kg, station: assign?.[p.id]?.station || "", color: assign?.[p.id]?.color || null },
   })) });
 }
 
@@ -245,7 +277,8 @@ function addHaulArrows(stations, truckTrips) {
   });
 }
 
-$("optimise").addEventListener("click", async () => {
+// Plan the routes; with a target time, first find the fleet that finishes within it.
+async function runPlan(targetH) {
   const missing = [!state.depot && "start point", !state.mrf && "MRF", !state.stations.length && "at least one transfer station"].filter(Boolean);
   const primary = fleetOf("primaryFleet");
   if (!primary.length) missing.push("at least one door-to-door vehicle");
@@ -262,11 +295,13 @@ $("optimise").addEventListener("click", async () => {
       overrides: state.parkOverrides, excluded: [...state.parkExcluded],
     },
   };
-  $("optimise").disabled = true;
+  if (targetH) body.target_h = targetH;
+  $("optimise").disabled = $("suggestFleet").disabled = true;
   $("status").textContent = "";
-  showProgress({ stage: "Starting", progress: 0, elapsed_s: 0, eta_s: null }, body.time_limit_s + 10);
+  $("fleetAdvice").hidden = true;
+  showProgress({ stage: "Starting", progress: 0, elapsed_s: 0, eta_s: null }, (targetH ? 4 : 1) * (body.time_limit_s + 10));
   try {
-    const job = await api(`/api/pilots/${PILOT}/v2/plan/jobs`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const job = await api(`/api/pilots/${PILOT}/v2/${targetH ? "fleet" : "plan"}/jobs`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     const t0 = performance.now();
     let st;
     for (;;) {
@@ -276,17 +311,54 @@ $("optimise").addEventListener("click", async () => {
       if (st.status !== "running") break;
     }
     if (st.status === "error") throw new Error(st.error);
-    state.result = st.result;
+    if (targetH) {
+      setFleet(st.result);
+      state.result = st.result.result;
+      showFleetAdvice(st.result);
+    } else {
+      state.result = st.result;
+    }
     $("status").textContent = `Done in ${fmt(st.elapsed_s)} s.`;
     renderResult();
   } catch (err) {
     $("status").textContent = `Error: ${err.message}`;
   } finally {
-    $("optimise").disabled = false;
+    $("optimise").disabled = $("suggestFleet").disabled = false;
     $("progress").hidden = true;
     $("mapBusy").hidden = true;
   }
-});
+}
+
+$("optimise").addEventListener("click", () => runPlan());
+$("suggestFleet").addEventListener("click", () => runPlan(+$("targetH").value || 5));
+
+function setFleet(s) {
+  $("primaryFleet").innerHTML = "";
+  $("secondaryFleet").innerHTML = "";
+  s.primary_fleet.forEach((r) => fleetRow($("primaryFleet"), "primary", r.type, r.count));
+  s.secondary_fleet.forEach((r) => fleetRow($("secondaryFleet"), "secondary", r.type, r.count));
+}
+
+function showFleetAdvice(s) {
+  const label = (k) => state.vehicles.find((v) => v.key === k)?.label || k;
+  const list = (rows) => rows.map((r) => `${r.count} × ${esc(label(r.type))}`).join(", ");
+  const time = state.result.summary.time_to_complete_min;
+  const lines = s.advice.map((a) => {
+    if (a.code === "time_split") return `Door-to-door vehicle time: ${a.collecting}% collecting at houses, ${a.unloading}% unloading at transfer stations, ${a.driving}% driving.`;
+    if (a.code === "stations_little_effect") return `More transfer stations would save little: they only shorten driving, which is ${a.driving_pct}% of the time. The number of vehicles is what sets the time.`;
+    if (a.code === "stations_over_capacity") return `${a.stations.map(esc).join(", ")} hold more than their capacity: add a transfer station near them.`;
+    if (a.code === "trucks_limit") return `Trucks set the finish time (${hm(a.truck_min)}): an extra truck finishes sooner.`;
+    if (a.code === "not_reached") return `The target was not reached in ${s.rounds.length} rounds. This is the fastest plan found (${hm(a.time_min)}); press Suggest fleet again to continue from it.`;
+    return "";
+  }).filter(Boolean);
+  $("fleetAdvice").innerHTML = `
+    <p><b>${s.fits ? `Finishes in ${hm(time)}, within ${fmt(s.target_h, 1)} h` : `Fastest found: ${hm(time)}`}</b> with
+      ${list(s.primary_fleet)}${s.secondary_fleet.length ? ` and ${list(s.secondary_fleet)}` : ""}. The fleet above has been updated.</p>
+    <ul>${lines.map((l) => `<li>${l}</li>`).join("")}</ul>
+    <p class="muted small">Tried: ${s.rounds.map((r) => `${r.primary_fleet.reduce((a, x) => a + x.count, 0)} vehicles + ${r.secondary_fleet.reduce((a, x) => a + x.count, 0)} trucks → ${hm(r.time_min)}`).join(" · ")}.
+      Times per house are planning assumptions (reference/vehicles.json) until measured in the field.</p>`;
+  $("fleetAdvice").hidden = false;
+}
 
 function showProgress(st, expected, localElapsed) {
   const elapsed = st.elapsed_s ?? localElapsed ?? 0;

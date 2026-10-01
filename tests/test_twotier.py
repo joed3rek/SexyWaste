@@ -100,3 +100,35 @@ def test_truck_km_comes_from_the_road_route(result):
         for t in tr["trips"]:
             assert t["km"] > 0 and len(t["geometry"]) >= 2
         assert tr["km"] == pytest.approx(sum(t["km"] for t in tr["trips"]), abs=0.05)
+
+
+def test_trips_drive_every_collection_street(result):
+    """A trip drives the street of every point it serves, not just a nearby junction."""
+    import math
+    from shapely.geometry import LineString, Point
+    k = math.cos(math.radians(12.9))
+    pts = {p["id"]: p for p in P.collection_points("hsr", {}, "Sector 4")}
+    off = []
+    for v in result["primary"]["vehicles"]:
+        for t in v["trips"]:
+            line = LineString([(x * 111320 * k, y * 110540) for x, y in t["geometry"]])
+            for pid in {pid.split("#")[0] for pid in t["point_ids"]}:
+                p = pts.get(pid)
+                if p and len(p["path_nodes"]) > 1 and not p.get("merged_from"):
+                    off.append(line.distance(Point(p["lon"] * 111320 * k, p["lat"] * 110540)))
+    assert off and max(off) < 25
+
+
+def test_resize_keeps_the_vehicle_mix():
+    rows = [{"type": "e_loader_3w", "count": 4}, {"type": "mini_tipper", "count": 2}]
+    assert T._resize(rows, 9) == [{"type": "e_loader_3w", "count": 6}, {"type": "mini_tipper", "count": 3}]
+    assert sum(r["count"] for r in T._resize(rows, 7)) == 7
+
+
+def test_suggest_fleet_reaches_the_target():
+    out = T.suggest_fleet(T.PlanInput(pilot="hsr", sector="Sector 4", depot=DEPOT, mrf=MRF,
+                                      primary_fleet=[{"type": "e_loader_3w", "count": 2}],
+                                      secondary_fleet=[{"type": "rear_loader_compactor", "count": 1}], time_limit_s=6), 6)
+    assert out["fits"] and out["result"]["summary"]["time_to_complete_min"] <= 6 * 60
+    assert {r["type"] for r in out["primary_fleet"]} == {"e_loader_3w"}
+    assert any(a["code"] == "time_split" for a in out["advice"])
