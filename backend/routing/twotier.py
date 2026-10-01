@@ -38,11 +38,11 @@ from backend.buildings import layers
 from backend.regulations import stream_keys
 from backend.routing import parks as PK
 from backend.routing import points as P
-from backend.routing.network import _road_class, load_graph, node_lonlat, path_geometry
+from backend.routing.matrix import RoutingService, routing_service
+from backend.routing.network import _road_class, load_graph, node_lonlat
 
 STREAMS = stream_keys()
 MAIN_ROADS = {"primary", "secondary", "tertiary"}  # trunk excluded: elevated or access-controlled in HSR
-BIG = 10**7
 
 
 @dataclass
@@ -81,41 +81,12 @@ def _graph(pilot: str):
     return G, U, nodes, xy, main
 
 
+def _routing(pilot: str) -> RoutingService:
+    return routing_service(P._area_for(pilot))
+
+
 def _nearest_nodes(pilot: str, lonlat: np.ndarray) -> list[int]:
-    G, _, nodes, xy, _ = _graph(pilot)
-    lat0 = math.radians(float(np.mean(xy[:, 1])))
-    scale = np.array([math.cos(lat0), 1.0])
-    out = []
-    for p in np.atleast_2d(lonlat):
-        d = (((xy - p) * scale) ** 2).sum(axis=1)
-        out.append(int(nodes[int(np.argmin(d))]))
-    return out
-
-
-class _Times:
-    """Cached one-to-all travel times (seconds) on the directed drive network."""
-
-    def __init__(self, G):
-        self.G = G
-        self._from: dict[int, dict] = {}
-        self._to: dict[int, dict] = {}
-
-    def frm(self, a: int) -> dict:
-        if a not in self._from:
-            self._from[a] = nx.single_source_dijkstra_path_length(self.G, a, weight="travel_time")
-        return self._from[a]
-
-    def to(self, b: int) -> dict:
-        if b not in self._to:
-            self._to[b] = nx.single_source_dijkstra_path_length(self.G.reverse(copy=False), b, weight="travel_time")
-        return self._to[b]
-
-    def t(self, a: int, b: int) -> float:
-        if a == b:
-            return 0.0
-        if a in self._from:
-            return self._from[a].get(b, BIG)
-        return self.to(b).get(a, BIG)
+    return _routing(pilot).nearest_nodes(lonlat)
 
 
 # ---------- Vehicles ----------
@@ -306,7 +277,7 @@ def _park_access_nodes(pilot: str, sites: list[dict], pts: list[dict], radius: f
 
 # ---------- Tier 1: vehicle territories and trips ----------
 
-def _solve_group(pts: list[dict], station: int, t: dict, times: _Times, inp: PlanInput,
+def _solve_group(pts: list[dict], station: int, t: dict, times: RoutingService, inp: PlanInput,
                  time_limit_s: int) -> tuple[list[dict], list[dict]]:
     """Trips for ONE vehicle over its own territory: a capacitated VRP whose routes are that
     vehicle's successive trips from the transfer station and back."""
@@ -314,9 +285,7 @@ def _solve_group(pts: list[dict], station: int, t: dict, times: _Times, inp: Pla
         return [], []
     n = len(pts)
     nodes = [station] + [p["node"] for p in pts] + [station]
-    for a in nodes:
-        times.frm(a)
-    tm = [[times.t(a, b) for b in nodes] for a in nodes]
+    tm = times.matrix(nodes).time_s.tolist()
     tot_kg = sum(p["load_kg"] for p in pts)
     tot_l = sum(_litres(p["load"], t["density"]) for p in pts)
     k = min(n, math.ceil(max(tot_kg / (0.9 * t["cap_kg"]), tot_l / (0.9 * t["cap_l"]))) + 2)
@@ -413,7 +382,7 @@ def _sweep(pts: list[dict], centre: tuple[float, float], shares: list[float]) ->
     return groups
 
 
-def _allocate(station_loads: dict, vehicles: list[dict], times: _Times, depot: int) -> dict:
+def _allocate(station_loads: dict, vehicles: list[dict], times: RoutingService, depot: int) -> dict:
     """Share the work so each vehicle's load is proportional to its weight, without overlap.
 
     Stations are chained geographically (nearest next, starting near the depot). The chain's total
@@ -464,7 +433,7 @@ def _allocate(station_loads: dict, vehicles: list[dict], times: _Times, depot: i
 
 
 def _plan_territories(groups: dict, stations: list[dict], vehicles: list[dict], types: dict, depot: int,
-                      times: _Times, inp: PlanInput, budget_s: float, report, frac0: float, frac1: float):
+                      times: RoutingService, inp: PlanInput, budget_s: float, report, frac0: float, frac1: float):
     """One planning pass: allocate vehicles to stations, sweep territories, route each territory."""
     loads = {s["node"]: sum(p["load_kg"] for p in groups.get(s["node"], [])) for s in stations}
     alloc = _allocate(loads, vehicles, times, depot)
@@ -552,7 +521,7 @@ def _split_point(p: dict, t: dict, streams: list[str]) -> list[dict]:
 
 # ---------- Scheduling ----------
 
-def _schedule_secondary(station_loads: list[dict], fleet: list[dict], mrf: int, start: int, times: _Times,
+def _schedule_secondary(station_loads: list[dict], fleet: list[dict], mrf: int, start: int, times: RoutingService,
                         inp: PlanInput, streams: list[str]) -> list[dict]:
     trucks = []
     for row in fleet:
@@ -590,32 +559,6 @@ def _schedule_secondary(station_loads: list[dict], fleet: list[dict], mrf: int, 
     return trucks
 
 
-# ---------- Geometry ----------
-
-class _Paths:
-    def __init__(self, G):
-        self.G = G
-        self.cache = {}
-
-    def leg(self, a: int, b: int):
-        if (a, b) not in self.cache:
-            try:
-                path = nx.shortest_path(self.G, a, b, weight="travel_time")
-            except nx.NetworkXNoPath:
-                path = [a, b] if a != b else [a]
-            coords, length, _ = path_geometry(self.G, path)
-            self.cache[(a, b)] = (coords, length)
-        return self.cache[(a, b)]
-
-    def route(self, stops: list[int]):
-        coords, length = [], 0.0
-        for a, b in zip(stops[:-1], stops[1:]):
-            c, l = self.leg(a, b)
-            coords.extend(c if not coords else c[1:])
-            length += l
-        return coords, length
-
-
 # ---------- Public entry point ----------
 
 def plan(inp: PlanInput, progress=None) -> dict:
@@ -623,7 +566,7 @@ def plan(inp: PlanInput, progress=None) -> dict:
     report = progress or (lambda stage, frac: None)
     report("Loading road network", 0.01)
     G, _, _, _, main = _graph(inp.pilot)
-    times, paths = _Times(G), _Paths(G)
+    times = paths = _routing(inp.pilot)  # travel times and route geometry, shared between plans
     shift_s = inp.shift_h * 3600
     depot, mrf = _nearest_nodes(inp.pilot, np.array([inp.depot, inp.mrf]))
     truck_start = _nearest_nodes(inp.pilot, np.array([inp.truck_depot]))[0] if inp.truck_depot else mrf
@@ -675,7 +618,7 @@ def plan(inp: PlanInput, progress=None) -> dict:
     # Assign points to stations: nearest within the radius, keeping station loads similar and
     # within two truck loads.
     for s in stations:
-        times.to(s["node"])
+        times.times_to(s["node"])
     groups = defaultdict(list)
     node_to_id = {s["node"]: s["id"] for s in stations}
     for p, n in zip(pts, _assign_balanced(inp, pts, [s["node"] for s in stations])):

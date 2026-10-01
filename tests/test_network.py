@@ -5,7 +5,7 @@ import pytest
 
 from backend.routing import network
 from backend.routing.network import add_travel_times
-from backend.routing.twotier import _Times
+from backend.routing.matrix import RoutingService
 
 
 def test_travel_time_respects_one_way():
@@ -17,7 +17,7 @@ def test_travel_time_respects_one_way():
     G.add_edge(2, 3, length=100.0, highway="residential")
     G.add_edge(3, 1, length=100.0, highway="residential")
     add_travel_times(G)
-    t = _Times(G)
+    t = RoutingService(G)
     assert t.t(1, 2) == pytest.approx(36.0)  # 100 m at 10 km/h
     assert t.t(2, 1) == pytest.approx(72.0)  # must go round via node 3
 
