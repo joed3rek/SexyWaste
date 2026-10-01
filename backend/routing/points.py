@@ -246,7 +246,8 @@ def building_snaps(pilot_key: str) -> pd.DataFrame:
 
 
 def generator_table(pilot_key: str, surveys: dict) -> pd.DataFrame:
-    """Buildings with use, per-stream kg, BWG status and kerb position."""
+    """Buildings with use, per-stream kg, BWG status and kerb position. `surveys` maps building id
+    to survey state (backend/survey/state.py)."""
     props = pd.DataFrame(generators.all_properties(pilot_key, surveys))
     t = props.merge(building_snaps(pilot_key), on="id")
 
@@ -297,7 +298,7 @@ def bwg_points(t: pd.DataFrame, seg_label: dict | None = None) -> list[dict]:
     """Each bulk waste generator is its own point, with wet waste excluded (processed at source or via EBWGR)."""
     seg_label = seg_label or {}
     out = []
-    for _, r in t[t["bwg_status"] == "bwg"].iterrows():
+    for _, r in t[t["bwg_status"] == "bwg_confirmed"].iterrows():
         g = r.to_frame().T.copy()
         g["wet"] = 0.0
         street = seg_label.get(r["seg_id"]) or "unnamed street"
@@ -318,7 +319,7 @@ def points_street_runs(pilot_key: str, surveys: dict, max_run_m: float = 150, ma
     t = generator_table(pilot_key, surveys)
     run_names = {rid: _street_name(n) for rid, n in runs["name"].items()}
     out = bwg_points(t, {sid: run_names[rid] for sid, rid in seg_to_run.items() if run_names[rid]})
-    t = t[t["bwg_status"] != "bwg"].copy()
+    t = t[t["bwg_status"] != "bwg_confirmed"].copy()
     t["run_id"] = t["seg_id"].map(seg_to_run)
     for run_id, grp in t.groupby("run_id"):
         run = runs.loc[run_id]

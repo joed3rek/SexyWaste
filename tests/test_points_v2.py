@@ -31,13 +31,29 @@ def test_every_building_once_and_uses_never_mixed(runs_points):
         assert _use_of(t, p["building_ids"]) == {p["use"]}
 
 
-def test_bwg_are_separate_and_wet_excluded(runs_points):
-    pts = runs_points
+def _confirmed_bwg_state():
+    """Survey state that confirms the largest apartment-type building as a BWG on floor area."""
+    import math
+    from backend.buildings import generators
+    from tests.test_buildings import state
+    t = generators.base_table("hsr")
+    row = t[t["category"] == "residential_apartment"].sort_values("footprint_m2").iloc[-1]
+    floors = math.ceil(20000 / row["footprint_m2"]) + 1
+    return row["id"], {row["id"]: state({"building_use": "apartment_society", "floors": floors})}
+
+
+def test_without_surveys_no_bwg_points_are_split_out(runs_points):
+    assert not [p for p in runs_points if p.get("is_bwg")], "only confirmed BWGs become separate points"
+
+
+def test_confirmed_bwg_is_a_separate_point_without_wet_waste():
+    bid, states = _confirmed_bwg_state()
+    pts = P.collection_points("hsr", states)
     bwg = [p for p in pts if p.get("is_bwg")]
-    assert bwg, "expected bulk waste generator points"
-    for p in bwg:
-        assert p["buildings"] == 1 and p["kg"]["wet"] == 0 and p["wet_excluded"]
-        assert p["onsite_processing"] in ("none", "compost", "biogas", "certificate", "not_surveyed")
+    assert [p["building_ids"] for p in bwg] == [[bid]]
+    p = bwg[0]
+    assert p["kg"]["wet"] == 0 and p["wet_excluded"] and p["wet_kg_excluded"] > 0
+    assert p["onsite_processing"] == "not_surveyed"
 
 
 def test_street_run_ids_are_stable(runs_points):
@@ -90,7 +106,8 @@ def test_cache_rebuilds_when_a_survey_changes():
     before = P.collection_points("hsr", {}, "Sector 4")
     target = next(p for p in before if not p.get("is_bwg") and p["use"] == "residential")
     bid = target["building_ids"][0]
-    after = P.collection_points("hsr", {bid: {"use": "vacant"}}, "Sector 4")
+    from tests.test_buildings import state
+    after = P.collection_points("hsr", {bid: state({"building_use": "vacant_or_abandoned"})}, "Sector 4")
     assert bid not in {b for p in after for b in p["building_ids"]}, "a vacant building should drop out"
 
 

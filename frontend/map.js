@@ -50,7 +50,9 @@ const fmtQ = (v) => fmt(v, v < 10 ? 2 : 1);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const matchExpr = (prop, colours, fallback = "#e5e7eb") => ["match", ["to-string", ["get", prop]], ...Object.entries(colours).flat(), fallback];
 const kpi = (label, value, sub = "", cls = "") => `<div class="kpi ${cls}"><div class="k">${label}</div><div class="v">${value}</div>${sub ? `<div class="s">${sub}</div>` : ""}</div>`;
-const isPriority = ["in", ["get", "bwg_status"], ["literal", ["bwg", "watch"]]];
+const BWG_ANY = ["bwg_confirmed", "bwg_likely"]; // likely: from estimates only (Round 2 candidate)
+const isBwg = ["in", ["get", "bwg_status"], ["literal", BWG_ANY]];
+const isPriority = ["in", ["get", "bwg_status"], ["literal", [...BWG_ANY, "watch"]]];
 
 const api = apiFetch; // ui.js
 
@@ -101,7 +103,7 @@ function countSurvey() {
   const n = { surveyed: 0, priority: 0, unsurveyed: 0 };
   fc.features.forEach(({ properties: p }) => {
     if (p.surveyed) n.surveyed++;
-    else if (p.bwg_status === "bwg" || p.bwg_status === "watch") n.priority++;
+    else if (BWG_ANY.includes(p.bwg_status) || p.bwg_status === "watch") n.priority++;
     else n.unsurveyed++;
   });
   return n;
@@ -117,7 +119,7 @@ function applyColour() {
     : "";
   $("legend").innerHTML = title +
     spec.legend.map(([c, label, n]) => `<div><span class="swatch" style="background:${c}"></span>${esc(label)}${n != null ? ` <span class="muted">${fmt(n)}</span>` : ""}</div>`).join("") +
-    `<div><span class="swatch outline"></span>Potential bulk waste generator <span class="muted">${fmt(summary.bwg_counts.bwg || 0)}</span></div>` +
+    `<div><span class="swatch outline"></span>Potential bulk waste generator <span class="muted">${fmt((summary.bwg_counts.bwg_confirmed || 0) + (summary.bwg_counts.bwg_likely || 0))}</span></div>` +
     `<div><span class="swatch outline dashed"></span>Near a BWG threshold <span class="muted">${fmt(summary.bwg_counts.watch || 0)}</span></div>`;
 }
 
@@ -125,10 +127,10 @@ function applyFilters() {
   const sector = $("sector").value;
   const conds = [];
   if (sector) conds.push(["==", ["get", "sector"], sector]);
-  if ($("filterFocus").checked) conds.push(ROLE === "surveyor" ? ["!", ["to-boolean", ["get", "surveyed"]]] : ["==", ["get", "bwg_status"], "bwg"]);
+  if ($("filterFocus").checked) conds.push(ROLE === "surveyor" ? ["!", ["to-boolean", ["get", "surveyed"]]] : isBwg);
   const f = conds.length ? ["all", ...conds] : null;
   ["buildings", "buildings-line", "buildings-3d"].forEach((id) => map.setFilter(id, f));
-  map.setFilter("bwg", ["all", ["==", ["get", "bwg_status"], "bwg"], ...conds]);
+  map.setFilter("bwg", ["all", isBwg, ...conds]);
   map.setFilter("watch", ["all", ["==", ["get", "bwg_status"], "watch"], ...conds]);
 }
 
@@ -194,7 +196,7 @@ map.on("load", async () => {
     map.addLayer({ id: "buildings-3d", type: "fill-extrusion", source: "buildings", layout: { visibility: "none" },
       paint: { "fill-extrusion-color": "#cbd5e1", "fill-extrusion-height": ["*", ["coalesce", ["get", "levels"], 1], 3.2], "fill-extrusion-opacity": 0.9 } });
     map.addLayer({ id: "buildings-line", type: "line", source: "buildings", minzoom: 15, paint: { "line-color": "#475569", "line-width": 0.4 } });
-    map.addLayer({ id: "bwg", type: "line", source: "buildings", filter: ["==", ["get", "bwg_status"], "bwg"], paint: { "line-color": "#7f1d1d", "line-width": 2.5 } });
+    map.addLayer({ id: "bwg", type: "line", source: "buildings", filter: isBwg, paint: { "line-color": "#7f1d1d", "line-width": 2.5 } });
     map.addLayer({ id: "watch", type: "line", source: "buildings", filter: ["==", ["get", "bwg_status"], "watch"], paint: { "line-color": "#7f1d1d", "line-width": 1.5, "line-dasharray": [2, 1] } });
     map.addLayer({ id: "selected", type: "line", source: "buildings", filter: ["==", ["get", "id"], ""], paint: { "line-color": "#000", "line-width": 3.5 } });
 
@@ -311,7 +313,8 @@ function renderCard(p) {
   const [kind, num] = p.id.split("/");
   const title = p.name || p.address || "Unnamed building";
   const bwgBadge = {
-    bwg: `<span class="badge bad">Bulk waste generator</span>`,
+    bwg_confirmed: `<span class="badge bad">Bulk waste generator (confirmed)</span>`,
+    bwg_likely: `<span class="badge warn">Likely bulk waste generator: estimates only, Round 2 candidate</span>`,
     watch: `<span class="badge warn">Near a threshold</span>`,
     no: `<span class="badge">No</span>`,
     not_applicable: `<span class="badge">Not a BWG entity type</span>`,

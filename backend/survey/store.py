@@ -1,17 +1,15 @@
-"""Building survey records: the ground truth that overrides OSM-based guesses.
+"""Bridge for the old survey form until the Round 1 surveyor screens replace it (Phase 5).
 
-Stored in SQLite (data/survey.db, git-ignored). One current record per building.
+The old form sends one flat record (use, units, floors, ...). save() turns it into a quick visit
+and appends field values and use-mix rows in the Round 1 model; nothing is overwritten. The old
+"clear survey" action cannot be supported because survey history is never deleted.
 """
 
 from __future__ import annotations
 
-import sqlite3
-from datetime import datetime, timezone
 from pathlib import Path
 
-from backend.config import ROOT
-
-DB_PATH = ROOT / "data" / "survey.db"
+from backend.survey import db
 
 USES = ("residential", "commercial", "mixed", "institutional", "vacant", "construction")
 ONSITE_PROCESSING = ("none", "compost", "biogas", "certificate")  # certificate = EBWGR certificate
@@ -25,33 +23,6 @@ FIELDS = (
     "onsite_processing", "segregation_observed", "weighed_kg_day", "surveyor", "notes",
     "home_compost", "home_compost_method", "home_compost_kg",
 )
-
-_SCHEMA = """
-CREATE TABLE IF NOT EXISTS building_survey (
-    pilot TEXT NOT NULL,
-    building_id TEXT NOT NULL,
-    use TEXT, units INTEGER, commercial_units INTEGER, floors REAL,
-    water_lpd REAL, water_source TEXT,
-    onsite_processing TEXT, segregation_observed TEXT, weighed_kg_day REAL,
-    surveyor TEXT, notes TEXT, updated_at TEXT NOT NULL,
-    home_compost TEXT, home_compost_method TEXT, home_compost_kg REAL,
-    PRIMARY KEY (pilot, building_id)
-)
-"""
-
-
-def _connect(db_path: Path | None = None) -> sqlite3.Connection:
-    path = db_path or DB_PATH
-    path.parent.mkdir(parents=True, exist_ok=True)
-    con = sqlite3.connect(path)
-    con.row_factory = sqlite3.Row
-    con.execute(_SCHEMA)
-    # Upgrade databases created before a column existed.
-    have = {r[1] for r in con.execute("PRAGMA table_info(building_survey)")}
-    for col, kind in (("home_compost", "TEXT"), ("home_compost_method", "TEXT"), ("home_compost_kg", "REAL")):
-        if col not in have:
-            con.execute(f"ALTER TABLE building_survey ADD COLUMN {col} {kind}")
-    return con
 
 
 def validate(record: dict) -> dict:
@@ -81,26 +52,42 @@ def validate(record: dict) -> dict:
     return clean
 
 
-def all_records(pilot: str, db_path: Path | None = None) -> dict[str, dict]:
-    with _connect(db_path) as con:
-        rows = con.execute("SELECT * FROM building_survey WHERE pilot = ?", (pilot,)).fetchall()
-    return {r["building_id"]: {k: r[k] for k in (*FIELDS, "updated_at")} for r in rows}
+def save(pilot: str, building_id: str, record: dict, actor: dict | None = None, osm: dict | None = None,
+         db_path: Path | None = None) -> dict:
+    """Record an old-form survey as a completed quick visit. Returns the clean record."""
+    from backend.buildings.generators import NORMS
+    from backend.survey import migrate
 
-
-def get(pilot: str, building_id: str, db_path: Path | None = None) -> dict | None:
-    return all_records(pilot, db_path).get(building_id)
-
-
-def save(pilot: str, building_id: str, record: dict, db_path: Path | None = None) -> dict:
     clean = validate(record)
-    clean["updated_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    cols = ", ".join(("pilot", "building_id", *clean))
-    marks = ", ".join("?" for _ in range(len(clean) + 2))
-    with _connect(db_path) as con:
-        con.execute(f"INSERT OR REPLACE INTO building_survey ({cols}) VALUES ({marks})", (pilot, building_id, *clean.values()))
+    actor = {"name": (actor or {}).get("name") or clean["surveyor"], "role": (actor or {}).get("role")}
+    osm = osm or {}
+    con = db.connect(db_path)
+    try:
+        with con:
+            at, vid = db.now(), db.new_id()
+            con.execute("INSERT INTO visit (id, pilot, building_id, round, purpose, user_name, user_role, started_at, ended_at,"
+                        " outcome, notes) VALUES (?, ?, ?, 'quick', 'survey', ?, ?, ?, ?, 'completed', ?)",
+                        (vid, pilot, building_id, actor["name"], actor["role"], at, at, clean["notes"]))
+            bu = migrate.map_building_use(clean["use"], clean["units"], osm.get("category"),
+                                          NORMS["surveyed_use"]["apartment_if_units_over"])
+            note = "Recorded with the older survey form."
+            if bu:
+                db.record_value(con, "building", building_id, "building_use", bu, "surveyed", vid, actor, note, at)
+            if clean["units"] is not None:
+                # New unit counts replace the building's active use mix.
+                con.execute("UPDATE use_mix SET status = 'removed', removed_visit_id = ? WHERE pilot = ? AND building_id = ?"
+                            " AND status = 'active'", (vid, pilot, building_id))
+                for use, n in migrate.use_mix_rows(bu, clean["units"], clean["commercial_units"], osm.get("sub_use")):
+                    mid = db.new_id()
+                    con.execute("INSERT INTO use_mix (id, pilot, building_id, use, created_visit_id) VALUES (?, ?, ?, ?, ?)",
+                                (mid, pilot, building_id, use, vid))
+                    db.record_value(con, "use_mix", mid, "count", n, "surveyed", vid, actor, note, at)
+            for field in ("floors", "water_lpd", "water_source", "onsite_processing", "segregation_observed",
+                          "home_compost", "home_compost_method", "home_compost_kg"):
+                if clean[field] is not None:
+                    db.record_value(con, "building", building_id, field, clean[field], "surveyed", vid, actor, note, at)
+            if clean["weighed_kg_day"] is not None:
+                db.record_value(con, "building", building_id, "weighed_kg_day", clean["weighed_kg_day"], "weighed", vid, actor, note, at)
+    finally:
+        con.close()
     return clean
-
-
-def delete(pilot: str, building_id: str, db_path: Path | None = None) -> None:
-    with _connect(db_path) as con:
-        con.execute("DELETE FROM building_survey WHERE pilot = ? AND building_id = ?", (pilot, building_id))

@@ -114,8 +114,8 @@ def _litres(kg_by_stream: dict, density: dict) -> float:
 # ---------- Transfer stations ----------
 
 def _sector_points(inp: PlanInput) -> list[dict]:
-    from backend.survey import store
-    pts = P.collection_points(inp.pilot, store.all_records(inp.pilot), inp.sector)
+    from backend.survey import state
+    pts = P.collection_points(inp.pilot, state.building_states(inp.pilot), inp.sector)
     out = []
     for p in pts:
         kg = {s: (0.0 if s == "wet" and p.get("wet_excluded") else p["kg"][s]) for s in inp.streams}
@@ -503,6 +503,22 @@ def _split_point(p: dict, t: dict, streams: list[str]) -> list[dict]:
     else:
         # One large building (for example an apartment complex): split its waste into equal loads.
         parts = [[(bid, [x / k for x in kg]) for bid, kg in rows] for _ in range(k)]
+
+    # A part made of whole buildings can still be too big for one load, by weight or by volume
+    # (for example one large apartment block in a street of houses). Split such parts into equal loads.
+    def fits(part):
+        raw = {st: sum(r[1][STREAMS.index(st)] for r in part) for st in streams}
+        return sum(raw.values()) <= 0.9 * t["cap_kg"] and _litres(raw, t["density"]) <= 0.9 * t["cap_l"]
+
+    refined = []
+    for part in parts:
+        if fits(part):
+            refined.append(part)
+            continue
+        raw = {st: sum(r[1][STREAMS.index(st)] for r in part) for st in streams}
+        j = math.ceil(max(sum(raw.values()) / (0.9 * t["cap_kg"]), _litres(raw, t["density"]) / (0.9 * t["cap_l"])))
+        refined += [[(bid, [x / j for x in kg]) for bid, kg in part] for _ in range(j)]
+    parts = refined
     # Building rows hold gross amounts; scale each part to the point's net load (after residents'
     # own drop-off at a park) and give each part its share of the wet waste bound for the park.
     gross = {st: sum(r[1][STREAMS.index(st)] for r in rows) for st in streams}

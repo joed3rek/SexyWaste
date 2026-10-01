@@ -19,6 +19,7 @@ from backend import regulations as regs
 from backend.buildings import layers
 from backend.buildings.layers import METRIC_CRS
 from backend.config import ROOT
+from backend.survey import uses as survey_uses
 
 NORMS = json.loads((Path(__file__).with_name("norms.json")).read_text(encoding="utf-8"))
 STREAMS = regs.stream_keys()
@@ -162,20 +163,6 @@ FRACTIONS = [k for k in NORMS["dry_waste_fractions"] if not k.startswith("_")]
 COMMERCIAL_CATS = ("food_service", "commercial_retail", "commercial_office", "hotel", "market")
 INSTITUTIONAL_CATS = ("educational", "healthcare", "public_institutional", "religious")
 
-BWG_GROUP = {
-    "residential_apartment": ("residential", "residential societies"),
-    "hotel": ("commercial", "hotels / hostels"),
-    "healthcare": ("commercial", "hospitals, nursing homes"),
-    "educational": ("institutional", "educational institutions"),
-    "commercial_office": ("institutional", "private companies"),
-    "commercial_retail": ("commercial", "commercial establishments, malls"),
-    "food_service": ("commercial", "commercial establishments"),
-    "mixed_use": ("commercial", "commercial establishments"),
-    "market": ("commercial", "wholesale markets"),
-    "industrial": ("commercial", "industrial units"),
-    "public_institutional": ("institutional", "government / community places"),
-    "religious": ("institutional", "community places or like"),
-}
 _LONG_DECIMALS = re.compile(r"(\d+\.\d{6})\d+")
 WATCH_FRACTION = 0.7  # flag for survey when an estimate is within 70% of a threshold
 
@@ -201,24 +188,20 @@ class _Tally:
         for s in STREAMS:
             self.streams[s] += kg * NORMS["stream_shares"][share_key][s]
 
-    def household(self, dwellings: float):
-        persons = dwellings * HH["persons_per_dwelling"]
+    def people(self, persons: float, dwellings: float):
         self.dwellings += dwellings
         self.persons += persons
         self.add(persons * HH["kg_per_capita_per_day"], "household")
 
+    def household(self, dwellings: float):
+        self.people(dwellings * HH["persons_per_dwelling"], dwellings)
+
     def floor_rate(self, cat: str, area: float):
         self.add(area / 100 * NORMS["non_residential"][cat]["kg_per_100m2"], cat)
 
-    def per_unit(self, cat: str, units: float):
-        if cat in NORMS["per_unit"]:
-            self.add(units * NORMS["per_unit"][cat], cat)
-        else:
-            self.add(units * NORMS["per_unit"]["commercial_retail"], "commercial_retail")
-
 
 def _typology_estimate(cat, sub_use, floor_area, levels, footprint) -> _Tally:
-    """Estimate from OSM geometry and the guessed typology (no survey)."""
+    """Estimate from geometry (footprint, floors) and a typology."""
     t = _Tally()
     if cat in NO_REGULAR_WASTE:
         return t
@@ -235,54 +218,100 @@ def _typology_estimate(cat, sub_use, floor_area, levels, footprint) -> _Tally:
     return t
 
 
-def _surveyed_category(use, units, osm_cat, osm_sub):
-    su = NORMS["surveyed_use"]
-    if use == "residential":
-        apt = (units or 1) > su["apartment_if_units_over"] or osm_cat == "residential_apartment"
-        return ("residential_apartment" if apt else "residential_house"), None
-    if use == "commercial":
-        if osm_cat in COMMERCIAL_CATS:
-            return osm_cat, None
-        return (osm_sub if osm_sub in COMMERCIAL_CATS else su["commercial_default"]), None
-    if use == "mixed":
-        sub = osm_sub or (osm_cat if osm_cat in COMMERCIAL_CATS else su["commercial_default"])
-        return "mixed_use", sub
-    if use == "institutional":
-        return (osm_cat if osm_cat in INSTITUTIONAL_CATS else su["institutional_default"]), None
-    if use == "vacant":
-        return "structure", None
-    if use == "construction":
-        return "construction", None
-    return osm_cat, osm_sub
+# ---------- Survey state (see backend/survey/state.py) ----------
+
+SOURCE_RANK = {"assumed": 0, "surveyed": 1, "verified": 2, "weighed": 3}
+CONFIRMING = ("surveyed", "verified", "weighed")
+# Coarse use for older screens and collection-point grouping.
+COARSE_USE = {
+    "independent_house": "residential", "apartment_society": "residential", "pg_coliving_building": "residential",
+    "hostel": "residential", "mixed_use_shops_below": "mixed", "hotel_guesthouse": "commercial",
+    "commercial_shops": "commercial", "commercial_offices": "commercial", "food_establishment": "commercial",
+    "market": "commercial", "workshop_industrial": "commercial", "hospital_clinic": "institutional",
+    "school_college": "institutional", "religious": "institutional", "government_public": "institutional",
+    "under_construction": "construction", "vacant_or_abandoned": "vacant", "non_occupied_structure": "vacant",
+}
 
 
-def _bwg(cat, floor_area, levels_source, water_lpd, water_source, kg_day, quantity_source) -> dict:
-    group = BWG_GROUP.get(cat)
-    if not group:
-        return {"status": "not_applicable", "criteria_met": [], "group": None}
+def _field(state: dict | None, name: str) -> dict | None:
+    return ((state or {}).get("fields") or {}).get(name)
+
+
+def _weakest(sources: list[str]) -> str:
+    return min(sources, key=SOURCE_RANK.get) if sources else "assumed"
+
+
+def _mix_estimate(rows: list[dict]) -> tuple[_Tally, list[str], set[str]]:
+    """Sum of use-mix rows. Returns (tally, sources of the inputs used, respondents behind them)."""
+    t, sources, respondents = _Tally(), [], set()
+
+    def take(row, name):
+        f = row["fields"].get(name)
+        if f is None:
+            return None
+        sources.append(f["source"])
+        if f.get("respondent"):
+            respondents.add(f["respondent"])
+        return float(f["value"])
+
+    for row in rows:
+        n = NORMS["use_mix"][row["use"]]
+        count = take(row, "count") or 0.0
+        if n["basis"] == "household":
+            occupants = take(row, "occupants_total")
+            t.people(occupants if occupants is not None else count * HH["persons_per_dwelling"], count)
+        elif n["basis"] == "per_bed":
+            beds = take(row, "beds_total")
+            t.add(beds * n["kg_per_bed"] if beds is not None else count * n["kg_per_unit"], n["stream_shares"])
+        elif n["basis"] == "per_unit":
+            t.add(count * n["kg_per_unit"], n["stream_shares"])
+        if not row["fields"]:
+            sources.append("assumed")
+    return t, sources, respondents
+
+
+def _share_key(cat: str) -> str:
+    return "household" if cat in HOUSEHOLD or cat not in NORMS["stream_shares"] else cat
+
+
+def _bwg(entity: dict | None, entity_source: str, floor_area: float, floors_source: str, kg_day: float,
+         kg_source: str, kg_is_estimate: bool) -> dict:
+    """Bulk waste generator status (SWM Rules 2026, r. 3(1)(i)); thresholds from the regulations library.
+
+    bwg_confirmed: the building use is surveyed as a BWG entity type AND a criterion is met by a
+    measured value: floor area with surveyed floors (x OSM footprint), or weighed waste.
+    bwg_likely: a criterion is met only through assumed values or estimates. A waste figure
+    estimated from a surveyed use mix is still an estimate.
+    The water criterion is not evaluated for now (project decision); it needs surveyor or BWSSB data."""
+    if not entity:
+        return {"status": "not_applicable", "criteria_met": [], "group": None, "entity": None}
+    entity_ok = entity_source in CONFIRMING
     checks = {
-        "floor_area_m2": (floor_area, f"footprint x floors, floors {levels_source}"),
-        "water_litres_per_day": (water_lpd, f"from {water_source}" if water_source else None),
-        "waste_kg_per_day": (kg_day, quantity_source),
+        "floor_area_m2": (floor_area, f"footprint x floors, floors {floors_source}", floors_source in CONFIRMING),
+        "waste_kg_per_day": (kg_day, f"{'estimate' if kg_is_estimate else 'weighed'}, inputs {kg_source}",
+                             not kg_is_estimate and kg_source == "weighed"),
     }
-    met, near = [], []
+    confirmed, met, near = [], [], []
     for c in regs.bwg_criteria():
-        value, basis = checks[c["key"]]
-        if value is None:
+        if c["key"] not in checks:
             continue
+        value, basis, measured = checks[c["key"]]
         text = f"{c['text']}: {value:,.0f} ({basis})"
         if value >= c["value"]:
             met.append(text)
+            if measured and entity_ok:
+                confirmed.append(text)
         elif value >= WATCH_FRACTION * c["value"]:
             near.append(text)
-    status = "bwg" if met else "watch" if near else "no"
-    return {"status": status, "criteria_met": met or near, "group": f"{group[0]}: {group[1]}"}
+    status = "bwg_confirmed" if confirmed else "bwg_likely" if met else "watch" if near else "no"
+    return {"status": status, "criteria_met": confirmed or met or near,
+            "group": f"{entity['group']}: {entity['entity']}", "entity": entity}
 
 
-def _compliance(bwg_status: str, survey: dict | None) -> str | None:
-    if bwg_status != "bwg":
+def _compliance(bwg_status: str, onsite: str | None) -> str | None:
+    """Compliance label, only for confirmed BWGs: never 'non-compliant' on an estimate."""
+    if bwg_status != "bwg_confirmed":
         return None
-    onsite = (survey or {}).get("onsite_processing")
     if onsite in ("compost", "biogas"):
         return "processing_at_source"
     if onsite == "certificate":
@@ -293,8 +322,11 @@ def _compliance(bwg_status: str, survey: dict | None) -> str | None:
 def _obligations(cat, dwellings, floor_area, bwg_status) -> list[dict]:
     rules = regs.swm()["generator_types"]
     out = []
-    if bwg_status == "bwg":
+    if bwg_status == "bwg_confirmed":
         out.append({"rule": regs.cite("6"), "text": "Register on the CPCB portal. Process wet waste at source (composting or biogas) or obtain EBWGR certificates. Hand over dry, sanitary and special care waste to authorised agencies."})
+    elif bwg_status == "bwg_likely":
+        ident = rules["bulk_waste_generator"]["identification_by_ulb"]
+        out.append({"rule": regs.cite(ident["rule"]), "text": "Possible bulk waste generator from estimates only: confirm in the Round 2 detailed survey before applying BWG duties."})
     large = rules["large_premises_segregation_duty"]
     if cat in ("residential_apartment", "hotel", "food_service", "market") or (
         cat in ("educational", "healthcare", "public_institutional", "commercial_office") and floor_area > large["area_threshold_m2"]
@@ -310,18 +342,12 @@ def _obligations(cat, dwellings, floor_area, bwg_status) -> list[dict]:
     return out
 
 
-def _collection(cat: str, sub_use: str | None, bwg_status: str) -> dict:
-    if cat in NO_REGULAR_WASTE:
-        if cat == "construction":
-            return {"mode": "none", "label": "C&D waste collection on request", "rule": regs.cite("5(1)(d)")}
-        return {"mode": "none", "label": "No regular collection", "rule": None}
-    if bwg_status == "bwg":
+def _collection(building_use: str | None, bwg_status: str) -> dict:
+    if bwg_status == "bwg_confirmed":
         return {"mode": "bwg", "label": "BWG: gate collection of dry, sanitary and special care waste; wet waste processed at source or covered by EBWGR", "rule": regs.cite("6(b)")}
-    if cat == "market":
-        return {"mode": "daily_bulk", "label": "Daily collection of market waste", "rule": regs.cite("39(19)")}
-    if cat == "food_service" or sub_use == "food_service":
-        return {"mode": "daily_commercial", "label": "Door-to-door, four streams; daily wet waste pickup recommended", "rule": regs.cite("39(4)")}
-    return {"mode": "door_to_door", "label": "Door-to-door collection, four streams", "rule": regs.cite("39(4)")}
+    if building_use is None:
+        return {"mode": "door_to_door", "label": "Door-to-door collection, four streams", "rule": regs.cite("39(4)")}
+    return survey_uses.collection(building_use)
 
 
 def _generator_type(cat: str) -> str:
@@ -332,58 +358,77 @@ def _generator_type(cat: str) -> str:
     return "household" if cat in HOUSEHOLD else "non_residential"
 
 
-def compute(base: dict, survey: dict | None = None) -> dict:
-    """All derived fields for one building, from its OSM base record and optional survey record."""
-    s = survey or {}
+def compute(base: dict, state: dict | None = None) -> dict:
+    """All derived fields for one building, from its OSM base record and its survey state.
+
+    Quantity: active use-mix rows if any; else the surveyed building use's typology with footprint
+    and floors; else the OSM typology. Collection mode and BWG entity group come from the resolved
+    building use when present, and from the OSM category otherwise. Every quantity carries the
+    weakest source among its inputs and the respondents behind them."""
+    bu_f = _field(state, "building_use")
+    building_use = bu_f["value"] if bu_f else None
     footprint = base["footprint_m2"]
-    if s.get("floors"):
-        levels, levels_source = float(s["floors"]), "surveyed"
+    floors_f = _field(state, "floors")
+    if floors_f:
+        levels, levels_source = float(floors_f["value"]), floors_f["source"]
     else:
         levels = base["osm_levels"] or NORMS["default_levels"][base["category"]]
         levels_source = "from OSM" if base["osm_levels"] else "assumed"
+    floors_src = levels_source if levels_source in SOURCE_RANK else "assumed"
     floor_area = footprint * levels
 
     cat, sub = base["category"], base["sub_use"]
-    if s.get("use"):
-        cat, sub = _surveyed_category(s["use"], s.get("units"), cat, sub)
+    if building_use:
+        cat = NORMS["building_use_typology"][building_use]
+        sub = (sub if sub in COMMERCIAL_CATS else NORMS["surveyed_use"]["commercial_default"]) if cat == "mixed_use" else None
+    hint = survey_uses.config()["osm_hint"].get(base["category"])
+    use_for_rules = building_use or hint
 
-    units = s.get("units")
-    if s.get("use") and units is not None and cat not in NO_REGULAR_WASTE:
-        t = _Tally()
-        if cat in ("residential_house", "residential_apartment"):
-            t.household(units)
-        elif cat == "mixed_use":
-            com = s.get("commercial_units") or 0
-            t.per_unit(sub, com)
-            t.household(max(0, units - com))
-        elif cat in INSTITUTIONAL_CATS:
-            t.floor_rate(cat, floor_area)
-        else:
-            t.per_unit(cat, units)
-        quantity_source = "estimate: surveyed units x typology"
+    rows = (state or {}).get("use_mix") or []
+    respondents: set[str] = set()
+    if rows:
+        t, sources, respondents = _mix_estimate(rows)
+        basis, quantity_source = "use_mix", "estimate: surveyed use mix x assumed rates"
+    elif building_use:
+        t = _typology_estimate(cat, sub, floor_area, levels, footprint)
+        sources = [bu_f["source"], floors_src]
+        if bu_f.get("respondent"):
+            respondents.add(bu_f["respondent"])
+        basis, quantity_source = "building_use", "estimate: surveyed building use x footprint x floors"
     else:
         t = _typology_estimate(cat, sub, floor_area, levels, footprint)
-        quantity_source = "estimate: OSM footprint x typology" if not s.get("use") else "estimate: surveyed use x typology"
+        sources, basis, quantity_source = ["assumed"], "osm", "estimate: OSM footprint x typology"
 
-    streams = dict(t.streams)
-    kg_day = t.kg
-    if s.get("weighed_kg_day") is not None:
-        scale = s["weighed_kg_day"] / kg_day if kg_day else 0
-        streams = {k: v * scale for k, v in streams.items()}
-        kg_day = s["weighed_kg_day"]
-        quantity_source = "weighed"
+    streams, kg_day = dict(t.streams), t.kg
+    is_estimate = True
+    weighed = _field(state, "weighed_kg_day")
+    if weighed is not None:
+        w = float(weighed["value"])
+        if kg_day > 0:
+            streams = {k: v * w / kg_day for k, v in streams.items()}
+        else:  # nothing to scale: split the weighed total by the typology's stream shares
+            shares = NORMS["stream_shares"][_share_key(cat)]
+            streams = {k: w * shares[k] for k in STREAMS}
+        kg_day, sources, basis, quantity_source, is_estimate = w, [weighed["source"]], "weighed", "weighed", False
+    kg_source = _weakest(sources)
 
+    flat = {k: v["value"] for k, v in ((state or {}).get("fields") or {}).items()}
     fractions = {f: streams["dry"] * NORMS["dry_waste_fractions"][f] for f in FRACTIONS}
-    home_composted, home_basis = _home_composting(s, streams["wet"])
-    water = s.get("water_lpd")
-    water_source = {"bwssb": "BWSSB data", "surveyor": "surveyor"}.get(s.get("water_source") or "surveyor") if water is not None else None
-    bwg = _bwg(cat, floor_area, levels_source, water, water_source, kg_day, quantity_source)
-    compliance = _compliance(bwg["status"], survey)
+    home_composted, home_basis = _home_composting(flat, streams["wet"])
+    entity = survey_uses.bwg_entity(use_for_rules) if use_for_rules else None
+    bwg = _bwg(entity, bu_f["source"] if bu_f else "assumed", floor_area, floors_src, kg_day, kg_source, is_estimate)
+    visit = (state or {}).get("visit")
+    surveyed = bool(visit and visit["outcome"] in ("completed", "partial")) or any(
+        f["source"] in CONFIRMING for f in ((state or {}).get("fields") or {}).values())
+    water = flat.get("water_lpd")
 
     return {
         "category": cat,
         "category_label": CATEGORY_LABELS[cat],
         "sub_use": sub,
+        "building_use": building_use,
+        "building_use_source": bu_f["source"] if bu_f else None,
+        "building_use_hint": hint,
         "generator_type": _generator_type(cat),
         "levels": levels,
         "levels_source": levels_source,
@@ -394,20 +439,42 @@ def compute(base: dict, survey: dict | None = None) -> dict:
         **{k: round(v, 2) for k, v in streams.items()},
         **{f"dry_{f}": round(v, 2) for f, v in fractions.items()},
         "quantity_source": quantity_source,
+        "quantity_basis": basis,
+        "quantity_input_source": kg_source,
+        "quantity_is_estimate": is_estimate,
+        "quantity_respondents": sorted(respondents),
         "wet_home_composted": round(home_composted, 2),
         "wet_to_collect": round(streams["wet"] - home_composted, 2),
         "home_compost_basis": home_basis,
         "water_lpd": water,
-        "water_source": water_source,
+        "water_source": {"bwssb": "BWSSB data", "surveyor": "surveyor"}.get(flat.get("water_source") or "surveyor") if water is not None else None,
         "bwg_status": bwg["status"],
         "bwg_criteria": bwg["criteria_met"],
         "bwg_group": bwg["group"],
-        "bwg_compliance": compliance,
+        "bwg_entity": bwg["entity"],
+        "round2_candidate": bwg["status"] == "bwg_likely",
+        "bwg_compliance": _compliance(bwg["status"], flat.get("onsite_processing")),
         "obligations": _obligations(cat, t.dwellings, floor_area, bwg["status"]),
-        "collection": _collection(cat, sub, bwg["status"]),
-        "surveyed": bool(survey),
-        "survey": survey,
+        "collection": _collection(use_for_rules, bwg["status"]),
+        "visit_outcome": visit["outcome"] if visit else None,
+        "surveyed": surveyed,
+        "survey": _survey_summary(state, building_use) if state else None,
     }
+
+
+def _survey_summary(state: dict, building_use: str | None) -> dict:
+    """Current values for the building card, including the coarse fields older screens read."""
+    flat = {k: v["value"] for k, v in state["fields"].items()}
+    mix = [{"id": r["id"], "use": r["use"], **{k: f["value"] for k, f in r["fields"].items()},
+            "sources": {k: f["source"] for k, f in r["fields"].items()}} for r in state["use_mix"]]
+    counts = {r["use"]: r.get("count") or 0 for r in mix}
+    units = sum(counts.values()) if mix else None
+    commercial = sum(n for u, n in counts.items() if u != "residential_dwelling") if mix else None
+    visit = state.get("visit") or {}
+    return {**flat, "sources": {k: v["source"] for k, v in state["fields"].items()}, "use_mix": mix,
+            "visit": state.get("visit"), "use": COARSE_USE.get(building_use), "units": units,
+            "commercial_units": commercial if COARSE_USE.get(building_use) == "mixed" else None,
+            "surveyor": visit.get("user_name")}
 
 
 def _home_composting(s: dict, wet: float) -> tuple[float, str | None]:
@@ -493,9 +560,9 @@ def _base_records_cached(pilot_key: str) -> dict[str, dict]:
     return _base_records(pilot_key)
 
 
-def building_properties(pilot_key: str, building_id: str, survey: dict | None) -> dict:
+def building_properties(pilot_key: str, building_id: str, state: dict | None) -> dict:
     base = _base_records_cached(pilot_key)[building_id]
-    return {**base, **compute(base, survey), "osm_category": base["category"], "osm_sub_use": base["sub_use"]}
+    return {**base, **compute(base, state), "osm_category": base["category"], "osm_sub_use": base["sub_use"]}
 
 
 def has_building(pilot_key: str, building_id: str) -> bool:
@@ -521,8 +588,8 @@ def buildings_geojson_text(pilot_key: str) -> str:
     return _LONG_DECIMALS.sub(lambda m: m.group(1), text)
 
 
-def all_properties(pilot_key: str, surveys: dict[str, dict]) -> list[dict]:
-    return [building_properties(pilot_key, bid, surveys.get(bid)) for bid in _base_records_cached(pilot_key)]
+def all_properties(pilot_key: str, states: dict[str, dict]) -> list[dict]:
+    return [building_properties(pilot_key, bid, states.get(bid)) for bid in _base_records_cached(pilot_key)]
 
 
 def landuse_geojson(pilot_key: str) -> dict:
@@ -544,8 +611,11 @@ def _py(v):
     return v.item() if hasattr(v, "item") and not isinstance(v, (str, bytes)) else v
 
 
-def summary(pilot_key: str, surveys: dict[str, dict]) -> dict:
-    t = pd.DataFrame(all_properties(pilot_key, surveys))
+BWG_ANY = ("bwg_confirmed", "bwg_likely")
+
+
+def summary(pilot_key: str, states: dict[str, dict]) -> dict:
+    t = pd.DataFrame(all_properties(pilot_key, states))
     area_km2 = layers.sectors(pilot_key).to_crs(METRIC_CRS).area.sum() / 1e6
     tpd = {s: round(t[s].sum() / 1000, 2) for s in STREAMS}
     dry_tpd = {f: round(t[f"dry_{f}"].sum() / 1000, 2) for f in FRACTIONS}
@@ -559,10 +629,11 @@ def summary(pilot_key: str, surveys: dict[str, dict]) -> dict:
             "households_est": round(g["dwellings"].sum()),
             "tpd": round(g["kg_day"].sum() / 1000, 2),
             **{f"{s}_tpd": round(g[s].sum() / 1000, 2) for s in STREAMS},
-            "bwg": int((g["bwg_status"] == "bwg").sum()),
+            "bwg": int(g["bwg_status"].isin(BWG_ANY).sum()),
+            "bwg_confirmed": int((g["bwg_status"] == "bwg_confirmed").sum()),
         })
-    bwgs = t[t["bwg_status"] == "bwg"].sort_values("kg_day", ascending=False)
-    to_survey = t[(~t["surveyed"]) & t["bwg_status"].isin(["bwg", "watch"])].sort_values("kg_day", ascending=False)
+    bwgs = t[t["bwg_status"].isin(BWG_ANY)].sort_values(["bwg_status", "kg_day"], ascending=[True, False])
+    to_survey = t[(~t["surveyed"]) & t["bwg_status"].isin([*BWG_ANY, "watch"])].sort_values("kg_day", ascending=False)
 
     def item(r):
         return {"id": r["id"], "name": r["name"], "address": r["address"], "sector": r["sector"],
@@ -582,6 +653,7 @@ def summary(pilot_key: str, surveys: dict[str, dict]) -> dict:
         "generator_type_counts": t["generator_type"].value_counts().to_dict(),
         "confidence_counts": t["confidence"].value_counts().to_dict(),
         "bwg_counts": t["bwg_status"].value_counts().to_dict(),
+        "round2_candidates": int(t["round2_candidate"].sum()),
         "compliance_counts": t["bwg_compliance"].value_counts().to_dict(),
         "compliance_labels": COMPLIANCE_LABELS,
         "households_est": round(t["dwellings"].sum()),

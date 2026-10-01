@@ -22,6 +22,7 @@ from backend.buildings.layers import sectors as pilot_sectors
 from backend.config import FRONTEND_DIR, PILOTS, WASTE_STREAMS
 from backend.routing import points as points_v2
 from backend.routing import parks, twotier
+from backend.survey import state as survey_state
 from backend.survey import store as survey_store
 
 app = FastAPI(title="SWM Urban Waste Intelligence")
@@ -75,7 +76,7 @@ def get_buildings(pilot_key: str):
 @app.get("/api/pilots/{pilot_key}/summary")
 def get_summary(pilot_key: str):
     pilot = _pilot(pilot_key)
-    return generators.summary(pilot, survey_store.all_records(pilot))
+    return generators.summary(pilot, survey_state.building_states(pilot))
 
 
 @app.get("/api/pilots/{pilot_key}/overrides")
@@ -83,8 +84,8 @@ def get_overrides(pilot_key: str):
     """Map properties of surveyed buildings, replacing the OSM-only values in the buildings layer."""
     pilot = _pilot(pilot_key)
     return {
-        bid: generators.map_properties(generators.building_properties(pilot, bid, rec))
-        for bid, rec in survey_store.all_records(pilot).items()
+        bid: generators.map_properties(generators.building_properties(pilot, bid, st))
+        for bid, st in survey_state.building_states(pilot).items()
         if generators.has_building(pilot, bid)
     }
 
@@ -97,10 +98,10 @@ def _building_id(pilot: str, building_id: str) -> str:
 
 @app.get("/api/pilots/{pilot_key}/building")
 def get_building(pilot_key: str, id: str):
-    """Full building card: OSM base, survey record and all computed fields."""
+    """Full building card: OSM base, current survey values and all computed fields."""
     pilot = _pilot(pilot_key)
     bid = _building_id(pilot, id)
-    return generators.building_properties(pilot, bid, survey_store.get(pilot, bid))
+    return generators.building_properties(pilot, bid, survey_state.building_state(pilot, bid))
 
 
 class SurveyIn(BaseModel):
@@ -121,22 +122,23 @@ class SurveyIn(BaseModel):
 
 
 @app.put("/api/pilots/{pilot_key}/survey")
-def put_survey(pilot_key: str, id: str, survey: SurveyIn):
+def put_survey(pilot_key: str, id: str, survey: SurveyIn, request: Request):
+    """Older survey form: recorded as a quick visit in the Round 1 model (removed in Phase 4)."""
     pilot = _pilot(pilot_key)
     bid = _building_id(pilot, id)
     try:
-        record = survey_store.save(pilot, bid, survey.model_dump())
-    except ValueError as err:
+        base = generators._base_records_cached(pilot)[bid]
+        survey_store.save(pilot, bid, survey.model_dump(), actor=auth.actor(request.headers),
+                          osm={"category": base["category"], "sub_use": base["sub_use"]})
+    except (ValueError, KeyError) as err:
         raise HTTPException(422, str(err)) from err
-    return generators.building_properties(pilot, bid, record)
+    return generators.building_properties(pilot, bid, survey_state.building_state(pilot, bid))
 
 
 @app.delete("/api/pilots/{pilot_key}/survey")
 def delete_survey(pilot_key: str, id: str):
-    pilot = _pilot(pilot_key)
-    bid = _building_id(pilot, id)
-    survey_store.delete(pilot, bid)
-    return generators.building_properties(pilot, bid, None)
+    _building_id(_pilot(pilot_key), id)
+    raise HTTPException(409, "Survey history is kept and cannot be cleared. Record a new visit to correct it.")
 
 
 @app.get("/api/survey/options")
@@ -164,7 +166,7 @@ def get_points_v2(pilot_key: str, sector: str | None = None,
     if not set(stream_list) <= set(WASTE_STREAMS):
         raise HTTPException(422, f"streams must be from {WASTE_STREAMS}")
     try:
-        pts = points_v2.collection_points(pilot, survey_store.all_records(pilot), sector, params)
+        pts = points_v2.collection_points(pilot, survey_state.building_states(pilot), sector, params)
         points_v2.vehicle_class(vehicle)
     except (ValueError, KeyError) as err:
         raise HTTPException(422, str(err)) from err

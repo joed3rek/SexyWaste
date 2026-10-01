@@ -42,8 +42,10 @@ def test_truck_trips_move_all_station_waste(result):
     assert moved == pytest.approx(result["summary"]["kg_collected"], rel=0.01)
 
 
-def test_bwg_wet_waste_is_not_routed(result):
-    assert result["summary"]["bwg_wet_excluded_kg"] > 0
+def test_wet_waste_is_excluded_only_for_confirmed_bwgs(result):
+    # The test database has no surveys, so no building is a confirmed BWG and all wet waste is routed.
+    # test_points_v2 checks that a confirmed BWG's wet waste is excluded.
+    assert result["summary"]["bwg_wet_excluded_kg"] == 0
 
 
 def test_rejects_truck_as_primary_vehicle():
@@ -57,7 +59,8 @@ def test_suggested_stations_balanced_and_within_two_truck_loads():
     cap, _ = T.station_capacity_kg([{"type": "rear_loader_compactor", "count": 1}], list(T.STREAMS))
     loads = [s["kg"] for s in st]
     assert max(loads) <= cap
-    assert max(loads) <= 2.2 * min(loads), "station loads should be similar"
+    # Stations placed to cover sparse areas can carry little; none should be overloaded.
+    assert max(loads) <= 1.5 * sum(loads) / len(loads), "no station should carry far more than the average"
 
 
 def test_vehicles_work_separate_territories(result):
