@@ -157,5 +157,128 @@
     "institutional_default": "public_institutional",
     "apartment_if_units_over": 2
   },
-  "_water": "Water use is not estimated. The BWG water criterion (40,000 L/day) is checked only against surveyor input or BWSSB billing data."
+  "_water": "Water use is not estimated. The BWG water criterion (40,000 L/day) is checked only against surveyor input or BWSSB billing data.",
+  "use_mix": {
+    "_status": "ASSUMPTIONS for Round 1 use-mix rows, not regulation and not from a cited source. Quantity per row = count x kg_per_unit, or beds_total x kg_per_bed, or (for homes) occupants_total (else count x persons_per_dwelling) x kg_per_capita_per_day. Stream shares use the named typology in stream_shares.",
+    "_calibration": "Round 3 (weighed sample) calibrates this by weighing each stream for several days at a stratified sample of buildings with this use and fitting kg/day per unit or bed.",
+    "residential_dwelling": {
+      "basis": "household",
+      "stream_shares": "household",
+      "note": "Uses household.persons_per_dwelling and household.kg_per_capita_per_day."
+    },
+    "pg_coliving": {
+      "basis": "per_bed",
+      "kg_per_bed": 0.4,
+      "kg_per_unit": 4.0,
+      "stream_shares": "household",
+      "note": "Assumed: residents eat some meals outside, so below the 0.5 kg/capita household norm. kg_per_unit is used when beds are not recorded (assumed 10 beds)."
+    },
+    "hostel": {
+      "basis": "per_bed",
+      "kg_per_bed": 0.45,
+      "kg_per_unit": 13.5,
+      "stream_shares": "household",
+      "note": "Assumed: hostels with a mess cook on site. kg_per_unit is used when beds are not recorded (assumed 30 beds)."
+    },
+    "hotel_guesthouse": {
+      "basis": "per_bed",
+      "kg_per_bed": 1.2,
+      "kg_per_unit": 24.0,
+      "stream_shares": "hotel",
+      "note": "Assumed; equals the earlier per-room hotel rate (per_unit.hotel). kg_per_unit is used when beds are not recorded (assumed 20 beds)."
+    },
+    "shop_retail": {
+      "basis": "per_unit",
+      "kg_per_unit": 2.0,
+      "stream_shares": "commercial_retail",
+      "note": "Same as per_unit.commercial_retail."
+    },
+    "food_service": {
+      "basis": "per_unit",
+      "kg_per_unit": 15.0,
+      "stream_shares": "food_service",
+      "note": "Same as per_unit.food_service."
+    },
+    "office": {
+      "basis": "per_unit",
+      "kg_per_unit": 1.5,
+      "stream_shares": "commercial_office",
+      "note": "Same as per_unit.commercial_office."
+    },
+    "clinic_healthcare": {
+      "basis": "per_unit",
+      "kg_per_unit": 3.0,
+      "stream_shares": "healthcare",
+      "note": "Same as per_unit.healthcare. General solid waste only; bio-medical waste is outside municipal collection."
+    },
+    "educational": {
+      "basis": "per_unit",
+      "kg_per_unit": 10.0,
+      "stream_shares": "educational",
+      "note": "Assumed per school, college or coaching centre in the building. Highly variable with enrolment; Round 2 should record student numbers."
+    },
+    "religious": {
+      "basis": "per_unit",
+      "kg_per_unit": 5.0,
+      "stream_shares": "religious",
+      "note": "Assumed per place of worship; festival peaks are not included."
+    },
+    "market_stall": {
+      "basis": "per_unit",
+      "kg_per_unit": 5.0,
+      "stream_shares": "market",
+      "note": "Same as per_unit.market."
+    },
+    "workshop_industrial": {
+      "basis": "per_unit",
+      "kg_per_unit": 3.0,
+      "stream_shares": "industrial",
+      "note": "Assumed per workshop; process waste that is not municipal solid waste is excluded."
+    },
+    "institutional": {
+      "basis": "per_unit",
+      "kg_per_unit": 3.0,
+      "stream_shares": "public_institutional",
+      "note": "Assumed per office of a government or community body."
+    },
+    "storage_parking": {
+      "basis": "per_unit",
+      "kg_per_unit": 0.2,
+      "stream_shares": "commercial_retail",
+      "note": "Assumed: packaging and sweepings only."
+    },
+    "vacant": {
+      "basis": "none",
+      "kg_per_unit": 0.0,
+      "stream_shares": "household",
+      "note": "Vacant units generate no regular waste."
+    },
+    "under_construction": {
+      "basis": "none",
+      "kg_per_unit": 0.0,
+      "stream_shares": "household",
+      "note": "C&D waste is handled under the C&D Waste Management Rules, 2025, not municipal collection."
+    }
+  },
+  "building_use_typology": {
+    "_status": "ASSUMPTION. When a building has a surveyed building use but no use-mix rows, its waste is estimated from this OSM typology with the footprint and floors. Round 3 (weighed sample) calibrates this by weighing each stream for several days at a stratified sample of buildings with this building use and fitting kg/day per unit or bed.",
+    "independent_house": "residential_house",
+    "apartment_society": "residential_apartment",
+    "pg_coliving_building": "residential_apartment",
+    "hostel": "hotel",
+    "hotel_guesthouse": "hotel",
+    "mixed_use_shops_below": "mixed_use",
+    "commercial_shops": "commercial_retail",
+    "commercial_offices": "commercial_office",
+    "food_establishment": "food_service",
+    "hospital_clinic": "healthcare",
+    "school_college": "educational",
+    "religious": "religious",
+    "government_public": "public_institutional",
+    "market": "market",
+    "workshop_industrial": "industrial",
+    "under_construction": "construction",
+    "vacant_or_abandoned": "structure",
+    "non_occupied_structure": "structure"
+  }
 }

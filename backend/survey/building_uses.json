@@ -1,0 +1,151 @@
+{
+  "_about": "Round 1 building use: what it means for collection, the bulk waste generator (BWG) entity group, the use-mix rows a surveyor is offered, and checks that flag a use mix that contradicts the building use. Typologies for estimating waste are in backend/buildings/norms.json (building_use_typology). BWG entity texts quote backend/regulations/library/swm_rules_2026.json exactly (SWM Rules 2026, r. 3(1)(i)).",
+  "collection_modes": {
+    "door_to_door": {"label": "Door-to-door collection, four streams", "rule": "39(4)"},
+    "daily_commercial": {"label": "Door-to-door, four streams; daily wet waste pickup recommended", "rule": "39(4)"},
+    "daily_bulk": {"label": "Daily collection of market waste", "rule": "39(19)"},
+    "cnd_on_request": {"label": "C&D waste collection on request", "rule": "5(1)(d)"},
+    "none": {"label": "No regular collection", "rule": null}
+  },
+  "uses": {
+    "residential_dwelling": {"label": "Homes (flats or dwellings)", "fields": ["count", "occupants_total"]},
+    "pg_coliving": {"label": "PG or co-living", "fields": ["count", "beds_total"]},
+    "hostel": {"label": "Hostel", "fields": ["count", "beds_total"]},
+    "hotel_guesthouse": {"label": "Hotel or guest house", "fields": ["count", "beds_total"]},
+    "shop_retail": {"label": "Shops", "fields": ["count"]},
+    "food_service": {"label": "Restaurant, café or eatery", "fields": ["count"]},
+    "office": {"label": "Offices", "fields": ["count"]},
+    "clinic_healthcare": {"label": "Clinic or healthcare", "fields": ["count"]},
+    "educational": {"label": "School, college or coaching centre", "fields": ["count"]},
+    "religious": {"label": "Place of worship", "fields": ["count"]},
+    "market_stall": {"label": "Market stalls", "fields": ["count"]},
+    "workshop_industrial": {"label": "Workshop or small industry", "fields": ["count"]},
+    "institutional": {"label": "Government or community office", "fields": ["count"]},
+    "storage_parking": {"label": "Storage or parking", "fields": ["count"]},
+    "vacant": {"label": "Vacant units", "fields": ["count"]},
+    "under_construction": {"label": "Under construction", "fields": ["count"]}
+  },
+  "occupied_uses": ["residential_dwelling", "pg_coliving", "hostel", "hotel_guesthouse", "shop_retail", "food_service",
+                    "office", "clinic_healthcare", "educational", "religious", "market_stall", "workshop_industrial", "institutional"],
+  "_checks": "Contradiction checks are survey quality rules, not regulation. 'expects_any': when use-mix rows exist, at least one must be one of these uses. 'warn_over': warn when a use's field is above the number given. 'no_occupied_uses': warn when any occupied use is recorded. The surveyor is warned and can still save.",
+  "building_uses": {
+    "independent_house": {
+      "label": "Independent house", "collection_mode": "door_to_door", "bwg_entity": null,
+      "default_use_mix": ["residential_dwelling"], "ask_society_name": false,
+      "checks": {"expects_any": ["residential_dwelling"],
+                 "warn_over": [{"use": "pg_coliving", "field": "beds_total", "max": 6},
+                               {"use": "hostel", "field": "beds_total", "max": 6},
+                               {"use": "hotel_guesthouse", "field": "beds_total", "max": 6},
+                               {"use": "residential_dwelling", "field": "count", "max": 4}]}
+    },
+    "apartment_society": {
+      "label": "Apartment or society", "collection_mode": "door_to_door",
+      "bwg_entity": {"group": "residential", "entity": "residential societies"},
+      "default_use_mix": ["residential_dwelling"], "ask_society_name": true,
+      "checks": {"expects_any": ["residential_dwelling"]}
+    },
+    "pg_coliving_building": {
+      "label": "PG or co-living building", "collection_mode": "door_to_door",
+      "bwg_entity": {"group": "commercial", "entity": "hostels"},
+      "_assumption": "A PG or co-living building is treated as a hostel for the BWG entity list, which does not name PGs.",
+      "default_use_mix": ["pg_coliving"], "ask_society_name": false,
+      "checks": {"expects_any": ["pg_coliving", "hostel"]}
+    },
+    "hostel": {
+      "label": "Hostel", "collection_mode": "door_to_door",
+      "bwg_entity": {"group": "commercial", "entity": "hostels"},
+      "default_use_mix": ["hostel"], "ask_society_name": false,
+      "checks": {"expects_any": ["hostel", "pg_coliving"]}
+    },
+    "hotel_guesthouse": {
+      "label": "Hotel or guest house", "collection_mode": "daily_commercial",
+      "bwg_entity": {"group": "commercial", "entity": "hotels"},
+      "default_use_mix": ["hotel_guesthouse"], "ask_society_name": false,
+      "checks": {"expects_any": ["hotel_guesthouse"]}
+    },
+    "mixed_use_shops_below": {
+      "label": "Mixed use: shops below, homes above", "collection_mode": "door_to_door",
+      "bwg_entity": {"group": "commercial", "entity": "commercial establishments including railways, bus stations or depots, airports, ports"},
+      "default_use_mix": ["residential_dwelling", "shop_retail"], "ask_society_name": true,
+      "checks": {"expects_any": ["residential_dwelling", "pg_coliving", "hostel"]}
+    },
+    "commercial_shops": {
+      "label": "Shops", "collection_mode": "door_to_door",
+      "bwg_entity": {"group": "commercial", "entity": "commercial establishments including railways, bus stations or depots, airports, ports"},
+      "default_use_mix": ["shop_retail"], "ask_society_name": false,
+      "checks": {"expects_any": ["shop_retail", "food_service", "clinic_healthcare", "office"]}
+    },
+    "commercial_offices": {
+      "label": "Offices", "collection_mode": "door_to_door",
+      "bwg_entity": {"group": "institutional", "entity": "public sector undertakings or private companies"},
+      "default_use_mix": ["office"], "ask_society_name": false,
+      "checks": {"expects_any": ["office"]}
+    },
+    "food_establishment": {
+      "label": "Restaurant or food business", "collection_mode": "daily_commercial",
+      "bwg_entity": {"group": "commercial", "entity": "commercial establishments including railways, bus stations or depots, airports, ports"},
+      "default_use_mix": ["food_service"], "ask_society_name": false,
+      "checks": {"expects_any": ["food_service"]}
+    },
+    "hospital_clinic": {
+      "label": "Hospital or clinic", "collection_mode": "door_to_door",
+      "bwg_entity": {"group": "commercial", "entity": "hospitals, nursing homes"},
+      "default_use_mix": ["clinic_healthcare"], "ask_society_name": false,
+      "checks": {"expects_any": ["clinic_healthcare"]}
+    },
+    "school_college": {
+      "label": "School or college", "collection_mode": "door_to_door",
+      "bwg_entity": {"group": "institutional", "entity": "schools, colleges, universities, other educational institutions"},
+      "default_use_mix": ["educational"], "ask_society_name": false,
+      "checks": {"expects_any": ["educational"]}
+    },
+    "religious": {
+      "label": "Place of worship", "collection_mode": "door_to_door",
+      "bwg_entity": {"group": "institutional", "entity": "community places or like"},
+      "default_use_mix": ["religious"], "ask_society_name": false,
+      "checks": {"expects_any": ["religious"]}
+    },
+    "government_public": {
+      "label": "Government or public building", "collection_mode": "door_to_door",
+      "bwg_entity": {"group": "institutional", "entity": "Central or State Government departments or undertakings"},
+      "default_use_mix": ["institutional"], "ask_society_name": false,
+      "checks": {"expects_any": ["institutional", "office", "educational", "clinic_healthcare"]}
+    },
+    "market": {
+      "label": "Market", "collection_mode": "daily_bulk",
+      "bwg_entity": {"group": "commercial", "entity": "wholesale markets including Mandis for agricultural and horticultural produce, fish and meat"},
+      "_assumption": "Every market is matched to the wholesale market entity; a retail market may not be a BWG entity.",
+      "default_use_mix": ["market_stall"], "ask_society_name": false,
+      "checks": {"expects_any": ["market_stall", "shop_retail", "food_service"]}
+    },
+    "workshop_industrial": {
+      "label": "Workshop or small industry", "collection_mode": "door_to_door",
+      "bwg_entity": {"group": "commercial", "entity": "industrial units and industrial areas"},
+      "default_use_mix": ["workshop_industrial"], "ask_society_name": false,
+      "checks": {"expects_any": ["workshop_industrial"]}
+    },
+    "under_construction": {
+      "label": "Under construction", "collection_mode": "cnd_on_request", "bwg_entity": null,
+      "default_use_mix": [], "ask_society_name": false,
+      "checks": {"no_occupied_uses": true}
+    },
+    "vacant_or_abandoned": {
+      "label": "Vacant or abandoned", "collection_mode": "none", "bwg_entity": null,
+      "default_use_mix": [], "ask_society_name": false,
+      "checks": {"no_occupied_uses": true}
+    },
+    "non_occupied_structure": {
+      "label": "Structure nobody lives or works in (tank, shed, garage)", "collection_mode": "none", "bwg_entity": null,
+      "default_use_mix": [], "ask_society_name": false,
+      "checks": {"no_occupied_uses": true}
+    }
+  },
+  "osm_hint": {
+    "_note": "OSM category shown to the surveyor as a hint only; it is never preselected.",
+    "residential_house": "independent_house", "residential_apartment": "apartment_society", "unclassified": "independent_house",
+    "mixed_use": "mixed_use_shops_below", "commercial_retail": "commercial_shops", "commercial_office": "commercial_offices",
+    "food_service": "food_establishment", "hotel": "hotel_guesthouse", "healthcare": "hospital_clinic",
+    "educational": "school_college", "religious": "religious", "market": "market", "industrial": "workshop_industrial",
+    "public_institutional": "government_public", "construction": "under_construction", "structure": "non_occupied_structure"
+  }
+}

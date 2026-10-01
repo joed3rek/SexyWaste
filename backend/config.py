@@ -7,6 +7,14 @@ ROOT = Path(__file__).resolve().parent.parent
 CACHE_DIR = ROOT / "data" / "cache"
 FRONTEND_DIR = ROOT / "frontend"
 
+# Survey frontage photos (Round 1: at most one optional photo per visit). Stored under data/photos/,
+# which is git-ignored. Surveyors are told not to photograph people or the inside of homes.
+PHOTO_DIR = ROOT / "data" / "photos"
+PHOTO_MAX_BYTES = 3 * 1024 * 1024
+# Photos older than this are deleted by the retention job; their database rows keep the hash so the
+# record shows a photo existed. A policy choice for the pilot, not a regulatory requirement.
+PHOTO_RETENTION_DAYS = 365
+
 
 @dataclass(frozen=True)
 class Area:
