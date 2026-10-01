@@ -19,8 +19,8 @@ function icon(name) {
 }
 
 // Where the full app (frontend + Python API) is hosted. GitHub Pages serves only the static
-// frontend, so pages there show a banner pointing to it. Set this once the app is deployed.
-const FULL_APP_URL = "";
+// frontend, so its data pages forward here (see renderShell).
+const FULL_APP_URL = "https://swm-urban-waste.onrender.com/";
 
 const NAV = [
   { key: "home", label: "Home", href: "index.html", icon: "home" },
@@ -85,6 +85,12 @@ function activeNavKey() {
   }
 
   if (location.hostname.endsWith("github.io")) {
+    // Pages that need the API cannot work here, so open them on the full app instead.
+    const page = location.pathname.split("/").pop();
+    if (FULL_APP_URL && /^(map|builder|rules)\.html$/.test(page)) {
+      location.replace(FULL_APP_URL + page + location.search);
+      return;
+    }
     const note = document.createElement("div");
     note.className = "preview-banner";
     note.innerHTML = FULL_APP_URL

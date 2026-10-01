@@ -463,11 +463,11 @@ Then open http://127.0.0.1:8000. The first load downloads OSM data through Overp
 
 The app is one FastAPI server that also serves the frontend, so it needs a host that runs Python. GitHub Pages only serves static files.
 
-- **Full app (Render).** `render.yaml` is a Render Blueprint. In the Render dashboard choose *New → Blueprint* and pick this repository. Render installs `requirements.txt` and starts `uvicorn backend.api.main:app --host 0.0.0.0 --port $PORT`. The first page load downloads OSM data through Overpass, which takes a few minutes.
-  - The free plan has no persistent disk, so the OSM cache is downloaded again after each restart and survey records are lost. Use a paid plan with the disk in `render.yaml` before collecting real surveys.
+- **Full app (Render).** `render.yaml` is a Render Blueprint. In the Render dashboard choose *New → Blueprint* and pick this repository. Render installs `requirements.txt` and starts `uvicorn backend.api.main:app --host 0.0.0.0 --port $PORT`. The build copies the prebuilt HSR map data from `deploy/cache/` into `data/cache/`, because Nominatim and Overpass often block cloud servers.
+  - The free plan has no persistent disk, so survey records are lost on each restart, and the app sleeps when idle. Use a paid plan with the disk in `render.yaml` before collecting real surveys.
   - The app has no login yet, so anyone with the link can edit survey records.
-  - After deploying, set `FULL_APP_URL` in `frontend/ui.js` so the GitHub Pages copy links to it.
-- **Design preview (GitHub Pages).** `.github/workflows/static.yml` publishes `frontend/` on every push to `main`. Pages cannot run the API, so the maps and Rules library show no data there, and a banner says so.
+  - Live at https://swm-urban-waste.onrender.com (`FULL_APP_URL` in `frontend/ui.js`).
+- **GitHub Pages.** `.github/workflows/static.yml` publishes `frontend/` on every push to `main`. Pages cannot run the API, so its map, route builder and rules pages forward to the Render app.
 
 Current code layout:
 

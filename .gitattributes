@@ -1,0 +1,2 @@
+# Prebuilt OSM cache: keep byte-for-byte (no line-ending conversion)
+deploy/cache/** -text

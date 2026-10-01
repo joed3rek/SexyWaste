@@ -5,15 +5,18 @@ services:
     name: swm-urban-waste
     runtime: python
     plan: free
-    buildCommand: pip install -r requirements.txt
+    # Copy the prebuilt HSR map cache (deploy/cache) so the server never has to download it:
+    # Nominatim and Overpass often block or stall requests from cloud hosts.
+    buildCommand: pip install -r requirements.txt && mkdir -p data/cache && cp -r deploy/cache/. data/cache/
     startCommand: uvicorn backend.api.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /api/pilots
     envVars:
       - key: PYTHON_VERSION
         value: 3.10.6
-    # The free plan has no persistent disk: the OSM cache (data/cache) is re-downloaded
-    # after each restart and survey records (data/survey.db) are lost. For real surveys,
-    # switch to a paid plan and uncomment the disk below.
+    # The free plan has no persistent disk, so survey records (data/survey.db) are lost on
+    # each restart. For real surveys, switch to a paid plan and uncomment the disk below.
+    # A disk mounted on data/ hides the build-time cache, so then also run the cp above
+    # in startCommand.
     # disk:
     #   name: swm-data
     #   mountPath: /opt/render/project/src/data
