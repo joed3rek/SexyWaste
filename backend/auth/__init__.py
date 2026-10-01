@@ -33,11 +33,12 @@ def role(key: str) -> dict:
 
 
 def actor(headers) -> dict:
-    """The acting user from request headers: {"name", "role", "verified": False}.
+    """The acting user from request headers: {"name", "role", "sectors", "verified": False}.
 
     Raises KeyError for a role that is not in the registry."""
     role_key = (headers.get("x-swm-role") or "").strip()
     name = unquote((headers.get("x-swm-user") or "").strip())
+    sectors = [unquote(s).strip() for s in (headers.get("x-swm-sectors") or "").split(",") if s.strip()]
     if role_key:
         role(role_key)
-    return {"name": name or None, "role": role_key or None, "verified": False}
+    return {"name": name or None, "role": role_key or None, "sectors": sectors, "verified": False}

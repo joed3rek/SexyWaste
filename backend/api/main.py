@@ -10,6 +10,7 @@ from __future__ import annotations
 import threading
 import time
 import uuid
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.gzip import GZipMiddleware
@@ -22,11 +23,20 @@ from backend.buildings.layers import sectors as pilot_sectors
 from backend.config import FRONTEND_DIR, PILOTS, WASTE_STREAMS
 from backend.routing import points as points_v2
 from backend.routing import parks, twotier
+from backend.api.survey_api import router as survey_router
+from backend.survey import service as survey_service
 from backend.survey import state as survey_state
 from backend.survey import store as survey_store
 
-app = FastAPI(title="SWM Urban Waste Intelligence")
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    survey_service.purge_old_photos()  # photo retention (backend/config.py)
+    yield
+
+
+app = FastAPI(title="SWM Urban Waste Intelligence", lifespan=lifespan)
 app.add_middleware(GZipMiddleware, minimum_size=2000)
+app.include_router(survey_router)
 
 
 def _pilot(pilot_key: str) -> str:
@@ -76,7 +86,10 @@ def get_buildings(pilot_key: str):
 @app.get("/api/pilots/{pilot_key}/summary")
 def get_summary(pilot_key: str):
     pilot = _pilot(pilot_key)
-    return generators.summary(pilot, survey_state.building_states(pilot))
+    out = generators.summary(pilot, survey_state.building_states(pilot))
+    sectors = {bid: r["sector"] for bid, r in generators._base_records_cached(pilot).items()}
+    out["survey"] = survey_service.survey_summary(pilot, sectors)
+    return out
 
 
 @app.get("/api/pilots/{pilot_key}/overrides")
@@ -98,10 +111,12 @@ def _building_id(pilot: str, building_id: str) -> str:
 
 @app.get("/api/pilots/{pilot_key}/building")
 def get_building(pilot_key: str, id: str):
-    """Full building card: OSM base, current survey values and all computed fields."""
+    """Full building card: OSM base, computed fields, and the survey detail (each field's current
+    value and source, use mix, visits, open map problems, contradictions)."""
     pilot = _pilot(pilot_key)
     bid = _building_id(pilot, id)
-    return generators.building_properties(pilot, bid, survey_state.building_state(pilot, bid))
+    props = generators.building_properties(pilot, bid, survey_state.building_state(pilot, bid))
+    return {**props, "survey_detail": survey_service.building_detail(pilot, bid)}
 
 
 class SurveyIn(BaseModel):

@@ -241,17 +241,15 @@ def _weakest(sources: list[str]) -> str:
     return min(sources, key=SOURCE_RANK.get) if sources else "assumed"
 
 
-def _mix_estimate(rows: list[dict]) -> tuple[_Tally, list[str], set[str]]:
-    """Sum of use-mix rows. Returns (tally, sources of the inputs used, respondents behind them)."""
-    t, sources, respondents = _Tally(), [], set()
+def _mix_estimate(rows: list[dict]) -> tuple[_Tally, list[str]]:
+    """Sum of use-mix rows. Returns (tally, sources of the inputs used)."""
+    t, sources = _Tally(), []
 
     def take(row, name):
         f = row["fields"].get(name)
         if f is None:
             return None
         sources.append(f["source"])
-        if f.get("respondent"):
-            respondents.add(f["respondent"])
         return float(f["value"])
 
     for row in rows:
@@ -267,7 +265,7 @@ def _mix_estimate(rows: list[dict]) -> tuple[_Tally, list[str], set[str]]:
             t.add(count * n["kg_per_unit"], n["stream_shares"])
         if not row["fields"]:
             sources.append("assumed")
-    return t, sources, respondents
+    return t, sources
 
 
 def _share_key(cat: str) -> str:
@@ -364,7 +362,7 @@ def compute(base: dict, state: dict | None = None) -> dict:
     Quantity: active use-mix rows if any; else the surveyed building use's typology with footprint
     and floors; else the OSM typology. Collection mode and BWG entity group come from the resolved
     building use when present, and from the OSM category otherwise. Every quantity carries the
-    weakest source among its inputs and the respondents behind them."""
+    weakest source among its inputs."""
     bu_f = _field(state, "building_use")
     building_use = bu_f["value"] if bu_f else None
     footprint = base["footprint_m2"]
@@ -385,15 +383,12 @@ def compute(base: dict, state: dict | None = None) -> dict:
     use_for_rules = building_use or hint
 
     rows = (state or {}).get("use_mix") or []
-    respondents: set[str] = set()
     if rows:
-        t, sources, respondents = _mix_estimate(rows)
+        t, sources = _mix_estimate(rows)
         basis, quantity_source = "use_mix", "estimate: surveyed use mix x assumed rates"
     elif building_use:
         t = _typology_estimate(cat, sub, floor_area, levels, footprint)
         sources = [bu_f["source"], floors_src]
-        if bu_f.get("respondent"):
-            respondents.add(bu_f["respondent"])
         basis, quantity_source = "building_use", "estimate: surveyed building use x footprint x floors"
     else:
         t = _typology_estimate(cat, sub, floor_area, levels, footprint)
@@ -442,7 +437,6 @@ def compute(base: dict, state: dict | None = None) -> dict:
         "quantity_basis": basis,
         "quantity_input_source": kg_source,
         "quantity_is_estimate": is_estimate,
-        "quantity_respondents": sorted(respondents),
         "wet_home_composted": round(home_composted, 2),
         "wet_to_collect": round(streams["wet"] - home_composted, 2),
         "home_compost_basis": home_basis,

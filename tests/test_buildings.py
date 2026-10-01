@@ -44,16 +44,16 @@ def test_poi_category_handles_missing_tags():
 
 # ---------- Survey state helpers ----------
 
-def state(fields=None, mix=None, respondent="owner", outcome="completed"):
+def state(fields=None, mix=None, outcome="completed"):
     """A survey state as backend/survey/state.py builds it. fields: {name: value or (value, source)};
     mix: [(use, {field: value or (value, source)})]."""
     def f(v):
         value, source = v if isinstance(v, tuple) else (v, "surveyed")
-        return {"value": value, "source": source, "respondent": respondent, "recorded_at": "2026-10-01T00:00:00+00:00",
+        return {"value": value, "source": source, "recorded_at": "2026-10-01T00:00:00+00:00",
                 "recorded_by": "Asha", "visit_id": "v1", "note": None}
     return {"fields": {k: f(v) for k, v in (fields or {}).items()},
             "use_mix": [{"id": f"m{i}", "use": u, "fields": {k: f(v) for k, v in fl.items()}} for i, (u, fl) in enumerate(mix or [])],
-            "visit": {"outcome": outcome, "respondent": respondent, "ended_at": None, "user_name": "Asha"}}
+            "visit": {"outcome": outcome, "ended_at": None, "user_name": "Asha"}}
 
 
 # ---------- Estimation ----------
@@ -72,7 +72,7 @@ def test_mixed_building_sums_its_use_mix_rows():
     p = g.compute(base(footprint_m2=300), state({"building_use": "mixed_use_shops_below"}, mix))
     assert p["kg_day"] == pytest.approx(37.0, abs=0.01)
     assert p["quantity_basis"] == "use_mix" and p["quantity_is_estimate"]
-    assert p["quantity_input_source"] == "surveyed" and p["quantity_respondents"] == ["owner"]
+    assert p["quantity_input_source"] == "surveyed"
     assert uses.contradictions("mixed_use_shops_below", [{"use": u, **fl} for u, fl in mix]) == []
 
 

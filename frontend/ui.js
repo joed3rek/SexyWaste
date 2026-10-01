@@ -64,7 +64,8 @@ function signOut() {
 
 function sessionHeaders() {
   const s = getSession();
-  return s ? { "X-SWM-Role": s.role, "X-SWM-User": encodeURIComponent(s.name || "") } : {};
+  return s ? { "X-SWM-Role": s.role, "X-SWM-User": encodeURIComponent(s.name || ""),
+                "X-SWM-Sectors": (s.sectors || []).map(encodeURIComponent).join(",") } : {};
 }
 
 async function apiFetch(path, options = {}) {

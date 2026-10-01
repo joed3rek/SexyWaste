@@ -38,9 +38,9 @@ def test_only_this_tasks_roles_are_built_and_they_have_a_home():
 
 
 def test_actor_reads_role_and_name_and_is_never_verified():
-    a = auth.actor({"x-swm-role": "surveyor", "x-swm-user": "Asha%20K"})
-    assert a == {"name": "Asha K", "role": "surveyor", "verified": False}
-    assert auth.actor({}) == {"name": None, "role": None, "verified": False}
+    a = auth.actor({"x-swm-role": "surveyor", "x-swm-user": "Asha%20K", "x-swm-sectors": "Sector%203,Sector%204"})
+    assert a == {"name": "Asha K", "role": "surveyor", "sectors": ["Sector 3", "Sector 4"], "verified": False}
+    assert auth.actor({}) == {"name": None, "role": None, "sectors": [], "verified": False}
     with pytest.raises(KeyError):
         auth.actor({"x-swm-role": "mayor"})
 
@@ -49,5 +49,5 @@ def test_api_lists_roles_and_echoes_the_actor():
     client = TestClient(app)
     assert len(client.get("/api/roles").json()["roles"]) == 14
     me = client.get("/api/auth/me", headers={"X-SWM-Role": "admin", "X-SWM-User": "Ravi"}).json()
-    assert me == {"name": "Ravi", "role": "admin", "verified": False}
+    assert me == {"name": "Ravi", "role": "admin", "sectors": [], "verified": False}
     assert client.get("/api/auth/me", headers={"X-SWM-Role": "mayor"}).status_code == 400

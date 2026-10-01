@@ -1,9 +1,9 @@
 """Current survey state of each building, read from the Round 1 tables through the resolver.
 
     state = {
-      "fields":   {field: {"value", "source", "respondent", "recorded_at", "recorded_by", "visit_id", "note"}},
+      "fields":   {field: {"value", "source", "recorded_at", "recorded_by", "visit_id", "note"}},
       "use_mix":  [{"id", "use", "fields": {field: {...same...}}}],   # active rows only
-      "visit":    {"outcome", "respondent", "ended_at", "user_name"} or None,  # latest survey visit
+      "visit":    {"outcome", "ended_at", "user_name"} or None,  # latest survey visit
     }
 
 Buildings with no visit and no values have no state. The legacy survey table is migrated the
@@ -46,9 +46,9 @@ def building_states(pilot: str, building_ids: list[str] | None = None, db_path: 
             args += list(building_ids)
         mix_rows = [dict(r) for r in con.execute(f"SELECT id, building_id, use FROM use_mix WHERE {where} AND status = 'active'", args)]
         visits = {}
-        for r in con.execute(f"SELECT building_id, outcome, respondent, ended_at, started_at, user_name FROM visit"
+        for r in con.execute(f"SELECT building_id, outcome, ended_at, started_at, user_name FROM visit"
                              f" WHERE {where} AND purpose = 'survey' AND outcome IS NOT NULL ORDER BY started_at", args):
-            visits[r["building_id"]] = {k: r[k] for k in ("outcome", "respondent", "ended_at", "user_name")}
+            visits[r["building_id"]] = {k: r[k] for k in ("outcome", "ended_at", "user_name")}
         ids = building_ids
         if ids is None:
             ids = {r[0] for r in con.execute("SELECT DISTINCT entity_id FROM field_value WHERE entity_type = 'building'")}

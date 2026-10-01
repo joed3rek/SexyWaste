@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS visit (
     started_at TEXT NOT NULL,
     ended_at TEXT,
     outcome TEXT CHECK (outcome IS NULL OR outcome IN {OUTCOMES}),
-    respondent TEXT CHECK (respondent IS NULL OR respondent IN {RESPONDENTS}),
+    respondent TEXT CHECK (respondent IS NULL OR respondent IN {RESPONDENTS}),  -- optional; not asked in Round 1
     gps_lat REAL, gps_lon REAL, gps_accuracy_m REAL,
     notes TEXT
 );

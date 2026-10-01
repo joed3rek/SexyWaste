@@ -15,6 +15,11 @@ PHOTO_MAX_BYTES = 3 * 1024 * 1024
 # record shows a photo existed. A policy choice for the pilot, not a regulatory requirement.
 PHOTO_RETENTION_DAYS = 365
 
+# Survey quality settings (not regulation).
+GPS_WARN_DISTANCE_M = 50        # warn when the phone's position is this far from the building footprint
+SPOT_CHECK_RATE = 0.05          # share of each surveyor's completed quick visits sampled per week
+SPOT_CHECK_WINDOW_DAYS = 7
+
 
 @dataclass(frozen=True)
 class Area:

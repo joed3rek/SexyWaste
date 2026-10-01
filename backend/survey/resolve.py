@@ -24,10 +24,9 @@ def pick(rows: list[dict]) -> dict | None:
 
 def resolve(con: sqlite3.Connection, entity_type: str, entity_ids: list[str] | None = None,
             fields: list[str] | None = None) -> dict[str, dict[str, dict]]:
-    """Current values: {entity_id: {field: {"value", "source", "recorded_at", "recorded_by", "visit_id",
-    "respondent", "note"}}}. Pass entity_ids to limit the lookup."""
-    sql = ("SELECT f.rowid AS seq, f.*, v.respondent FROM field_value f LEFT JOIN visit v ON v.id = f.visit_id"
-           " WHERE f.entity_type = ?")
+    """Current values: {entity_id: {field: {"value", "source", "recorded_at", "recorded_by", "visit_id", "note"}}}.
+    Pass entity_ids to limit the lookup."""
+    sql = "SELECT f.rowid AS seq, f.* FROM field_value f WHERE f.entity_type = ?"
     args: list = [entity_type]
     if entity_ids is not None:
         if not entity_ids:
@@ -45,7 +44,7 @@ def resolve(con: sqlite3.Connection, entity_type: str, entity_ids: list[str] | N
         w = pick(rows)
         out.setdefault(eid, {})[field] = {
             "value": json.loads(w["value"]), "source": w["source"], "recorded_at": w["recorded_at"],
-            "recorded_by": w["recorded_by"], "visit_id": w["visit_id"], "respondent": w["respondent"], "note": w["note"],
+            "recorded_by": w["recorded_by"], "visit_id": w["visit_id"], "note": w["note"],
         }
     return out
 
@@ -53,6 +52,6 @@ def resolve(con: sqlite3.Connection, entity_type: str, entity_ids: list[str] | N
 def history(con: sqlite3.Connection, entity_type: str, entity_id: str) -> list[dict]:
     """Every value ever recorded for an entity, oldest first."""
     rows = con.execute(
-        "SELECT f.*, v.respondent, v.purpose FROM field_value f LEFT JOIN visit v ON v.id = f.visit_id"
+        "SELECT f.*, v.purpose FROM field_value f LEFT JOIN visit v ON v.id = f.visit_id"
         " WHERE f.entity_type = ? AND f.entity_id = ? ORDER BY f.recorded_at, f.rowid", (entity_type, entity_id))
     return [{**dict(r), "value": json.loads(r["value"])} for r in rows]

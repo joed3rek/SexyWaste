@@ -86,13 +86,6 @@ def test_verified_value_keeps_the_surveyed_value_it_confirms(con):
     assert [h["source"] for h in resolve.history(con, "building", "way/1")] == ["surveyed", "verified"]
 
 
-def test_resolver_reports_the_respondent(con):
-    v = _visit(con)
-    con.execute("UPDATE visit SET respondent = 'tenant' WHERE id = ?", (v,))
-    db.record_value(con, "building", "way/1", "collection_arrangement", "municipal_door_to_door", "surveyed", v, ACTOR)
-    assert resolve.resolve(con, "building")["way/1"]["collection_arrangement"]["respondent"] == "tenant"
-
-
 def test_schema_accepts_a_round_2_unit_entity_without_changes(con, monkeypatch):
     monkeypatch.setattr(db, "ENTITY_TYPES", (*db.ENTITY_TYPES, "unit"))
     db.record_value(con, "unit", "unit-1", "occupants", 4, "surveyed", None, ACTOR)
