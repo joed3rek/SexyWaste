@@ -23,10 +23,10 @@ from backend.buildings.layers import sectors as pilot_sectors
 from backend.config import FRONTEND_DIR, PILOTS, WASTE_STREAMS
 from backend.routing import points as points_v2
 from backend.routing import parks, twotier
+from backend.routing.network import node_lonlat
 from backend.api.survey_api import router as survey_router
 from backend.survey import service as survey_service
 from backend.survey import state as survey_state
-from backend.survey import store as survey_store
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
@@ -119,55 +119,6 @@ def get_building(pilot_key: str, id: str):
     return {**props, "survey_detail": survey_service.building_detail(pilot, bid)}
 
 
-class SurveyIn(BaseModel):
-    use: str | None = None
-    units: int | None = Field(None, ge=0)
-    commercial_units: int | None = Field(None, ge=0)
-    floors: float | None = Field(None, gt=0, le=100)
-    water_lpd: float | None = Field(None, ge=0)
-    water_source: str | None = None
-    onsite_processing: str | None = None
-    segregation_observed: str | None = None
-    weighed_kg_day: float | None = Field(None, ge=0)
-    surveyor: str | None = None
-    notes: str | None = None
-    home_compost: str | None = None
-    home_compost_method: str | None = None
-    home_compost_kg: float | None = Field(None, ge=0)
-
-
-@app.put("/api/pilots/{pilot_key}/survey")
-def put_survey(pilot_key: str, id: str, survey: SurveyIn, request: Request):
-    """Older survey form: recorded as a quick visit in the Round 1 model (removed in Phase 4)."""
-    pilot = _pilot(pilot_key)
-    bid = _building_id(pilot, id)
-    try:
-        base = generators._base_records_cached(pilot)[bid]
-        survey_store.save(pilot, bid, survey.model_dump(), actor=auth.actor(request.headers),
-                          osm={"category": base["category"], "sub_use": base["sub_use"]})
-    except (ValueError, KeyError) as err:
-        raise HTTPException(422, str(err)) from err
-    return generators.building_properties(pilot, bid, survey_state.building_state(pilot, bid))
-
-
-@app.delete("/api/pilots/{pilot_key}/survey")
-def delete_survey(pilot_key: str, id: str):
-    _building_id(_pilot(pilot_key), id)
-    raise HTTPException(409, "Survey history is kept and cannot be cleared. Record a new visit to correct it.")
-
-
-@app.get("/api/survey/options")
-def survey_options():
-    return {
-        "use": survey_store.USES,
-        "onsite_processing": survey_store.ONSITE_PROCESSING,
-        "segregation_observed": survey_store.SEGREGATION,
-        "water_source": survey_store.WATER_SOURCES,
-        "home_compost": survey_store.HOME_COMPOST,
-        "home_compost_method": survey_store.HOME_COMPOST_METHODS,
-    }
-
-
 # ---------- Route Builder v2: collection points ----------
 
 @app.get("/api/pilots/{pilot_key}/v2/points")
@@ -185,8 +136,11 @@ def get_points_v2(pilot_key: str, sector: str | None = None,
         points_v2.vehicle_class(vehicle)
     except (ValueError, KeyError) as err:
         raise HTTPException(422, str(err)) from err
+    G = twotier._graph(pilot)[0]
     for p in pts:
         p["service_min"] = points_v2.service_minutes(p, vehicle, [s for s in stream_list if not (s == "wet" and p.get("wet_excluded"))])
+        # The stretch of street the vehicle drives to collect from this point, for display.
+        p["street"] = [node_lonlat(G, n) for n in p.get("path_nodes", []) if n in G.nodes]
     return {"method": "street_runs", "params": params, "vehicle": vehicle, "streams": stream_list,
             "summary": points_v2.summarise(pts), "points": pts}
 
@@ -291,9 +245,24 @@ _JOBS: dict[str, dict] = {}
 _JOBS_LOCK = threading.Lock()
 
 
+class FleetIn(PlanV2In):
+    target_h: float = Field(5, ge=1, le=16)
+
+
 @app.post("/api/pilots/{pilot_key}/v2/plan/jobs")
 def start_plan_job(pilot_key: str, body: PlanV2In):
     inp = _plan_input(pilot_key, body)
+    return _start_job(lambda report: twotier.plan(inp, report), body.time_limit_s + 10)
+
+
+@app.post("/api/pilots/{pilot_key}/v2/fleet/jobs")
+def start_fleet_job(pilot_key: str, body: FleetIn):
+    """Suggest the fleet that finishes within target_h hours (runs the optimiser several times)."""
+    inp = _plan_input(pilot_key, body)
+    return _start_job(lambda report: twotier.suggest_fleet(inp, body.target_h, report), 4 * (body.time_limit_s + 10))
+
+
+def _start_job(fn, expected_s: float) -> dict:
     job_id = uuid.uuid4().hex[:12]
     job = {"status": "running", "stage": "Starting", "progress": 0.0, "started": time.time(), "result": None, "error": None}
     with _JOBS_LOCK:
@@ -306,13 +275,13 @@ def start_plan_job(pilot_key: str, body: PlanV2In):
 
     def work():
         try:
-            job["result"] = twotier.plan(inp, report)
+            job["result"] = fn(report)
             job["status"] = "done"
         except Exception as err:  # reported to the page, not raised
             job["error"], job["status"] = str(err), "error"
 
     threading.Thread(target=work, daemon=True).start()
-    return {"job_id": job_id, "expected_s": body.time_limit_s + 10}
+    return {"job_id": job_id, "expected_s": expected_s}
 
 
 @app.get("/api/pilots/{pilot_key}/v2/plan/jobs/{job_id}")

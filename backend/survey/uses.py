@@ -41,11 +41,13 @@ def bwg_entity(key: str) -> dict | None:
     return {"group": e["group"], "entity": e["entity"], "rule": regs.cite(bwg["rule"])}
 
 
-def contradictions(key: str, rows: list[dict]) -> list[str]:
-    """Plain-language warnings when active use-mix rows contradict the building use.
+def contradictions(key: str, rows: list[dict]) -> list[dict]:
+    """Warnings when active use-mix rows contradict the building use.
 
     `rows` are active rows: {"use": ..., "count": n, "beds_total": n, "occupants_total": n}.
-    The surveyor is warned and can still save; the warnings are logged for the supervisor."""
+    Each warning has a `code` and its details, for the screens to word in the user's language,
+    and an English `message` for logs. The surveyor is warned and can still save; the warnings
+    are logged for the supervisor."""
     bu = building_use(key)
     checks = bu.get("checks", {})
     labels = {k: v["label"] for k, v in config()["uses"].items()}
@@ -55,14 +57,18 @@ def contradictions(key: str, rows: list[dict]) -> list[str]:
     present = {r["use"] for r in rows}
     expects = checks.get("expects_any")
     if expects and not present & set(expects):
-        out.append(f"{bu['label']} with no {' or '.join(labels[u].lower() for u in expects)} recorded.")
+        out.append({"code": "expects_any", "building_use": key, "uses": list(expects),
+                    "message": f"{bu['label']} with no {' or '.join(labels[u].lower() for u in expects)} recorded."})
     for rule in checks.get("warn_over", []):
         total = sum(float(r.get(rule["field"]) or 0) for r in rows if r["use"] == rule["use"])
         if total > rule["max"]:
             field = {"beds_total": "beds", "count": "units", "occupants_total": "occupants"}[rule["field"]]
-            out.append(f"{bu['label']} with {total:g} {field} of {labels[rule['use']].lower()} (more than {rule['max']}).")
+            out.append({"code": "warn_over", "building_use": key, "use": rule["use"], "field": rule["field"],
+                        "total": total, "max": rule["max"],
+                        "message": f"{bu['label']} with {total:g} {field} of {labels[rule['use']].lower()} (more than {rule['max']})."})
     if checks.get("no_occupied_uses"):
         occupied = present & set(config()["occupied_uses"])
         if occupied:
-            out.append(f"{bu['label']} with occupied uses recorded: {', '.join(labels[u].lower() for u in sorted(occupied))}.")
+            out.append({"code": "no_occupied_uses", "building_use": key, "uses": sorted(occupied),
+                        "message": f"{bu['label']} with occupied uses recorded: {', '.join(labels[u].lower() for u in sorted(occupied))}."})
     return out

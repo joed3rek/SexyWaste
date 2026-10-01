@@ -181,10 +181,10 @@ def _current_value(con, entity_type: str, entity_id: str, field: str):
     return f["value"] if f else None
 
 
-def _write(con, v: dict, actor: dict, entity_type: str, entity_id: str, field: str, value) -> str | None:
-    """Record one value in a visit. In a spot-check, a value that matches the checked visit is
+def _write(con, v: dict, actor: dict, entity_type: str, entity_id: str, field: str, value) -> dict | None:
+    """Record one value in a visit. In a spot-check, a value that matches the current record is
     recorded as verified; a different value is recorded as surveyed and the mismatch is logged.
-    Returns a mismatch message or None."""
+    Returns the mismatch ({field, use, surveyed, checked, message}) or None."""
     if v["purpose"] != "spot_check":
         db.record_value(con, entity_type, entity_id, field, value, "surveyed", v["id"], actor)
         return None
@@ -196,10 +196,12 @@ def _write(con, v: dict, actor: dict, entity_type: str, entity_id: str, field: s
                     f"Spot-check differs from the survey ({before!r}).")
     kind = "spot_check_building_use_mismatch" if field == "building_use" else "spot_check_mismatch"
     orig = _visit(con, v["spot_check_of"])
-    _review(con, v["pilot"], v["building_id"], v["id"], kind,
-            {"field": field, "entity_type": entity_type, "entity_id": entity_id, "surveyed": before, "checked": value,
-             "surveyor": orig["user_name"], "checked_by": actor.get("name")})
-    return f"{field}: survey said {before!r}, spot-check found {value!r}."
+    use = con.execute("SELECT use FROM use_mix WHERE id = ?", (entity_id,)).fetchone()[0] if entity_type == "use_mix" else None
+    detail = {"field": field, "use": use, "entity_type": entity_type, "entity_id": entity_id, "surveyed": before, "checked": value,
+              "surveyor": orig["user_name"], "checked_by": actor.get("name")}
+    _review(con, v["pilot"], v["building_id"], v["id"], kind, detail)
+    return {"field": field, "use": use, "surveyed": before, "checked": value,
+            "message": f"{field}{f' ({use})' if use else ''}: survey said {before!r}, spot-check found {value!r}."}
 
 
 def set_building_fields(visit_id: str, actor: dict, fields: dict, db_path: Path | None = None) -> dict:
@@ -258,7 +260,8 @@ def add_use_mix(visit_id: str, actor: dict, use: str, values: dict, db_path: Pat
                 con.execute("INSERT INTO use_mix (id, pilot, building_id, use, created_visit_id) VALUES (?, ?, ?, ?, ?)",
                             (mid, v["pilot"], v["building_id"], use, visit_id))
                 if v["purpose"] == "spot_check":
-                    mismatches.append(f"{use}: not in the survey, found by the spot-check.")
+                    mismatches.append({"field": "use_mix", "use": use, "surveyed": None, "checked": "present",
+                                       "message": f"{use}: not in the survey, found by the spot-check."})
                     _review(con, v["pilot"], v["building_id"], visit_id, "spot_check_mismatch",
                             {"field": "use_mix", "use": use, "surveyed": None, "checked": "present",
                              "surveyor": _visit(con, v["spot_check_of"])["user_name"], "checked_by": actor.get("name")})
@@ -284,7 +287,8 @@ def update_use_mix(visit_id: str, actor: dict, row_id: str, values: dict, remove
             if remove:
                 con.execute("UPDATE use_mix SET status = 'removed', removed_visit_id = ? WHERE id = ?", (visit_id, row_id))
                 if v["purpose"] == "spot_check":
-                    mismatches.append(f"{row['use']}: in the survey, not found by the spot-check.")
+                    mismatches.append({"field": "use_mix", "use": row["use"], "surveyed": "present", "checked": None,
+                                       "message": f"{row['use']}: in the survey, not found by the spot-check."})
                     _review(con, v["pilot"], v["building_id"], visit_id, "spot_check_mismatch",
                             {"field": "use_mix", "use": row["use"], "surveyed": "present", "checked": None,
                              "surveyor": _visit(con, v["spot_check_of"])["user_name"], "checked_by": actor.get("name")})
@@ -298,7 +302,7 @@ def update_use_mix(visit_id: str, actor: dict, row_id: str, values: dict, remove
         con.close()
 
 
-def contradictions_for(con, pilot: str, building_id: str) -> list[str]:
+def contradictions_for(con, pilot: str, building_id: str) -> list[dict]:
     bu = resolve.resolve(con, "building", [building_id], ["building_use"]).get(building_id, {}).get("building_use")
     if not bu:
         return []
@@ -471,10 +475,14 @@ def survey_summary(pilot: str, building_sectors: dict[str, str], db_path: Path |
     `building_sectors` maps every building id to its sector, so not-visited buildings are counted."""
     con = db.connect(db_path)
     try:
-        latest = {}
+        latest, by_surveyor = {}, {}
         for r in con.execute("SELECT building_id, outcome, user_name FROM visit WHERE pilot = ? AND purpose = 'survey'"
                              " AND outcome IS NOT NULL ORDER BY started_at", (pilot,)):
             latest[r["building_id"]] = r["outcome"]
+            sv = by_surveyor.setdefault(r["user_name"] or "unknown", {"surveyor": r["user_name"], "visits": 0,
+                                                                      **{o: 0 for o in db.OUTCOMES}})
+            sv["visits"] += 1
+            sv[r["outcome"]] += 1
         uses_now = resolve.resolve(con, "building", fields=["building_use"])
         checks = [dict(r) for r in con.execute(
             "SELECT s.id AS check_id, o.user_name AS surveyor FROM visit s JOIN visit o ON o.id = s.spot_check_of"
@@ -525,4 +533,84 @@ def survey_summary(pilot: str, building_sectors: dict[str, str], db_path: Path |
         "spot_checks_by_surveyor": sorted(per_surveyor.values(), key=lambda s: s["surveyor"] or ""),
         "open_reviews": open_reviews,
         "open_geometry_flags": open_flags,
+        "visits_by_surveyor": sorted(by_surveyor.values(), key=lambda r: r["surveyor"] or ""),
     }
+
+
+def today_count(pilot: str, user_name: str, tz: str = "Asia/Kolkata", db_path: Path | None = None) -> int:
+    """Visits the person closed today (local time of the pilot city)."""
+    from zoneinfo import ZoneInfo
+    local = datetime.now(ZoneInfo(tz))
+    start = local.replace(hour=0, minute=0, second=0, microsecond=0).astimezone(timezone.utc).isoformat(timespec="seconds")
+    con = db.connect(db_path)
+    try:
+        return con.execute("SELECT COUNT(*) FROM visit WHERE pilot = ? AND user_name = ? AND purpose = 'survey'"
+                           " AND outcome IS NOT NULL AND ended_at >= ?", (pilot, user_name, start)).fetchone()[0]
+    finally:
+        con.close()
+
+
+def resolve_review_item(item_id: str, actor: dict, db_path: Path | None = None) -> None:
+    if actor.get("role") != "survey_supervisor":
+        raise SurveyError("Only a survey supervisor resolves review items.", 403)
+    con = db.connect(db_path)
+    try:
+        with con:
+            n = con.execute("UPDATE review_item SET status = 'resolved', resolved_by = ?, resolved_at = ? WHERE id = ? AND status = 'open'",
+                            (actor.get("name"), db.now(), item_id)).rowcount
+        if not n:
+            raise SurveyError("Unknown or already resolved review item.", 404)
+    finally:
+        con.close()
+
+
+# ---------- Sector assignments ----------
+
+def assignments(pilot: str, surveyor_name: str | None = None, db_path: Path | None = None) -> list[dict]:
+    con = db.connect(db_path)
+    try:
+        sql = "SELECT * FROM sector_assignment WHERE pilot = ? AND ended_at IS NULL"
+        args = [pilot]
+        if surveyor_name:
+            sql += " AND surveyor_name = ?"
+            args.append(surveyor_name)
+        return [dict(r) for r in con.execute(sql + " ORDER BY surveyor_name, sector", args)]
+    finally:
+        con.close()
+
+
+def assign_sector(pilot: str, actor: dict, surveyor_name: str, sector: str, db_path: Path | None = None) -> dict:
+    """A supervisor assigns one of their own sectors to a surveyor."""
+    if actor.get("role") != "survey_supervisor":
+        raise SurveyError("Only a survey supervisor assigns sectors.", 403)
+    _check_sector(actor, sector, "This sector")
+    name = (surveyor_name or "").strip()
+    if not name:
+        raise SurveyError("Enter the surveyor's name.")
+    con = db.connect(db_path)
+    try:
+        if con.execute("SELECT 1 FROM sector_assignment WHERE pilot = ? AND surveyor_name = ? AND sector = ? AND ended_at IS NULL",
+                       (pilot, name, sector)).fetchone():
+            raise SurveyError(f"{name} already has {sector}.", 409)
+        aid = db.new_id()
+        with con:
+            con.execute("INSERT INTO sector_assignment (id, pilot, surveyor_name, sector, assigned_by, assigned_at) VALUES (?, ?, ?, ?, ?, ?)",
+                        (aid, pilot, name, sector, actor.get("name"), db.now()))
+        return dict(con.execute("SELECT * FROM sector_assignment WHERE id = ?", (aid,)).fetchone())
+    finally:
+        con.close()
+
+
+def end_assignment(assignment_id: str, actor: dict, db_path: Path | None = None) -> None:
+    if actor.get("role") != "survey_supervisor":
+        raise SurveyError("Only a survey supervisor changes assignments.", 403)
+    con = db.connect(db_path)
+    try:
+        row = con.execute("SELECT * FROM sector_assignment WHERE id = ? AND ended_at IS NULL", (assignment_id,)).fetchone()
+        if not row:
+            raise SurveyError("Unknown or ended assignment.", 404)
+        _check_sector(actor, row["sector"], "This sector")
+        with con:
+            con.execute("UPDATE sector_assignment SET ended_by = ?, ended_at = ? WHERE id = ?", (actor.get("name"), db.now(), assignment_id))
+    finally:
+        con.close()

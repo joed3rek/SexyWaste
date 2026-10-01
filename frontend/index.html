@@ -14,40 +14,43 @@
   <header class="topbar">
     <a class="brand" href="index.html"><span class="logo" data-icon="logo"></span><span class="name">Urban Waste Intelligence</span></a>
     <nav aria-label="Planning tools">
-      <a href="map.html?role=planner">Planner map</a>
-      <a href="builder.html">Route builder</a>
-      <a href="rules.html">Rules library</a>
+      <a href="map.html?role=planner" data-t="signin.planner_map"></a>
+      <a href="builder.html" data-t="signin.route_builder"></a>
+      <a href="rules.html" data-t="signin.rules"></a>
     </nav>
   </header>
 
   <main class="signin">
-    <p class="eyebrow">HSR Layout Sectors 1–7 pilot · Solid Waste Management Rules, 2026</p>
-    <h1>Sign in</h1>
+    <p class="eyebrow" data-t="signin.eyebrow"></p>
+    <h1 data-t="signin.title"></h1>
 
     <div id="current" class="card-box current" hidden>
-      <p>Signed in as <b id="currentName"></b> · <span id="currentRole"></span></p>
+      <p><span data-t="signin.signed_in_as"></span> <b id="currentName"></b> · <span id="currentRole"></span></p>
       <div class="row">
-        <a id="continueBtn" class="btn block" href="#">Continue</a>
-        <button id="signOutBtn" type="button" class="secondary block">Sign out</button>
+        <a id="continueBtn" class="btn block" href="#" data-t="signin.continue"></a>
+        <button id="signOutBtn" type="button" class="secondary block" data-t="common.sign_out"></button>
       </div>
     </div>
 
     <form id="signinForm" class="card-box" novalidate>
       <fieldset class="choice-group">
-        <legend>Your role</legend>
-        <div id="roleChoices" class="choices"><p class="hint">Loading roles…</p></div>
+        <legend data-t="signin.role"></legend>
+        <div id="roleChoices" class="choices"><p class="hint" data-t="signin.loading_roles"></p></div>
       </fieldset>
-      <label>Your name <input id="name" name="name" autocomplete="name" required /></label>
+      <label><span data-t="signin.name"></span><input id="name" name="name" autocomplete="name" required /></label>
       <fieldset id="sectorBox" class="choice-group" hidden>
-        <legend>Your sectors</legend>
+        <legend data-t="signin.sectors"></legend>
         <div id="sectorChoices" class="chips"></div>
+        <p id="assignedNote" class="hint small" data-t="signin.assigned" hidden></p>
       </fieldset>
+      <label><span data-t="signin.language"></span>
+        <select id="language"><option value="en" data-t="lang.en"></option><option value="kn" data-t="lang.kn"></option></select></label>
       <p id="formError" class="warn" hidden></p>
-      <button type="submit" class="block lg">Sign in</button>
-      <p class="hint small">Pilot build: sign-in is not checked. Your role, name and sectors are kept in this browser and recorded with what you save, but they are not verified.</p>
+      <button type="submit" class="block lg" data-t="signin.submit"></button>
+      <p class="hint small" data-t="signin.note"></p>
     </form>
 
-    <p class="hint small">All waste quantities are estimates until replaced by weighed data. Building footprints © OpenStreetMap contributors.</p>
+    <p class="hint small" data-t="signin.footer"></p>
   </main>
 
   <script src="ui.js"></script>
@@ -73,20 +76,36 @@
       $("current").hidden = !role;
       if (!role) return;
       $("currentName").textContent = s.name;
-      $("currentRole").textContent = role.label + (s.sectors?.length ? ` · ${s.sectors.join(", ")}` : "");
+      $("currentRole").textContent = t(`role.${role.key}`) + (s.sectors?.length ? ` · ${s.sectors.join(", ")}` : "");
       $("continueBtn").href = role.home;
     }
 
+    // Sectors a supervisor assigned to this name are ticked (still editable: login is a dummy).
+    async function preselectAssigned() {
+      const name = $("name").value.trim();
+      const role = selectedRole();
+      if (!name || !role || role.key !== "surveyor") return;
+      try {
+        const { assignments } = await apiFetch(`/api/pilots/${PILOT}/assignments?surveyor=${encodeURIComponent(name)}`);
+        if (!assignments.length) return;
+        const sectors = new Set(assignments.map((a) => a.sector));
+        document.querySelectorAll('input[name="sector"]').forEach((c) => (c.checked = sectors.has(c.value)));
+        $("assignedNote").hidden = false;
+      } catch { /* keep manual choice */ }
+    }
+
     (async () => {
+      await UI_READY;
+      $("language").value = (getSession() || {}).language || "en";
       try {
         const [reg, sectors] = await Promise.all([apiFetch("/api/roles"), apiFetch(`/api/pilots/${PILOT}/sectors`)]);
         ROLES = reg.roles;
         $("roleChoices").innerHTML = ROLES.filter((r) => r.built).map((r) => `
           <label class="choice"><input type="radio" name="role" value="${esc(r.key)}" />
-            <span><b>${esc(r.label)}</b><span class="muted small">${esc(r.description)}</span></span></label>`).join("");
+            <span><b>${esc(t(`role.${r.key}`))}</b><span class="muted small">${esc(t(`role.${r.key}.description`))}</span></span></label>`).join("");
         $("sectorChoices").innerHTML = sectors.features.map((f) => f.properties.name).map((n) => `
           <label class="chip"><input type="checkbox" name="sector" value="${esc(n)}" /><span>${esc(n)}</span></label>`).join("");
-        document.querySelectorAll('input[name="role"]').forEach((el) => el.addEventListener("change", updateFields));
+        document.querySelectorAll('input[name="role"]').forEach((el) => el.addEventListener("change", () => { updateFields(); preselectAssigned(); }));
         const s = getSession();
         if (s) {
           $("name").value = s.name || "";
@@ -99,16 +118,22 @@
       }
     })();
 
+    $("name").addEventListener("change", preselectAssigned);
+    $("language").addEventListener("change", () => {
+      const s = getSession();
+      if (s) { setSession({ ...s, language: $("language").value }); applyStrings(); }
+    });
     $("signinForm").addEventListener("submit", (e) => {
       e.preventDefault();
       const role = selectedRole();
       const name = $("name").value.trim();
       const sectors = [...document.querySelectorAll('input[name="sector"]:checked')].map((c) => c.value);
-      const problem = !role ? "Choose your role." : !name ? "Enter your name." : role.jurisdiction === "sector" && !sectors.length ? "Choose at least one sector." : "";
+      const problem = !role ? t("signin.err_role") : !name ? t("signin.err_name") : role.jurisdiction === "sector" && !sectors.length ? t("signin.err_sector") : "";
       $("formError").hidden = !problem;
       $("formError").textContent = problem;
       if (problem) return;
-      setSession({ role: role.key, name, sectors: role.jurisdiction === "sector" ? sectors : [], signed_in_at: new Date().toISOString() });
+      setSession({ role: role.key, name, sectors: role.jurisdiction === "sector" ? sectors : [], language: $("language").value,
+                   signed_in_at: new Date().toISOString() });
       location.href = role.home;
     });
     $("signOutBtn").addEventListener("click", signOut);

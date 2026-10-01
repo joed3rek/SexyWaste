@@ -165,7 +165,14 @@ async def add_photo(pilot_key: str, visit_id: str, request: Request, lon: float 
 
 @router.get("/api/pilots/{pilot_key}/spot-checks")
 def spot_checks(pilot_key: str, request: Request):
-    return {"queue": _run(service.spot_check_sample, _pilot(pilot_key), _actor(request))}
+    from backend.buildings import generators
+    pilot = _pilot(pilot_key)
+    queue = _run(service.spot_check_sample, pilot, _actor(request))
+    base = generators._base_records_cached(pilot)
+    for q in queue:
+        b = base.get(q["building_id"], {})
+        q["building_label"] = b.get("name") or b.get("address")
+    return {"queue": queue}
 
 
 @router.get("/api/pilots/{pilot_key}/history")
@@ -190,3 +197,48 @@ def review_items(pilot_key: str, status: str = "open"):
     finally:
         con.close()
     return {"review_items": items, "geometry_flags": flags}
+
+
+@router.patch("/api/pilots/{pilot_key}/review-items/{item_id}")
+def resolve_review_item(pilot_key: str, item_id: str, request: Request):
+    _pilot(pilot_key)
+    _run(service.resolve_review_item, item_id, _actor(request))
+    return {"status": "resolved"}
+
+
+@router.get("/api/pilots/{pilot_key}/surveyor/home")
+def surveyor_home(pilot_key: str, request: Request):
+    """Today's count for the signed-in person and progress in their sectors."""
+    from backend.buildings import generators
+    pilot = _pilot(pilot_key)
+    actor = _actor(request)
+    sectors = {bid: r["sector"] for bid, r in generators._base_records_cached(pilot).items()}
+    summary = service.survey_summary(pilot, sectors)
+    mine = set(actor["sectors"])
+    return {"today": service.today_count(pilot, actor["name"]),
+            "sectors": [r for r in summary["coverage_by_sector"] if r["sector"] in mine]}
+
+
+# ---------- Sector assignments ----------
+
+class AssignmentIn(BaseModel):
+    surveyor_name: str = Field(min_length=1, max_length=80)
+    sector: str
+
+
+@router.get("/api/pilots/{pilot_key}/assignments")
+def list_assignments(pilot_key: str, surveyor: str | None = None):
+    return {"assignments": service.assignments(_pilot(pilot_key), surveyor)}
+
+
+@router.post("/api/pilots/{pilot_key}/assignments")
+def add_assignment(pilot_key: str, body: AssignmentIn, request: Request):
+    return _run(service.assign_sector, _pilot(pilot_key), _actor(request), body.surveyor_name, body.sector)
+
+
+@router.delete("/api/pilots/{pilot_key}/assignments/{assignment_id}")
+def end_assignment(pilot_key: str, assignment_id: str, request: Request):
+    """Ends an assignment (the row is kept with ended_at)."""
+    _pilot(pilot_key)
+    _run(service.end_assignment, assignment_id, _actor(request))
+    return {"status": "ended"}

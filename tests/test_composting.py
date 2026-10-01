@@ -6,7 +6,6 @@ from backend.buildings import generators as g
 from backend.config import CACHE_DIR
 from backend.routing import parks as PK
 from backend.routing import twotier as T
-from backend.survey import store
 from tests.test_buildings import state
 
 HOUSE = dict(id="way/1", sector="Sector 1", house_number=None, street=None, name=None, address=None,
@@ -27,30 +26,6 @@ def test_home_composting_kg_is_capped_at_wet_waste():
     p = g.compute(HOUSE, state({"building_use": "independent_house", "home_compost": "some", "home_compost_kg": 999},
                                [("residential_dwelling", {"count": 1})]))
     assert p["wet_to_collect"] == 0 and p["home_compost_basis"] == "surveyed kg/day"
-
-
-def test_store_clears_method_and_kg_when_not_composting(tmp_path):
-    rec = store.save("hsr", "way/1", {"use": "residential", "home_compost": "no", "home_compost_kg": 3,
-                                      "home_compost_method": "pit"}, db_path=tmp_path / "s.db")
-    assert rec["home_compost_kg"] is None and rec["home_compost_method"] is None
-    with pytest.raises(ValueError):
-        store.save("hsr", "way/1", {"home_compost": "sometimes"}, db_path=tmp_path / "s.db")
-
-
-def test_older_form_save_appends_a_visit_and_never_overwrites(tmp_path):
-    from backend.survey import db as sdb
-    from backend.survey import resolve
-    from backend.survey import state as st
-    path = tmp_path / "s.db"
-    store.save("hsr", "way/1", {"use": "residential", "units": 2, "floors": 3, "surveyor": "Ravi"}, db_path=path)
-    store.save("hsr", "way/1", {"use": "residential", "units": 5, "floors": 4}, actor={"name": "Asha", "role": "surveyor"}, db_path=path)
-    s = st.building_state("hsr", "way/1", db_path=path)
-    assert s["fields"]["building_use"]["value"] == "apartment_society" and s["fields"]["floors"]["value"] == 4
-    assert [(m["use"], m["fields"]["count"]["value"]) for m in s["use_mix"]] == [("residential_dwelling", 5)]
-    con = sdb.connect(path)
-    assert [h["value"] for h in resolve.history(con, "building", "way/1") if h["field"] == "floors"] == [3, 4]
-    assert con.execute("SELECT COUNT(*) FROM visit").fetchone()[0] == 2
-    con.close()
 
 
 def test_tier_shares_follow_park_size():

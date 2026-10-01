@@ -143,7 +143,8 @@ def test_mixed_building_with_flats_pg_shops_and_cafe_raises_no_contradiction():
 def test_independent_house_with_30_pg_beds_is_a_contradiction():
     warn = uses.contradictions("independent_house", [{"use": "residential_dwelling", "count": 1},
                                                      {"use": "pg_coliving", "count": 1, "beds_total": 30}])
-    assert len(warn) == 1 and "30 beds" in warn[0]
+    assert len(warn) == 1 and warn[0]["code"] == "warn_over" and warn[0]["total"] == 30
+    assert "30 beds" in warn[0]["message"]
 
 
 def test_offices_without_office_rows_and_vacant_with_homes_are_contradictions():

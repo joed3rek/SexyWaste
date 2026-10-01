@@ -15,9 +15,9 @@
     "phone_otp": "Phone with OTP"
   },
   "roles": [
-    {"key": "surveyor", "label": "Surveyor", "module": "planning", "login": "phone_pin", "jurisdiction": "sector", "built": true, "home": "map.html?role=surveyor",
+    {"key": "surveyor", "label": "Surveyor", "module": "planning", "login": "phone_pin", "jurisdiction": "sector", "built": true, "home": "surveyor.html",
      "description": "Visits buildings and records building use, use mix and collection basics."},
-    {"key": "survey_supervisor", "label": "Survey supervisor", "module": "planning", "login": "phone_pin", "jurisdiction": "sector", "built": true, "home": "stub.html?role=survey_supervisor",
+    {"key": "survey_supervisor", "label": "Survey supervisor", "module": "planning", "login": "phone_pin", "jurisdiction": "sector", "built": true, "home": "supervisor.html",
      "description": "Assigns sectors, spot-checks surveys and resolves map problems."},
     {"key": "planner", "label": "Planner", "module": "planning", "login": "email_password", "jurisdiction": "city", "built": false, "home": "map.html?role=planner",
      "description": "Reads the waste profile and designs collection cycles, routes and transfer stations."},

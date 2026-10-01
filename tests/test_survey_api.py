@@ -107,7 +107,7 @@ def test_contradiction_warns_saves_and_is_logged_for_the_supervisor(client, buil
     client.post(url + "/building-fields", json={"fields": {"building_use": "independent_house"}}, headers=ASHA)
     client.post(url + "/use-mix", json={"use": "residential_dwelling", "count": 1}, headers=ASHA)
     r = client.post(url + "/use-mix", json={"use": "pg_coliving", "count": 1, "beds_total": 30}, headers=ASHA)
-    assert r.status_code == 200 and "30 beds" in r.json()["warnings"][0]
+    assert r.status_code == 200 and r.json()["warnings"][0]["code"] == "warn_over" and "30 beds" in r.json()["warnings"][0]["message"]
     client.patch(url, json={"outcome": "completed"}, headers=ASHA)
     items = client.get("/api/pilots/hsr/review-items").json()["review_items"]
     assert [i["kind"] for i in items if i["building_id"] == bid] == ["use_mix_contradiction"]

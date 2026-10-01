@@ -2,7 +2,8 @@
 // Terms and rule citations follow the SWM Rules 2026 (see rules.html). Quantities are estimates.
 
 const PILOT = "hsr";
-const ROLE = new URLSearchParams(location.search).get("role") === "planner" ? "planner" : "surveyor";
+if (new URLSearchParams(location.search).get("role") === "surveyor") location.replace("surveyor.html"); // the survey has its own app
+const ROLE = "planner";
 const $ = (id) => document.getElementById(id);
 const byId = new Map();
 let fc = null;
@@ -351,91 +352,10 @@ function renderCard(p) {
     <h3>Collection</h3>
     <p class="small">${esc(p.collection.label)} ${p.collection.rule ? `<span class="cite">${esc(p.collection.rule)}</span>` : ""}</p>
     ${p.obligations?.length ? `<h3>Obligations</h3><ul class="small">${p.obligations.map((o) => `<li>${esc(o.text)} <span class="cite">${esc(o.rule)}</span></li>`).join("")}</ul>` : ""}
-    ${ROLE === "surveyor" ? surveyForm(p) : ""}`;
+`;
 
   $("closeDetail").addEventListener("click", () => { $("detail").hidden = true; selectedId = null; map.setFilter("selected", ["==", ["get", "id"], ""]); });
-  if (ROLE === "surveyor") wireSurveyForm(p);
   $("detail").scrollIntoView({ behavior: "smooth", block: "nearest" });
-}
-
-function options(labels, value, blank = "Select…") {
-  return `<option value="">${blank}</option>` + Object.entries(labels).map(([k, v]) => `<option value="${k}"${k === value ? " selected" : ""}>${v}</option>`).join("");
-}
-
-function surveyForm(p) {
-  const s = p.survey || {};
-  let surveyor = s.surveyor || "";
-  try { surveyor = surveyor || localStorage.getItem("surveyor") || ""; } catch { /* storage unavailable */ }
-  return `
-    <form id="surveyForm" class="survey">
-      <h3>${p.surveyed ? "Update survey" : "Fill building card"}</h3>
-      <label>Building use <select name="use" required>${options(USE_LABELS, s.use)}</select></label>
-      <div class="row">
-        <label>Number of units <input name="units" type="number" min="0" step="1" value="${s.units ?? ""}" placeholder="homes / shops / rooms" /></label>
-        <label id="comUnitsWrap">Of which commercial <input name="commercial_units" type="number" min="0" step="1" value="${s.commercial_units ?? ""}" /></label>
-      </div>
-      <label>Floors <input name="floors" type="number" min="1" max="100" step="1" value="${s.floors ?? ""}" placeholder="OSM: ${p.levels_source === "from OSM" ? p.levels : "unknown"}" /></label>
-      <div class="row">
-        <label>Water use, L/day <input name="water_lpd" type="number" min="0" step="100" value="${s.water_lpd ?? ""}" /></label>
-        <label>Water source <select name="water_source">${options({ surveyor: "Surveyor estimate", bwssb: "BWSSB bill" }, s.water_source, "—")}</select></label>
-      </div>
-      <label>On-site processing (bulk waste generators) <select name="onsite_processing">${options(ONSITE_LABELS, s.onsite_processing, "Not checked")}</select></label>
-      <label>Is wet waste composted in the building? <select name="home_compost">${options(HOME_COMPOST_LABELS, s.home_compost, "Not asked")}</select></label>
-      <div class="row" id="homeCompostWrap">
-        <label>How <select name="home_compost_method">${options(HOME_COMPOST_METHODS, s.home_compost_method, "—")}</select></label>
-        <label>kg/day (optional) <input name="home_compost_kg" type="number" min="0" step="0.1" value="${s.home_compost_kg ?? ""}" placeholder="if known" /></label>
-      </div>
-      <label>Segregation observed (collector) <select name="segregation_observed">${options(SEG_LABELS, s.segregation_observed, "Not observed")}</select></label>
-      <details${s.weighed_kg_day != null ? " open" : ""}><summary class="small">Weighed data (optional)</summary>
-        <label>Weighed waste, kg/day <input name="weighed_kg_day" type="number" min="0" step="0.1" value="${s.weighed_kg_day ?? ""}" /></label>
-      </details>
-      <div class="row">
-        <label>Surveyor <input name="surveyor" value="${esc(surveyor)}" /></label>
-        <label>Notes <input name="notes" value="${esc(s.notes || "")}" /></label>
-      </div>
-      <button type="submit">Save building card</button>
-      ${p.surveyed ? `<button type="button" id="clearSurvey" class="secondary">Clear survey</button>` : ""}
-      <p id="surveyMsg" class="hint"></p>
-    </form>`;
-}
-
-function wireSurveyForm(p) {
-  const form = $("surveyForm");
-  const toggle = () => ($("comUnitsWrap").hidden = form.use.value !== "mixed");
-  form.use.addEventListener("change", toggle);
-  toggle();
-  const toggleCompost = () => ($("homeCompostWrap").hidden = !["all", "most", "some"].includes(form.home_compost.value));
-  form.home_compost.addEventListener("change", toggleCompost);
-  toggleCompost();
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const data = Object.fromEntries(new FormData(form).entries());
-    for (const k of Object.keys(data)) if (data[k] === "") data[k] = null;
-    if (data.use !== "mixed") data.commercial_units = null;
-    try { if (data.surveyor) localStorage.setItem("surveyor", data.surveyor); } catch { /* ignore */ }
-    try {
-      const updated = await api(`/api/pilots/${PILOT}/survey?id=${encodeURIComponent(p.id)}`, {
-        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data),
-      });
-      afterSave(updated, "Saved.");
-    } catch (err) {
-      $("surveyMsg").textContent = `Could not save: ${err.message}`;
-    }
-  });
-  $("clearSurvey")?.addEventListener("click", async () => {
-    const updated = await api(`/api/pilots/${PILOT}/survey?id=${encodeURIComponent(p.id)}`, { method: "DELETE" });
-    afterSave(updated, "Survey cleared.");
-  });
-}
-
-async function afterSave(updated, msg) {
-  const f = byId.get(updated.id);
-  const keep = Object.keys(f.properties);
-  keep.forEach((k) => { if (k in updated) f.properties[k] = updated[k]; });
-  map.getSource("buildings").setData(fc);
-  renderCard(updated);
-  $("surveyMsg").textContent = msg;
-  await refreshSummary();
 }
 
 // ---------- Controls ----------

@@ -564,7 +564,8 @@ def has_building(pilot_key: str, building_id: str) -> bool:
 
 
 MAP_FIELDS = ["id", "sector", "house_number", "name", "address", "category", "generator_type", "confidence",
-              "bwg_status", "bwg_compliance", "surveyed", "levels", "kg_day", *STREAMS, *[f"dry_{f}" for f in FRACTIONS]]
+              "bwg_status", "bwg_compliance", "round2_candidate", "surveyed", "visit_outcome", "levels", "kg_day",
+              *STREAMS, *[f"dry_{f}" for f in FRACTIONS]]
 
 
 def map_properties(props: dict) -> dict:

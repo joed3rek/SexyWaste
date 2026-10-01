@@ -23,12 +23,61 @@ function icon(name) {
 const FULL_APP_URL = "https://swm-urban-waste.onrender.com/";
 
 const NAV = [
-  { key: "home", label: "Home", href: "index.html", icon: "home" },
-  { key: "surveyor", label: "Survey", href: "map.html?role=surveyor", icon: "survey" },
-  { key: "planner", label: "Planner", href: "map.html?role=planner", icon: "planner" },
-  { key: "builder", label: "Routes", href: "builder.html", icon: "routes" },
-  { key: "rules", label: "Rules", href: "rules.html", icon: "rules" },
+  { key: "home", href: "index.html", icon: "home" },
+  { key: "surveyor", href: "surveyor.html", icon: "survey" },
+  { key: "supervisor", href: "supervisor.html", icon: "ward", role: "survey_supervisor" },
+  { key: "planner", href: "map.html?role=planner", icon: "planner" },
+  { key: "builder", href: "builder.html", icon: "routes" },
+  { key: "rules", href: "rules.html", icon: "rules" },
 ];
+
+// ---------- Strings ----------
+// Every user-facing string of the built roles lives in strings.json, keyed by id, with English
+// values and a Kannada column for a human translator. The interface uses the language chosen at
+// sign-in and falls back to English for anything not yet translated.
+
+let STRINGS = {};
+
+async function loadStrings() {
+  try {
+    const res = await fetch("strings.json");
+    STRINGS = (await res.json()).strings || {};
+  } catch {
+    STRINGS = {};
+  }
+}
+
+function lang() {
+  return (getSession() || {}).language || "en";
+}
+
+function t(id, vars = {}) {
+  const entry = STRINGS[id];
+  let text = entry ? (entry[lang()] || entry.en) : id;
+  for (const [k, v] of Object.entries(vars)) text = text.replaceAll(`{${k}}`, v);
+  return text;
+}
+
+function applyStrings(root = document) {
+  root.querySelectorAll("[data-t]").forEach((el) => (el.textContent = t(el.dataset.t)));
+  root.querySelectorAll("[data-t-placeholder]").forEach((el) => (el.placeholder = t(el.dataset.tPlaceholder)));
+  document.documentElement.lang = lang();
+}
+
+// ---------- Writes ----------
+// Every write goes through this one function, so offline queuing can be added here later.
+
+async function swmWrite(method, path, body, rawType) {
+  const opts = { method };
+  if (rawType) {
+    opts.body = body;
+    opts.headers = { "Content-Type": rawType };
+  } else if (body !== undefined) {
+    opts.body = JSON.stringify(body);
+    opts.headers = { "Content-Type": "application/json" };
+  }
+  return apiFetch(path, opts);
+}
 
 // JSON request to the app's API with a readable error. Without the Python server (for example on
 // GitHub Pages) the host answers with an HTML page instead of JSON.
@@ -102,22 +151,28 @@ function mapPadding(map, extra = 20) {
 
 function activeNavKey() {
   const page = location.pathname.split("/").pop() || "index.html";
-  if (page.startsWith("map")) return new URLSearchParams(location.search).get("role") === "planner" ? "planner" : "surveyor";
+  if (page.startsWith("map")) return "planner";
+  if (page.startsWith("surveyor")) return "surveyor";
+  if (page.startsWith("supervisor")) return "supervisor";
   if (page.startsWith("builder")) return "builder";
   if (page.startsWith("rules")) return "rules";
   return "home";
 }
 
-(function renderShell() {
+const UI_READY = loadStrings().then(renderShell);
+
+function renderShell() {
   document.querySelectorAll("[data-icon]").forEach((el) => (el.innerHTML = icon(el.dataset.icon)));
+  applyStrings();
 
   const nav = document.getElementById("appNav");
   if (nav) {
     const active = activeNavKey();
     nav.className = "rail";
     nav.setAttribute("aria-label", "Main");
+    const role = (getSession() || {}).role;
     nav.innerHTML = `<a class="logo" href="index.html" title="Urban Waste Intelligence">${icon("logo")}</a>` +
-      NAV.map((n) => `<a class="item${n.key === active ? " active" : ""}" href="${n.href}"${n.key === active ? ' aria-current="page"' : ""}>${icon(n.icon)}<span>${n.label}</span></a>`).join("");
+      NAV.filter((n) => !n.role || n.role === role).map((n) => `<a class="item${n.key === active ? " active" : ""}" href="${n.href}"${n.key === active ? ' aria-current="page"' : ""}>${icon(n.icon)}<span>${t(`nav.${n.key}`)}</span></a>`).join("");
   }
 
   if (location.hostname.endsWith("github.io")) {
@@ -144,4 +199,4 @@ function activeNavKey() {
     handle.addEventListener("click", () => panel.classList.toggle("collapsed"));
     panel.prepend(handle);
   }
-})();
+}

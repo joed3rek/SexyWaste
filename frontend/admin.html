@@ -14,50 +14,54 @@
   <nav id="appNav"></nav>
   <main class="doc">
     <header class="page-head">
-      <p class="eyebrow">System</p>
-      <h1>Admin</h1>
+      <p class="eyebrow" data-t="admin.eyebrow"></p>
+      <h1 data-t="admin.title"></h1>
       <p class="sub" id="who"></p>
     </header>
     <div id="denied" class="card-box" hidden>
-      <p>This page is for the admin role. <a href="index.html">Sign in as admin</a>.</p>
+      <p><span data-t="admin.denied"></span> <a href="index.html" data-t="admin.sign_in_as_admin"></a></p>
     </div>
     <div id="content" hidden>
-      <h2>Users</h2>
-      <p class="hint">Login is a dummy during the pilot, so there are no user accounts to manage. People choose a role and type their name when they sign in; both are recorded with what they save but not verified.</p>
-
-      <h2>Roles</h2>
-      <p class="hint">Every role in the platform, from <code>backend/auth/roles.json</code>. Each role is limited to a jurisdiction and will use the login method shown once real sign-in is added.</p>
+      <h2 data-t="admin.users"></h2>
+      <p class="hint" data-t="admin.users_note"></p>
+      <h2 data-t="admin.roles"></h2>
+      <p class="hint" data-t="admin.roles_note"></p>
       <div id="roleTable"></div>
-
-      <h2>Coming next</h2>
-      <p class="hint">Roles without screens yet, shown here so the rest of the plan stays visible during development.</p>
+      <h2 data-t="admin.coming"></h2>
+      <p class="hint" data-t="admin.coming_note"></p>
       <div id="comingNext" class="roles"></div>
-
-      <h2>Planning tools</h2>
-      <p class="hint">Open to everyone during the pilot. Gating them behind sign-in belongs to their own sections.</p>
-      <p><a href="map.html?role=planner">Planner map</a> · <a href="builder.html">Route builder</a> · <a href="rules.html">Rules library</a></p>
+      <h2 data-t="admin.tools"></h2>
+      <p class="hint" data-t="admin.tools_note"></p>
+      <p><a href="map.html?role=planner" data-t="signin.planner_map"></a> · <a href="builder.html" data-t="signin.route_builder"></a> · <a href="rules.html" data-t="signin.rules"></a></p>
     </div>
   </main>
   <script src="ui.js"></script>
   <script>
     const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-    const s = getSession();
-    if (!s || s.role !== "admin") {
-      document.getElementById("denied").hidden = false;
-    } else {
-      document.getElementById("who").textContent = `Signed in as ${s.name}`;
+    (async () => {
+      await UI_READY;
+      const s = getSession();
+      if (!s || s.role !== "admin") {
+        document.getElementById("denied").hidden = false;
+        return;
+      }
+      document.getElementById("who").textContent = t("admin.signed_in", { name: s.name });
       document.getElementById("content").hidden = false;
-      apiFetch("/api/roles").then((reg) => {
-        const rows = reg.roles.map((r) => `<tr><td><b>${esc(r.label)}</b><br><span class="muted small">${esc(r.description)}</span></td>
-          <td>${esc(reg.modules[r.module])}</td><td>${esc(reg.login_methods[r.login])}</td><td>${esc(r.jurisdiction)}</td>
-          <td>${r.built ? '<span class="badge ok">Built</span>' : '<span class="badge">Coming next</span>'}</td></tr>`).join("");
-        document.getElementById("roleTable").innerHTML = `<table><tr><th>Role</th><th>Module</th><th>Login (planned)</th><th>Jurisdiction</th><th>Status</th></tr>${rows}</table>`;
+      try {
+        const reg = await apiFetch("/api/roles");
+        const rows = reg.roles.map((r) => `<tr><td><b>${esc(t(`role.${r.key}`))}</b><br><span class="muted small">${esc(t(`role.${r.key}.description`))}</span></td>
+          <td>${esc(t(`module.${r.module}`))}</td><td>${esc(t(`login.${r.login}`))}</td><td>${esc(t(`jurisdiction.${r.jurisdiction}`))}</td>
+          <td>${r.built ? `<span class="badge ok">${esc(t("status.built"))}</span>` : `<span class="badge">${esc(t("status.coming"))}</span>`}</td></tr>`).join("");
+        document.getElementById("roleTable").innerHTML = `<table><tr><th>${esc(t("col.role"))}</th><th>${esc(t("col.module"))}</th>
+          <th>${esc(t("col.login"))}</th><th>${esc(t("col.jurisdiction"))}</th><th>${esc(t("col.status"))}</th></tr>${rows}</table>`;
         document.getElementById("comingNext").innerHTML = reg.roles.filter((r) => !r.built).map((r) => `
           <a class="role soon" href="${r.home ? esc(r.home) : `stub.html?role=${encodeURIComponent(r.key)}`}">
-            <h3>${esc(r.label)}</h3><p>${esc(r.description)}</p>
-            <div class="foot"><span class="badge">${esc(reg.modules[r.module])}</span><span class="go">${r.home ? "Open" : "Preview"} →</span></div></a>`).join("");
-      }).catch((err) => { document.getElementById("roleTable").innerHTML = `<p class="warn">${esc(err.message)}</p>`; });
-    }
+            <h3>${esc(t(`role.${r.key}`))}</h3><p>${esc(t(`role.${r.key}.description`))}</p>
+            <div class="foot"><span class="badge">${esc(t(`module.${r.module}`))}</span><span class="go">${esc(t(r.home ? "admin.open" : "admin.preview"))}</span></div></a>`).join("");
+      } catch (err) {
+        document.getElementById("roleTable").innerHTML = `<p class="warn">${esc(err.message)}</p>`;
+      }
+    })();
   </script>
 </body>
 </html>

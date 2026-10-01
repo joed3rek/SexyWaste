@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <link rel="icon" href="data:," />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Survey supervision</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="page with-rail">
+  <nav id="appNav"></nav>
+  <main class="doc">
+    <header class="page-head">
+      <p class="eyebrow" data-t="role.survey_supervisor"></p>
+      <h1 data-t="sup.title"></h1>
+      <p class="sub" id="who"></p>
+    </header>
+    <div id="denied" class="card-box" hidden><p><span data-t="sup.denied"></span> <a href="index.html" data-t="sup.sign_in"></a></p></div>
+
+    <div id="content" hidden>
+      <h2 data-t="sup.progress"></h2>
+      <h3 data-t="sup.by_sector"></h3>
+      <div class="scroll" id="bySector"></div>
+      <h3 data-t="sup.by_surveyor"></h3>
+      <div class="scroll" id="bySurveyor"></div>
+
+      <h2 data-t="sup.queue"></h2>
+      <p class="hint" data-t="sup.queue_help"></p>
+      <div id="queue" class="results"></div>
+
+      <h2 data-t="sup.rates"></h2>
+      <div class="scroll" id="rates"></div>
+
+      <h2 data-t="sup.review"></h2>
+      <div id="reviews" class="results"></div>
+      <h3 data-t="sup.flags"></h3>
+      <div id="flags" class="results"></div>
+
+      <h2 data-t="sup.assign"></h2>
+      <p class="hint" data-t="sup.assign_help"></p>
+      <form id="assignForm" class="row assign-form">
+        <label><span data-t="sup.assign_name"></span><input id="assignName" required maxlength="80" /></label>
+        <label><span data-t="sup.assign_sector"></span><select id="assignSector"></select></label>
+        <button type="submit" data-t="sup.assign_add"></button>
+      </form>
+      <p id="assignErr" class="warn" hidden></p>
+      <div id="assignments" class="results"></div>
+    </div>
+  </main>
+  <script src="ui.js"></script>
+  <script src="survey_flow.js"></script>
+  <script src="supervisor.js"></script>
+</body>
+</html>

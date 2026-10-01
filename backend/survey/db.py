@@ -134,6 +134,18 @@ CREATE TABLE IF NOT EXISTS review_item (
     resolved_by TEXT, resolved_at TEXT
 );
 
+-- Sectors a supervisor assigns to a surveyor (by name, as login is a dummy). Ending sets ended_at.
+CREATE TABLE IF NOT EXISTS sector_assignment (
+    id TEXT PRIMARY KEY,
+    pilot TEXT NOT NULL,
+    surveyor_name TEXT NOT NULL,
+    sector TEXT NOT NULL,
+    assigned_by TEXT,
+    assigned_at TEXT NOT NULL,
+    ended_by TEXT,
+    ended_at TEXT
+);
+
 CREATE TRIGGER IF NOT EXISTS field_value_no_update BEFORE UPDATE ON field_value
 BEGIN SELECT RAISE(ABORT, 'field_value is append-only: add a new row instead'); END;
 CREATE TRIGGER IF NOT EXISTS field_value_no_delete BEFORE DELETE ON field_value

@@ -1,0 +1,1233 @@
+{
+ "_about": "Every user-facing string of the built roles (sign-in, surveyor, survey supervisor, admin), keyed by id. 'en' is English; 'kn' is left empty for a human translator. Do not machine-translate. The interface falls back to English where 'kn' is empty. Placeholders in braces, such as {name}, must be kept.",
+ "strings": {
+  "nav.home": {
+   "en": "Home",
+   "kn": ""
+  },
+  "nav.surveyor": {
+   "en": "Survey",
+   "kn": ""
+  },
+  "nav.supervisor": {
+   "en": "Supervise",
+   "kn": ""
+  },
+  "nav.planner": {
+   "en": "Planner",
+   "kn": ""
+  },
+  "nav.builder": {
+   "en": "Routes",
+   "kn": ""
+  },
+  "nav.rules": {
+   "en": "Rules",
+   "kn": ""
+  },
+  "common.next": {
+   "en": "Next",
+   "kn": ""
+  },
+  "common.back": {
+   "en": "Back",
+   "kn": ""
+  },
+  "common.save": {
+   "en": "Save",
+   "kn": ""
+  },
+  "common.cancel": {
+   "en": "Cancel",
+   "kn": ""
+  },
+  "common.close": {
+   "en": "Close",
+   "kn": ""
+  },
+  "common.loading": {
+   "en": "Loading…",
+   "kn": ""
+  },
+  "common.sign_out": {
+   "en": "Sign out",
+   "kn": ""
+  },
+  "common.error": {
+   "en": "Something went wrong: {message}",
+   "kn": ""
+  },
+  "common.optional": {
+   "en": "optional",
+   "kn": ""
+  },
+  "common.none": {
+   "en": "None",
+   "kn": ""
+  },
+  "common.saved": {
+   "en": "Saved.",
+   "kn": ""
+  },
+  "signin.eyebrow": {
+   "en": "HSR Layout Sectors 1–7 pilot · Solid Waste Management Rules, 2026",
+   "kn": ""
+  },
+  "signin.title": {
+   "en": "Sign in",
+   "kn": ""
+  },
+  "signin.signed_in_as": {
+   "en": "Signed in as",
+   "kn": ""
+  },
+  "signin.continue": {
+   "en": "Continue",
+   "kn": ""
+  },
+  "signin.role": {
+   "en": "Your role",
+   "kn": ""
+  },
+  "signin.name": {
+   "en": "Your name",
+   "kn": ""
+  },
+  "signin.sectors": {
+   "en": "Your sectors",
+   "kn": ""
+  },
+  "signin.assigned": {
+   "en": "Sectors your supervisor assigned to you are selected.",
+   "kn": ""
+  },
+  "signin.language": {
+   "en": "Language",
+   "kn": ""
+  },
+  "signin.submit": {
+   "en": "Sign in",
+   "kn": ""
+  },
+  "signin.note": {
+   "en": "Pilot build: sign-in is not checked. Your role, name and sectors are kept in this browser and recorded with what you save, but they are not verified.",
+   "kn": ""
+  },
+  "signin.err_role": {
+   "en": "Choose your role.",
+   "kn": ""
+  },
+  "signin.err_name": {
+   "en": "Enter your name.",
+   "kn": ""
+  },
+  "signin.err_sector": {
+   "en": "Choose at least one sector.",
+   "kn": ""
+  },
+  "signin.loading_roles": {
+   "en": "Loading roles…",
+   "kn": ""
+  },
+  "signin.footer": {
+   "en": "All waste quantities are estimates until replaced by weighed data. Building footprints © OpenStreetMap contributors.",
+   "kn": ""
+  },
+  "signin.planner_map": {
+   "en": "Planner map",
+   "kn": ""
+  },
+  "signin.route_builder": {
+   "en": "Route builder",
+   "kn": ""
+  },
+  "signin.rules": {
+   "en": "Rules library",
+   "kn": ""
+  },
+  "lang.en": {
+   "en": "English",
+   "kn": ""
+  },
+  "lang.kn": {
+   "en": "ಕನ್ನಡ (Kannada)",
+   "kn": ""
+  },
+  "admin.eyebrow": {
+   "en": "System",
+   "kn": ""
+  },
+  "admin.title": {
+   "en": "Admin",
+   "kn": ""
+  },
+  "admin.signed_in": {
+   "en": "Signed in as {name}",
+   "kn": ""
+  },
+  "admin.denied": {
+   "en": "This page is for the admin role.",
+   "kn": ""
+  },
+  "admin.sign_in_as_admin": {
+   "en": "Sign in as admin",
+   "kn": ""
+  },
+  "admin.users": {
+   "en": "Users",
+   "kn": ""
+  },
+  "admin.users_note": {
+   "en": "Login is a dummy during the pilot, so there are no user accounts to manage. People choose a role and type their name when they sign in; both are recorded with what they save but not verified.",
+   "kn": ""
+  },
+  "admin.roles": {
+   "en": "Roles",
+   "kn": ""
+  },
+  "admin.roles_note": {
+   "en": "Every role in the platform. Each role is limited to a jurisdiction and will use the login method shown once real sign-in is added.",
+   "kn": ""
+  },
+  "admin.coming": {
+   "en": "Coming next",
+   "kn": ""
+  },
+  "admin.coming_note": {
+   "en": "Roles without screens yet, shown here so the rest of the plan stays visible during development.",
+   "kn": ""
+  },
+  "admin.tools": {
+   "en": "Planning tools",
+   "kn": ""
+  },
+  "admin.tools_note": {
+   "en": "Open to everyone during the pilot. Gating them behind sign-in belongs to their own sections.",
+   "kn": ""
+  },
+  "admin.open": {
+   "en": "Open →",
+   "kn": ""
+  },
+  "admin.preview": {
+   "en": "Preview →",
+   "kn": ""
+  },
+  "col.role": {
+   "en": "Role",
+   "kn": ""
+  },
+  "col.module": {
+   "en": "Module",
+   "kn": ""
+  },
+  "col.login": {
+   "en": "Login (planned)",
+   "kn": ""
+  },
+  "col.jurisdiction": {
+   "en": "Jurisdiction",
+   "kn": ""
+  },
+  "col.status": {
+   "en": "Status",
+   "kn": ""
+  },
+  "status.built": {
+   "en": "Built",
+   "kn": ""
+  },
+  "status.coming": {
+   "en": "Coming next",
+   "kn": ""
+  },
+  "jurisdiction.city": {
+   "en": "City",
+   "kn": ""
+  },
+  "jurisdiction.ward": {
+   "en": "Ward",
+   "kn": ""
+  },
+  "jurisdiction.sector": {
+   "en": "Sector",
+   "kn": ""
+  },
+  "sv.title": {
+   "en": "Building survey",
+   "kn": ""
+  },
+  "sv.today": {
+   "en": "Today: {n}",
+   "kn": ""
+  },
+  "sv.sector_progress": {
+   "en": "{sector}: {visited} of {total} visited",
+   "kn": ""
+  },
+  "sv.loading_map": {
+   "en": "Loading buildings…",
+   "kn": ""
+  },
+  "sv.no_sectors": {
+   "en": "No sectors chosen. Sign in again and choose your sectors.",
+   "kn": ""
+  },
+  "sv.legend": {
+   "en": "Map key",
+   "kn": ""
+  },
+  "sv.report_missing": {
+   "en": "Missing building",
+   "kn": ""
+  },
+  "sv.pin_missing": {
+   "en": "Tap the map where the missing building is.",
+   "kn": ""
+  },
+  "sv.missing_note": {
+   "en": "What is there? (optional)",
+   "kn": ""
+  },
+  "sv.missing_saved": {
+   "en": "Missing building reported. Your supervisor will review it.",
+   "kn": ""
+  },
+  "sv.not_your_sector": {
+   "en": "This building is not in your sectors.",
+   "kn": ""
+  },
+  "legend.completed": {
+   "en": "Completed",
+   "kn": ""
+  },
+  "legend.partial": {
+   "en": "Partly done",
+   "kn": ""
+  },
+  "legend.refused_locked": {
+   "en": "Refused or locked",
+   "kn": ""
+  },
+  "legend.revisit": {
+   "en": "Come back later",
+   "kn": ""
+  },
+  "legend.other": {
+   "en": "Other outcome",
+   "kn": ""
+  },
+  "legend.not_visited": {
+   "en": "Not visited",
+   "kn": ""
+  },
+  "legend.survey_first": {
+   "en": "Survey first: likely bulk waste generator",
+   "kn": ""
+  },
+  "sheet.no_name": {
+   "en": "Unnamed building",
+   "kn": ""
+  },
+  "sheet.osm_hint": {
+   "en": "Map guess: {use}",
+   "kn": ""
+  },
+  "sheet.last_visit": {
+   "en": "Last visit: {outcome}, {name}",
+   "kn": ""
+  },
+  "sheet.never": {
+   "en": "Not visited yet",
+   "kn": ""
+  },
+  "sheet.start": {
+   "en": "Start visit",
+   "kn": ""
+  },
+  "sheet.report": {
+   "en": "Report map problem",
+   "kn": ""
+  },
+  "sheet.survey_first": {
+   "en": "Survey first: estimates suggest a bulk waste generator.",
+   "kn": ""
+  },
+  "sheet.supervisor_note": {
+   "en": "Spot-checks start from your queue on the Supervise page.",
+   "kn": ""
+  },
+  "flag.title": {
+   "en": "Map problem",
+   "kn": ""
+  },
+  "flag.note": {
+   "en": "Note (optional)",
+   "kn": ""
+  },
+  "flag.saved": {
+   "en": "Thanks. Your supervisor will review it.",
+   "kn": ""
+  },
+  "flag.choose": {
+   "en": "What is wrong?",
+   "kn": ""
+  },
+  "flow.step": {
+   "en": "Step {n} of {total}",
+   "kn": ""
+  },
+  "flow.gps_wait": {
+   "en": "Getting your position…",
+   "kn": ""
+  },
+  "flow.gps_none": {
+   "en": "Position not available. You can continue.",
+   "kn": ""
+  },
+  "flow.s1.title": {
+   "en": "Can you survey this building?",
+   "kn": ""
+  },
+  "flow.s1.survey": {
+   "en": "Yes, start the survey",
+   "kn": ""
+  },
+  "flow.s1.other": {
+   "en": "Or record why not:",
+   "kn": ""
+  },
+  "flow.s1.note": {
+   "en": "Note (optional)",
+   "kn": ""
+  },
+  "flow.s1.end": {
+   "en": "Save and close",
+   "kn": ""
+  },
+  "flow.s2.title": {
+   "en": "What is this building used for?",
+   "kn": ""
+  },
+  "flow.s2.hint": {
+   "en": "Map guess: {use}. Choose what you see.",
+   "kn": ""
+  },
+  "flow.s2.floors": {
+   "en": "Floors",
+   "kn": ""
+  },
+  "flow.s2.floors_osm": {
+   "en": "Map: {n}, from OpenStreetMap",
+   "kn": ""
+  },
+  "flow.s2.floors_assumed": {
+   "en": "Map: {n}, assumed",
+   "kn": ""
+  },
+  "flow.s2.society": {
+   "en": "Society or building name",
+   "kn": ""
+  },
+  "flow.s2.need_use": {
+   "en": "Choose the building use.",
+   "kn": ""
+  },
+  "flow.s3.title": {
+   "en": "What is inside?",
+   "kn": ""
+  },
+  "flow.s3.help": {
+   "en": "Tap each use you see. Count them, and add people or beds where asked.",
+   "kn": ""
+  },
+  "flow.s3.add": {
+   "en": "Add a use",
+   "kn": ""
+  },
+  "flow.s3.remove": {
+   "en": "Remove",
+   "kn": ""
+  },
+  "flow.s3.need_count": {
+   "en": "Enter how many for {use}.",
+   "kn": ""
+  },
+  "flow.s3.check": {
+   "en": "Please check:",
+   "kn": ""
+  },
+  "flow.s3.continue_anyway": {
+   "en": "Continue anyway",
+   "kn": ""
+  },
+  "flow.s3.empty": {
+   "en": "Nothing recorded yet.",
+   "kn": ""
+  },
+  "field.count": {
+   "en": "How many",
+   "kn": ""
+  },
+  "field.occupants_total": {
+   "en": "People living there (total)",
+   "kn": ""
+  },
+  "field.beds_total": {
+   "en": "Beds (total)",
+   "kn": ""
+  },
+  "flow.s4.title": {
+   "en": "Collection and composting",
+   "kn": ""
+  },
+  "field.collection_arrangement": {
+   "en": "Who collects the waste?",
+   "kn": ""
+  },
+  "field.segregation_reported": {
+   "en": "Do they say they separate waste?",
+   "kn": ""
+  },
+  "field.home_compost": {
+   "en": "Do they compost wet waste here?",
+   "kn": ""
+  },
+  "field.home_compost_method": {
+   "en": "How?",
+   "kn": ""
+  },
+  "flow.s4.photo": {
+   "en": "Frontage photo (optional)",
+   "kn": ""
+  },
+  "flow.s4.photo_guidance": {
+   "en": "Photograph the front of the building only. No people, no inside of homes.",
+   "kn": ""
+  },
+  "flow.s4.photo_added": {
+   "en": "Photo added.",
+   "kn": ""
+  },
+  "flow.s5.title": {
+   "en": "Check and finish",
+   "kn": ""
+  },
+  "flow.s5.estimate": {
+   "en": "Estimated waste",
+   "kn": ""
+  },
+  "flow.s5.kg": {
+   "en": "{kg} kg/day",
+   "kn": ""
+  },
+  "basis.use_mix": {
+   "en": "From the use mix and assumed rates",
+   "kn": ""
+  },
+  "basis.building_use": {
+   "en": "From the building use and its size",
+   "kn": ""
+  },
+  "basis.osm": {
+   "en": "From the map only",
+   "kn": ""
+  },
+  "basis.weighed": {
+   "en": "Weighed",
+   "kn": ""
+  },
+  "flow.s5.bwg_likely": {
+   "en": "Possible bulk waste generator, from estimates only. Marked for the Round 2 detailed survey.",
+   "kn": ""
+  },
+  "flow.s5.bwg_confirmed": {
+   "en": "Bulk waste generator (confirmed).",
+   "kn": ""
+  },
+  "flow.s5.finish": {
+   "en": "Finish: completed",
+   "kn": ""
+  },
+  "flow.s5.partial": {
+   "en": "Finish: partly done",
+   "kn": ""
+  },
+  "flow.mismatch": {
+   "en": "Differs from the survey: {text}",
+   "kn": ""
+  },
+  "flow.warnings": {
+   "en": "Please check:",
+   "kn": ""
+  },
+  "spot.title": {
+   "en": "Spot-check",
+   "kn": ""
+  },
+  "spot.of": {
+   "en": "Checking {name}'s visit of {date}",
+   "kn": ""
+  },
+  "spot.blind": {
+   "en": "Record what you see. The survey's answers are not shown, so the check is independent.",
+   "kn": ""
+  },
+  "source.assumed": {
+   "en": "Assumed",
+   "kn": ""
+  },
+  "source.surveyed": {
+   "en": "Surveyed",
+   "kn": ""
+  },
+  "source.verified": {
+   "en": "Verified",
+   "kn": ""
+  },
+  "source.weighed": {
+   "en": "Weighed",
+   "kn": ""
+  },
+  "source.estimate": {
+   "en": "Estimate",
+   "kn": ""
+  },
+  "sup.title": {
+   "en": "Survey supervision",
+   "kn": ""
+  },
+  "sup.sectors": {
+   "en": "Your sectors: {sectors}",
+   "kn": ""
+  },
+  "sup.denied": {
+   "en": "This page is for survey supervisors.",
+   "kn": ""
+  },
+  "sup.sign_in": {
+   "en": "Sign in as a survey supervisor",
+   "kn": ""
+  },
+  "sup.progress": {
+   "en": "Progress",
+   "kn": ""
+  },
+  "sup.by_sector": {
+   "en": "By sector",
+   "kn": ""
+  },
+  "sup.by_surveyor": {
+   "en": "By surveyor",
+   "kn": ""
+  },
+  "col.sector": {
+   "en": "Sector",
+   "kn": ""
+  },
+  "col.buildings": {
+   "en": "Buildings",
+   "kn": ""
+  },
+  "col.visited": {
+   "en": "Visited",
+   "kn": ""
+  },
+  "col.not_visited": {
+   "en": "Not visited",
+   "kn": ""
+  },
+  "col.surveyor": {
+   "en": "Surveyor",
+   "kn": ""
+  },
+  "col.visits": {
+   "en": "Visits",
+   "kn": ""
+  },
+  "sup.queue": {
+   "en": "Spot-check queue",
+   "kn": ""
+  },
+  "sup.queue_help": {
+   "en": "About 5% of each surveyor's completed visits this week, never your own.",
+   "kn": ""
+  },
+  "sup.queue_empty": {
+   "en": "Nothing to spot-check this week.",
+   "kn": ""
+  },
+  "sup.start_check": {
+   "en": "Spot-check",
+   "kn": ""
+  },
+  "sup.rates": {
+   "en": "Spot-check results by surveyor",
+   "kn": ""
+  },
+  "col.checks": {
+   "en": "Spot-checks",
+   "kn": ""
+  },
+  "col.values": {
+   "en": "Values checked",
+   "kn": ""
+  },
+  "col.mismatches": {
+   "en": "Other mismatches",
+   "kn": ""
+  },
+  "col.rate": {
+   "en": "Mismatch rate",
+   "kn": ""
+  },
+  "col.use_mismatches": {
+   "en": "Building use mismatches",
+   "kn": ""
+  },
+  "sup.rates_empty": {
+   "en": "No spot-checks yet.",
+   "kn": ""
+  },
+  "sup.review": {
+   "en": "To review",
+   "kn": ""
+  },
+  "sup.review_empty": {
+   "en": "Nothing to review.",
+   "kn": ""
+  },
+  "sup.resolve": {
+   "en": "Mark resolved",
+   "kn": ""
+  },
+  "review.use_mix_contradiction": {
+   "en": "Use mix contradicts building use",
+   "kn": ""
+  },
+  "review.gps_far": {
+   "en": "Position far from the building",
+   "kn": ""
+  },
+  "review.spot_check_mismatch": {
+   "en": "Spot-check mismatch",
+   "kn": ""
+  },
+  "review.spot_check_building_use_mismatch": {
+   "en": "Spot-check: building use differs",
+   "kn": ""
+  },
+  "sup.flags": {
+   "en": "Map problems",
+   "kn": ""
+  },
+  "sup.flags_empty": {
+   "en": "No open map problems.",
+   "kn": ""
+  },
+  "sup.assign": {
+   "en": "Sector assignments",
+   "kn": ""
+  },
+  "sup.assign_help": {
+   "en": "Assign your sectors to surveyors. Their sectors are selected for them when they sign in.",
+   "kn": ""
+  },
+  "sup.assign_name": {
+   "en": "Surveyor's name",
+   "kn": ""
+  },
+  "sup.assign_sector": {
+   "en": "Sector",
+   "kn": ""
+  },
+  "sup.assign_add": {
+   "en": "Assign",
+   "kn": ""
+  },
+  "sup.assign_end": {
+   "en": "End",
+   "kn": ""
+  },
+  "sup.assign_empty": {
+   "en": "No assignments yet.",
+   "kn": ""
+  },
+  "outcome.completed": {
+   "en": "Completed",
+   "kn": ""
+  },
+  "outcome.partial": {
+   "en": "Partly done",
+   "kn": ""
+  },
+  "outcome.refused": {
+   "en": "Refused",
+   "kn": ""
+  },
+  "outcome.locked": {
+   "en": "Locked, nobody there",
+   "kn": ""
+  },
+  "outcome.revisit_requested": {
+   "en": "Asked to come back later",
+   "kn": ""
+  },
+  "outcome.demolished": {
+   "en": "Demolished",
+   "kn": ""
+  },
+  "outcome.not_a_building": {
+   "en": "Not a building",
+   "kn": ""
+  },
+  "outcome.footprint_issue": {
+   "en": "Map shape is wrong",
+   "kn": ""
+  },
+  "flag.merged_with_neighbour": {
+   "en": "Joined with the next building on the map",
+   "kn": ""
+  },
+  "flag.should_be_split": {
+   "en": "Should be two or more buildings",
+   "kn": ""
+  },
+  "flag.missing_from_map": {
+   "en": "Missing from the map",
+   "kn": ""
+  },
+  "flag.wrong_shape": {
+   "en": "Wrong shape",
+   "kn": ""
+  },
+  "flag.not_a_building": {
+   "en": "Not a building",
+   "kn": ""
+  },
+  "value.collection_arrangement.municipal_door_to_door": {
+   "en": "Municipal door-to-door",
+   "kn": ""
+  },
+  "value.collection_arrangement.society_or_private_contractor": {
+   "en": "Society or private contractor",
+   "kn": ""
+  },
+  "value.collection_arrangement.informal_picker_or_scrap_dealer": {
+   "en": "Waste picker or scrap dealer",
+   "kn": ""
+  },
+  "value.collection_arrangement.self_disposal": {
+   "en": "They dispose of it themselves",
+   "kn": ""
+  },
+  "value.collection_arrangement.none": {
+   "en": "Nobody collects it",
+   "kn": ""
+  },
+  "value.collection_arrangement.unknown": {
+   "en": "Don't know",
+   "kn": ""
+  },
+  "value.segregation_reported.four_stream": {
+   "en": "Four ways: wet, dry, sanitary, special care",
+   "kn": ""
+  },
+  "value.segregation_reported.wet_dry_only": {
+   "en": "Wet and dry only",
+   "kn": ""
+  },
+  "value.segregation_reported.mixed": {
+   "en": "Not separated",
+   "kn": ""
+  },
+  "value.segregation_reported.unknown": {
+   "en": "Don't know",
+   "kn": ""
+  },
+  "value.home_compost.no": {
+   "en": "No",
+   "kn": ""
+  },
+  "value.home_compost.all": {
+   "en": "Yes, all of it",
+   "kn": ""
+  },
+  "value.home_compost.most": {
+   "en": "Yes, most of it",
+   "kn": ""
+  },
+  "value.home_compost.some": {
+   "en": "Yes, some of it",
+   "kn": ""
+  },
+  "value.home_compost_method.pit": {
+   "en": "Compost pit",
+   "kn": ""
+  },
+  "value.home_compost_method.bin": {
+   "en": "Bin or pot",
+   "kn": ""
+  },
+  "value.home_compost_method.aerobic": {
+   "en": "Composting unit",
+   "kn": ""
+  },
+  "value.home_compost_method.biogas": {
+   "en": "Biogas unit",
+   "kn": ""
+  },
+  "building_use.independent_house": {
+   "en": "Independent house",
+   "kn": ""
+  },
+  "building_use.apartment_society": {
+   "en": "Apartment or society",
+   "kn": ""
+  },
+  "building_use.pg_coliving_building": {
+   "en": "PG or co-living building",
+   "kn": ""
+  },
+  "building_use.hostel": {
+   "en": "Hostel",
+   "kn": ""
+  },
+  "building_use.hotel_guesthouse": {
+   "en": "Hotel or guest house",
+   "kn": ""
+  },
+  "building_use.mixed_use_shops_below": {
+   "en": "Mixed use: shops below, homes above",
+   "kn": ""
+  },
+  "building_use.commercial_shops": {
+   "en": "Shops",
+   "kn": ""
+  },
+  "building_use.commercial_offices": {
+   "en": "Offices",
+   "kn": ""
+  },
+  "building_use.food_establishment": {
+   "en": "Restaurant or food business",
+   "kn": ""
+  },
+  "building_use.hospital_clinic": {
+   "en": "Hospital or clinic",
+   "kn": ""
+  },
+  "building_use.school_college": {
+   "en": "School or college",
+   "kn": ""
+  },
+  "building_use.religious": {
+   "en": "Place of worship",
+   "kn": ""
+  },
+  "building_use.government_public": {
+   "en": "Government or public building",
+   "kn": ""
+  },
+  "building_use.market": {
+   "en": "Market",
+   "kn": ""
+  },
+  "building_use.workshop_industrial": {
+   "en": "Workshop or small industry",
+   "kn": ""
+  },
+  "building_use.under_construction": {
+   "en": "Under construction",
+   "kn": ""
+  },
+  "building_use.vacant_or_abandoned": {
+   "en": "Vacant or abandoned",
+   "kn": ""
+  },
+  "building_use.non_occupied_structure": {
+   "en": "Structure nobody lives or works in (tank, shed, garage)",
+   "kn": ""
+  },
+  "use.residential_dwelling": {
+   "en": "Homes (flats or dwellings)",
+   "kn": ""
+  },
+  "use.pg_coliving": {
+   "en": "PG or co-living",
+   "kn": ""
+  },
+  "use.hostel": {
+   "en": "Hostel",
+   "kn": ""
+  },
+  "use.hotel_guesthouse": {
+   "en": "Hotel or guest house",
+   "kn": ""
+  },
+  "use.shop_retail": {
+   "en": "Shops",
+   "kn": ""
+  },
+  "use.food_service": {
+   "en": "Restaurant, café or eatery",
+   "kn": ""
+  },
+  "use.office": {
+   "en": "Offices",
+   "kn": ""
+  },
+  "use.clinic_healthcare": {
+   "en": "Clinic or healthcare",
+   "kn": ""
+  },
+  "use.educational": {
+   "en": "School, college or coaching centre",
+   "kn": ""
+  },
+  "use.religious": {
+   "en": "Place of worship",
+   "kn": ""
+  },
+  "use.market_stall": {
+   "en": "Market stalls",
+   "kn": ""
+  },
+  "use.workshop_industrial": {
+   "en": "Workshop or small industry",
+   "kn": ""
+  },
+  "use.institutional": {
+   "en": "Government or community office",
+   "kn": ""
+  },
+  "use.storage_parking": {
+   "en": "Storage or parking",
+   "kn": ""
+  },
+  "use.vacant": {
+   "en": "Vacant units",
+   "kn": ""
+  },
+  "use.under_construction": {
+   "en": "Under construction",
+   "kn": ""
+  },
+  "module.planning": {
+   "en": "Planning",
+   "kn": ""
+  },
+  "module.operations": {
+   "en": "Operations",
+   "kn": ""
+  },
+  "module.processing": {
+   "en": "Processing",
+   "kn": ""
+  },
+  "module.governance": {
+   "en": "Governance",
+   "kn": ""
+  },
+  "module.public": {
+   "en": "Public",
+   "kn": ""
+  },
+  "module.system": {
+   "en": "System",
+   "kn": ""
+  },
+  "login.phone_pin": {
+   "en": "Phone and PIN",
+   "kn": ""
+  },
+  "login.phone_pin_icons": {
+   "en": "Phone and PIN, icon-led",
+   "kn": ""
+  },
+  "login.email_password": {
+   "en": "Email and password",
+   "kn": ""
+  },
+  "login.phone_otp": {
+   "en": "Phone with OTP",
+   "kn": ""
+  },
+  "role.surveyor": {
+   "en": "Surveyor",
+   "kn": ""
+  },
+  "role.surveyor.description": {
+   "en": "Visits buildings and records building use, use mix and collection basics.",
+   "kn": ""
+  },
+  "role.survey_supervisor": {
+   "en": "Survey supervisor",
+   "kn": ""
+  },
+  "role.survey_supervisor.description": {
+   "en": "Assigns sectors, spot-checks surveys and resolves map problems.",
+   "kn": ""
+  },
+  "role.planner": {
+   "en": "Planner",
+   "kn": ""
+  },
+  "role.planner.description": {
+   "en": "Reads the waste profile and designs collection cycles, routes and transfer stations.",
+   "kn": ""
+  },
+  "role.fleet_workforce_manager": {
+   "en": "Fleet and workforce manager",
+   "kn": ""
+  },
+  "role.fleet_workforce_manager.description": {
+   "en": "Maintains the vehicle inventory, staff, shifts and PPE records.",
+   "kn": ""
+  },
+  "role.driver": {
+   "en": "Driver",
+   "kn": ""
+  },
+  "role.driver.description": {
+   "en": "Sees the assigned route and navigation, nothing more.",
+   "kn": ""
+  },
+  "role.collector": {
+   "en": "Collector (pourakarmika)",
+   "kn": ""
+  },
+  "role.collector.description": {
+   "en": "Starts the shift, confirms collection, and reports missed pickups, garbage vulnerable points and unsafe conditions.",
+   "kn": ""
+  },
+  "role.operations_supervisor": {
+   "en": "Operations supervisor",
+   "kn": ""
+  },
+  "role.operations_supervisor.description": {
+   "en": "Runs the live command centre, reassigns routes and validates penalties.",
+   "kn": ""
+  },
+  "role.collection_contractor": {
+   "en": "Collection contractor",
+   "kn": ""
+  },
+  "role.collection_contractor.description": {
+   "en": "Sees performance on their contract.",
+   "kn": ""
+  },
+  "role.facility_operator": {
+   "en": "MRF or DWCC operator",
+   "kn": ""
+  },
+  "role.facility_operator.description": {
+   "en": "Records incoming loads, sorting, rejects, downtime and incidents.",
+   "kn": ""
+  },
+  "role.recycler": {
+   "en": "Recycler (formal or informal)",
+   "kn": ""
+  },
+  "role.recycler.description": {
+   "en": "Records pickups, materials and volumes.",
+   "kn": ""
+  },
+  "role.ward_officer": {
+   "en": "Ward officer",
+   "kn": ""
+  },
+  "role.ward_officer.description": {
+   "en": "Sees coverage, bulk waste generators, compliance and analytics for the ward.",
+   "kn": ""
+  },
+  "role.trainer": {
+   "en": "Trainer",
+   "kn": ""
+  },
+  "role.trainer.description": {
+   "en": "Assigns and tracks training modules.",
+   "kn": ""
+  },
+  "role.generator": {
+   "en": "Generator (household, RWA, BWG)",
+   "kn": ""
+  },
+  "role.generator.description": {
+   "en": "Sees their building, schedule and status, and reports complaints.",
+   "kn": ""
+  },
+  "role.admin": {
+   "en": "Admin",
+   "kn": ""
+  },
+  "role.admin.description": {
+   "en": "Manages users, roles and jurisdictions.",
+   "kn": ""
+  },
+  "contra.expects_any": {
+   "en": "{building_use} with no {uses} recorded.",
+   "kn": ""
+  },
+  "contra.warn_over": {
+   "en": "{building_use} with {total} {field} of {use} (more than {max}).",
+   "kn": ""
+  },
+  "contra.no_occupied_uses": {
+   "en": "{building_use} with occupied uses recorded: {uses}.",
+   "kn": ""
+  },
+  "contra.or": {
+   "en": " or ",
+   "kn": ""
+  },
+  "mismatch.field": {
+   "en": "{field}: survey said {surveyed}, spot-check found {checked}.",
+   "kn": ""
+  },
+  "mismatch.use_field": {
+   "en": "{use}, {field}: survey said {surveyed}, spot-check found {checked}.",
+   "kn": ""
+  },
+  "mismatch.use_added": {
+   "en": "{use}: not in the survey, found by the spot-check.",
+   "kn": ""
+  },
+  "mismatch.use_missing": {
+   "en": "{use}: in the survey, not found by the spot-check.",
+   "kn": ""
+  },
+  "mismatch.blank": {
+   "en": "nothing",
+   "kn": ""
+  },
+  "field.building_use": {
+   "en": "Building use",
+   "kn": ""
+  },
+  "field.floors": {
+   "en": "Floors",
+   "kn": ""
+  },
+  "field.society_name": {
+   "en": "Society or building name",
+   "kn": ""
+  },
+  "noun.count": {
+   "en": "units",
+   "kn": ""
+  },
+  "noun.beds_total": {
+   "en": "beds",
+   "kn": ""
+  },
+  "noun.occupants_total": {
+   "en": "people",
+   "kn": ""
+  },
+  "sv.tap_hint": {
+   "en": "Tap a building on the map to open it and start a visit. Zoom in to see buildings clearly.",
+   "kn": ""
+  }
+ }
+}
