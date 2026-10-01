@@ -50,11 +50,7 @@ const matchExpr = (prop, colours, fallback = "#e5e7eb") => ["match", ["to-string
 const kpi = (label, value, sub = "", cls = "") => `<div class="kpi ${cls}"><div class="k">${label}</div><div class="v">${value}</div>${sub ? `<div class="s">${sub}</div>` : ""}</div>`;
 const isPriority = ["in", ["get", "bwg_status"], ["literal", ["bwg", "watch"]]];
 
-async function api(path, options) {
-  const res = await fetch(path, options);
-  if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
-  return res.json();
-}
+const api = apiFetch; // ui.js
 
 // ---------- Colouring ----------
 

@@ -30,6 +30,26 @@ const NAV = [
   { key: "rules", label: "Rules", href: "rules.html", icon: "rules" },
 ];
 
+// JSON request to the app's API with a readable error. Without the Python server (for example on
+// GitHub Pages) the host answers with an HTML page instead of JSON.
+async function apiFetch(path, options) {
+  let res;
+  try {
+    res = await fetch(path, options);
+  } catch {
+    throw new Error("Cannot reach the data server. Check your connection and try again.");
+  }
+  const type = res.headers.get("content-type") || "";
+  if (!type.includes("application/json")) {
+    throw new Error(FULL_APP_URL
+      ? `This copy of the site has no data server. Open the full app: ${FULL_APP_URL}`
+      : "This copy of the site has no data server, so maps and data cannot load here. Run the app server (see README).");
+  }
+  const body = await res.json();
+  if (!res.ok) throw new Error(`${res.status}: ${typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail ?? body).slice(0, 300)}`);
+  return body;
+}
+
 // fitBounds padding that keeps features clear of the floating panel
 // (left of the map on desktop, a bottom sheet on phones).
 function mapPadding(map, extra = 20) {

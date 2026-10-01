@@ -6,13 +6,13 @@ const date = (d) => `<span class="nowrap">${esc(d)}</span>`;
 const cite = (r) => `<span class="cite">r. ${esc(r)}</span>`;
 
 (async () => {
-  const index = await (await fetch("/api/regulations")).json();
+  const index = await apiFetch("/api/regulations");
   document.getElementById("docs").innerHTML = table(
     ["Document", "Instrument", "In force", "Status"],
     index.documents.map((d) => [esc(d.title), esc(d.instrument), date(d.in_force_from), esc(d.status)]),
   ) + `<p class="hint">Planned additions: ${index.planned.map(esc).join("; ")}.</p>`;
 
-  const d = await (await fetch("/api/regulations/swm_rules_2026")).json();
+  const d = await apiFetch("/api/regulations/swm_rules_2026");
   const ws = d.waste_streams;
   const bwg = d.generator_types.bulk_waste_generator;
   document.getElementById("content").innerHTML = `
@@ -49,4 +49,6 @@ const cite = (r) => `<span class="cite">r. ${esc(r)}</span>`;
 
     <h3>Differences between the Hindi and English texts</h3>
     ${table(["Topic", "English", "Hindi", "Used"], d.text_discrepancies.map((x) => [esc(x.topic), esc(x.english), esc(x.hindi), esc(x.used)]))}`;
-})();
+})().catch((err) => {
+  document.getElementById("content").innerHTML = `<p class="warn">${esc(err.message)}</p>`;
+});
