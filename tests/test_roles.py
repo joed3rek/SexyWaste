@@ -51,3 +51,19 @@ def test_api_lists_roles_and_echoes_the_actor():
     me = client.get("/api/auth/me", headers={"X-SWM-Role": "admin", "X-SWM-User": "Ravi"}).json()
     assert me == {"name": "Ravi", "role": "admin", "sectors": [], "verified": False}
     assert client.get("/api/auth/me", headers={"X-SWM-Role": "mayor"}).status_code == 400
+
+
+def test_built_roles_have_a_home_page():
+    from backend.config import FRONTEND_DIR
+    for r in auth.roles():
+        if r["built"]:
+            page = r["home"].split("?")[0]
+            assert (FRONTEND_DIR / page).exists(), f"{r['key']}: {page} missing"
+
+
+def test_every_role_is_documented():
+    import io
+    from backend.config import ROOT
+    doc = io.open(ROOT / "docs" / "roles.md", encoding="utf-8").read()
+    for r in auth.roles():
+        assert r["label"] in doc, f"{r['label']} not in docs/roles.md"
