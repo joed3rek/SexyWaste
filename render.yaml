@@ -1,0 +1,20 @@
+# Render Blueprint: runs the whole app (FastAPI API + static frontend) as one web service.
+# Deploy: Render dashboard -> New -> Blueprint -> pick this repository. See README "Deploying".
+services:
+  - type: web
+    name: swm-urban-waste
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn backend.api.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/pilots
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.6
+    # The free plan has no persistent disk: the OSM cache (data/cache) is re-downloaded
+    # after each restart and survey records (data/survey.db) are lost. For real surveys,
+    # switch to a paid plan and uncomment the disk below.
+    # disk:
+    #   name: swm-data
+    #   mountPath: /opt/render/project/src/data
+    #   sizeGB: 1

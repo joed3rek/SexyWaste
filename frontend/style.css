@@ -434,6 +434,14 @@ details.advanced label { margin: var(--s-3) 0; }
   animation: fade-down var(--t-med) var(--ease) both;
 }
 .map-busy[hidden] { display: none !important; }
+/* Shown on the static GitHub Pages copy, where the API is not available */
+.preview-banner {
+  position: fixed; z-index: 40; bottom: 36px; right: var(--s-4);
+  max-width: 360px; padding: 10px var(--s-4);
+  background: var(--ink); color: #fff; border-radius: var(--r-md); box-shadow: var(--sh-3);
+  font-size: var(--fs-sm); line-height: 1.45;
+}
+.preview-banner a { color: #fff; text-decoration: underline; }
 .spinner { flex: none; width: 24px; height: 24px; border: 3px solid var(--surface-3); border-top-color: var(--ink); border-radius: 50%; animation: spin .8s linear infinite; }
 
 /* ---------- 6. Pages ---------- */
@@ -552,6 +560,7 @@ details.advanced label { margin: var(--s-3) 0; }
   .sheet-handle::before { content: ""; width: 40px; height: 4px; border-radius: 2px; background: var(--line-strong); }
 
   .map-busy { left: 50%; top: var(--s-3); width: calc(100% - 32px); max-width: 420px; }
+  .preview-banner { top: var(--s-3); bottom: auto; left: var(--s-3); right: var(--s-3); max-width: none; }
 
   .topbar { padding: 0 var(--s-4); gap: var(--s-3); }
   .topbar nav a { padding: var(--s-2); font-size: var(--fs-md); }

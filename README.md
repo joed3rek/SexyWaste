@@ -459,6 +459,16 @@ Then open http://127.0.0.1:8000. The first load downloads OSM data through Overp
 .venv\Scripts\python -m pytest
 ```
 
+#### Deploying
+
+The app is one FastAPI server that also serves the frontend, so it needs a host that runs Python. GitHub Pages only serves static files.
+
+- **Full app (Render).** `render.yaml` is a Render Blueprint. In the Render dashboard choose *New → Blueprint* and pick this repository. Render installs `requirements.txt` and starts `uvicorn backend.api.main:app --host 0.0.0.0 --port $PORT`. The first page load downloads OSM data through Overpass, which takes a few minutes.
+  - The free plan has no persistent disk, so the OSM cache is downloaded again after each restart and survey records are lost. Use a paid plan with the disk in `render.yaml` before collecting real surveys.
+  - The app has no login yet, so anyone with the link can edit survey records.
+  - After deploying, set `FULL_APP_URL` in `frontend/ui.js` so the GitHub Pages copy links to it.
+- **Design preview (GitHub Pages).** `.github/workflows/static.yml` publishes `frontend/` on every push to `main`. Pages cannot run the API, so the maps and Rules library show no data there, and a banner says so.
+
 Current code layout:
 
 ```
@@ -476,6 +486,7 @@ backend/
 └── routing/               # Road network, street-run collection points (points.py) and two-tier planner (twotier.py)
 frontend/
 ├── index.html             # Role picker
+├── style.css, ui.js       # Design system and shared shell (navigation, icons)
 ├── map.html, map.js       # Surveyor and planner map, building card
 ├── builder.html, builder.js  # Route builder
 ├── rules.html, rules.js   # Rules library viewer

@@ -36,8 +36,9 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Upload entire repository
-          path: '.'
+          # Only the static frontend, so the site root is the home page.
+          # Pages cannot run the Python API; see README "Deploying".
+          path: 'frontend'
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5

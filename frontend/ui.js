@@ -18,6 +18,10 @@ function icon(name) {
   return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ""}</svg>`;
 }
 
+// Where the full app (frontend + Python API) is hosted. GitHub Pages serves only the static
+// frontend, so pages there show a banner pointing to it. Set this once the app is deployed.
+const FULL_APP_URL = "";
+
 const NAV = [
   { key: "home", label: "Home", href: "index.html", icon: "home" },
   { key: "surveyor", label: "Survey", href: "map.html?role=surveyor", icon: "survey" },
@@ -58,6 +62,15 @@ function activeNavKey() {
     nav.setAttribute("aria-label", "Main");
     nav.innerHTML = `<a class="logo" href="index.html" title="Urban Waste Intelligence">${icon("logo")}</a>` +
       NAV.map((n) => `<a class="item${n.key === active ? " active" : ""}" href="${n.href}"${n.key === active ? ' aria-current="page"' : ""}>${icon(n.icon)}<span>${n.label}</span></a>`).join("");
+  }
+
+  if (location.hostname.endsWith("github.io")) {
+    const note = document.createElement("div");
+    note.className = "preview-banner";
+    note.innerHTML = FULL_APP_URL
+      ? `Design preview. Maps and data run on the <a href="${FULL_APP_URL}">full app</a>.`
+      : "Design preview. Maps and data need the app server: run it locally (see README).";
+    document.body.append(note);
   }
 
   // On phones the panel is a bottom sheet; the handle collapses it to show more map.
