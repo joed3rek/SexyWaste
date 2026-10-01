@@ -321,7 +321,7 @@ function renderResult() {
   map.getSource("routes").setData({ type: "FeatureCollection", features: feats });
   map.getSource("haul").setData({ type: "FeatureCollection", features: r.stations.filter((x) => x.kg > 0).map((x) => ({ type: "Feature", geometry: { type: "LineString", coordinates: x.to_mrf_geometry }, properties: { station: x.id } })) });
   const tripsAt = {};
-  r.secondary.trucks.forEach((t) => t.trips.forEach((x) => (tripsAt[x.station] = (tripsAt[x.station] || 0) + 1)));
+  r.secondary.trucks.forEach((t) => t.trips.forEach((x) => x.stations.forEach((st) => (tripsAt[st] = (tripsAt[st] || 0) + 1))));
   if (r.secondary.trucks.length) addHaulArrows(r.stations, tripsAt);
   $("showRoutes").checked = true;
   $("showHaul").checked = true;
@@ -342,6 +342,7 @@ function renderResult() {
   if (!s.within_shift) warn.push(`The work takes ${hm(s.time_to_complete_min)}, longer than the ${hm(s.shift_min)} shift. Add vehicles or plan a second shift.`);
   if (s.vehicles_over_shift.length) warn.push(`Over shift: ${s.vehicles_over_shift.map(esc).join(", ")}.`);
   if (s.uncollected_kg > 0) warn.push(`${fmt(s.uncollected_kg)} kg/day at ${s.uncollected_points.length} point(s) could not be collected (street too narrow for every vehicle, or not enough capacity).`);
+  if (s.left_at_stations_kg > 0) warn.push(`${fmt(s.left_at_stations_kg)} kg/day stays at the transfer stations: no truck trip can take it to the MRF within the ${hm(s.shift_min)} shift. Add a truck or lengthen the shift.`);
   if (!r.secondary.trucks.length) warn.push("No trucks added: waste stays at the transfer stations.");
   if (s.bwg_wet_excluded_kg) warn.push(`${fmt(s.bwg_wet_excluded_kg)} kg/day of wet waste from bulk waste generators is not collected: they process it on site or hold EBWGR certificates (SWM Rules 2026, r. 6).`);
   $("warnings").innerHTML = warn.map((w) => `<p class="warn">${w}</p>`).join("");
@@ -356,8 +357,11 @@ function renderResult() {
   $("tripDetail").innerHTML = "";
   state.selectedVehicle = null;
 
-  $("truckTable").innerHTML = r.secondary.trucks.length ? `<tr><th>Truck</th><th>Trips</th><th>km</th><th>Time</th></tr>` + r.secondary.trucks.map((t) =>
-    `<tr class="clickable" data-st="${esc([...new Set(t.trips.map((x) => x.station))].join(","))}"><td>${esc(t.id)}</td><td>${t.trips.length}</td><td>${fmt(t.km, 1)}</td><td>${hm(t.total_min)}</td></tr>`).join("") : `<tr><td class="muted">No trucks.</td></tr>`;
+  const streamName = { wet: "Wet", dry: "Dry", sanitary: "Sanitary", special: "Special care" };
+  $("truckTable").innerHTML = r.secondary.trucks.length ? `<tr><th>Truck</th><th>Trips (one stream each)</th><th>km</th><th>Time</th></tr>` + r.secondary.trucks.map((t) =>
+    `<tr class="clickable" data-st="${esc([...new Set(t.trips.flatMap((x) => x.stations))].join(","))}"><td>${esc(t.id)}</td>
+      <td>${t.trips.map((x) => `${streamName[x.stream] || esc(x.stream)} ${fmt(x.kg)} kg from ${x.stations.map(esc).join(", ")}`).join("<br>")}</td>
+      <td>${fmt(t.km, 1)}</td><td>${hm(t.total_min)}</td></tr>`).join("") : `<tr><td class="muted">No trucks.</td></tr>`;
   document.querySelectorAll("#truckTable tr.clickable").forEach((tr) => {
     const sts = tr.dataset.st.split(",");
     const f = ["in", ["get", "station"], ["literal", sts]];
@@ -365,7 +369,7 @@ function renderResult() {
     tr.addEventListener("mouseleave", () => { map.setFilter("haul", null); map.setFilter("haul-casing", null); });
   });
   const truckTrips = {};
-  r.secondary.trucks.forEach((t) => t.trips.forEach((x) => (truckTrips[x.station] = (truckTrips[x.station] || 0) + 1)));
+  r.secondary.trucks.forEach((t) => t.trips.forEach((x) => x.stations.forEach((st) => (truckTrips[st] = (truckTrips[st] || 0) + 1))));
   $("stationTable").innerHTML = `<tr><th>Station</th><th>Points</th><th>t/day</th><th>Of capacity</th><th>Trips in</th><th>Truck trips</th><th>To MRF</th></tr>` + r.stations.map((x) =>
     `<tr><td>${esc(x.id)}${x.on_main_road ? "" : ' <span class="muted small">(side road)</span>'}</td><td>${fmt(x.points)}</td><td>${fmt(x.kg / 1000, 2)}</td><td class="${x.kg > r.station_capacity_kg ? "over" : ""}">${fmt(100 * x.kg / r.station_capacity_kg)}%</td><td>${fmt(x.primary_trips)}</td><td>${fmt(truckTrips[x.id] || 0)}</td><td>${fmt(x.to_mrf_km, 1)} km</td></tr>`).join("");
   $("assumptions").innerHTML = r.assumptions.map((a) => `<li>${esc(a)}</li>`).join("");

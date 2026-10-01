@@ -68,3 +68,32 @@ def test_vehicles_work_separate_territories(result):
                 seen.setdefault(pid, set()).add(v["id"])
     assert all(len(vs) == 1 for vs in seen.values()), "a collection point is visited by two vehicles"
     assert all(len({t["station"] for t in v["trips"]}) <= 3 for v in result["primary"]["vehicles"])
+
+
+def test_each_truck_trip_carries_one_stream_within_capacity(result):
+    cap = P.vehicle_class("rear_loader_compactor")["payload_kg"]["value"]
+    trips = [t for tr in result["secondary"]["trucks"] for t in tr["trips"]]
+    assert trips
+    for t in trips:
+        assert t["stream"] in T.STREAMS
+        assert t["kg"] <= cap + 1 and t["fill_pct"] <= 101
+        assert sum(t["by_station"].values()) == pytest.approx(t["kg"], abs=1)
+
+
+def test_every_stream_at_every_station_reaches_the_mrf(result):
+    moved = {}
+    for tr in result["secondary"]["trucks"]:
+        for t in tr["trips"]:
+            for st, kg in t["by_station"].items():
+                moved[(st, t["stream"])] = moved.get((st, t["stream"]), 0) + kg
+    for st in result["stations"]:
+        for stream, kg in st["kg_by_stream"].items():
+            assert moved.get((st["id"], stream), 0) == pytest.approx(kg, abs=2), (st["id"], stream)
+    assert result["summary"]["left_at_stations_kg"] == 0
+
+
+def test_truck_km_comes_from_the_road_route(result):
+    for tr in result["secondary"]["trucks"]:
+        for t in tr["trips"]:
+            assert t["km"] > 0 and len(t["geometry"]) >= 2
+        assert tr["km"] == pytest.approx(sum(t["km"] for t in tr["trips"]), abs=0.05)

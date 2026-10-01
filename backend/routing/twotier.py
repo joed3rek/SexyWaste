@@ -17,7 +17,9 @@ Method, per sector:
    unloading time, so the solver uses as few trips as it sensibly can.
 4. Trips are assigned to the physical fleet by longest-trip-first scheduling to the least
    busy vehicle of the right type, adding depot and station-to-station travel.
-5. Truck loads are scheduled the same way, earliest-available truck first.
+5. Truck trips are built per stream with OR-Tools: each trip leaves the MRF, picks up one stream
+   at one or more transfer stations and returns, so streams are never mixed (r. 8(h)(v)-(vi)).
+   Trips go to the truck of their type that can start them soonest, longest trips first.
 
 All times are estimates from assumed road speeds and service rates.
 """
@@ -519,44 +521,123 @@ def _split_point(p: dict, t: dict, streams: list[str]) -> list[dict]:
     return out
 
 
-# ---------- Scheduling ----------
+# ---------- Tier 2: trucks from transfer stations to the MRF ----------
+
+def _secondary_trips(items: list[dict], specs: dict, mrf: int, times: RoutingService, inp: PlanInput,
+                     time_limit_s: float) -> tuple[list[dict], list[dict]]:
+    """Truck trips for ONE stream: a capacitated VRP from the MRF whose routes are single trips.
+
+    A single-body truck carries one stream per trip so streams are never mixed (SWM Rules 2026,
+    r. 8(h)(v)-(vi)), but one trip may pick that stream up at several transfer stations.
+    `items` are station loads of the stream, each small enough for the smallest truck.
+    `specs` maps truck type to its capacity. Returns (trips, items left over)."""
+    if not items:
+        return [], []
+    stream = items[0]["stream"]
+    n = len(items)
+    nodes = [mrf] + [it["node"] for it in items] + [mrf]
+    tm = times.matrix(nodes).time_s.tolist()
+    load_s = inp.truck_load_min * 60
+    svc = [0.0] + [load_s] * n + [0.0]
+    total_kg = sum(it["kg"] for it in items)
+    slots = []  # one routing "vehicle" per possible trip, by truck type
+    for key, spec in specs.items():
+        cap_kg = min(spec["cap_kg"], spec["cap_l"] / 1000 * spec["density"][stream])
+        slots += [(key, spec, cap_kg)] * min(n, math.ceil(total_kg / (0.9 * cap_kg)) + 1)
+    k = len(slots)
+    manager = pywrapcp.RoutingIndexManager(len(nodes), k, [0] * k, [n + 1] * k)
+    routing = pywrapcp.RoutingModel(manager)
+    cb = routing.RegisterTransitCallback(
+        lambda i, j: int(tm[manager.IndexToNode(i)][manager.IndexToNode(j)] + svc[manager.IndexToNode(i)]))
+    routing.SetArcCostEvaluatorOfAllVehicles(cb)
+    for v in range(k):
+        routing.SetFixedCostOfVehicle(int(inp.truck_unload_min * 60), v)
+    shift_s = int(inp.shift_h * 3600)
+    routing.AddDimension(cb, 0, shift_s, True, "Time")
+    kg = [0] + [int(round(it["kg"])) for it in items] + [0]
+    routing.AddDimensionWithVehicleCapacity(routing.RegisterUnaryTransitCallback(lambda i: kg[manager.IndexToNode(i)]),
+                                            0, [int(c) for _, _, c in slots], True, "Kg")
+    for i in range(1, n + 1):
+        routing.AddDisjunction([manager.NodeToIndex(i)], shift_s * 100)
+    params = pywrapcp.DefaultRoutingSearchParameters()
+    params.first_solution_strategy = routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC
+    params.local_search_metaheuristic = routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH
+    lim = max(0.3, float(time_limit_s))
+    params.time_limit.seconds = int(lim)
+    params.time_limit.nanos = int((lim - int(lim)) * 1e9)
+    sol = routing.SolveWithParameters(params)
+    if sol is None:
+        return [], items
+    trips, served = [], set()
+    for v in range(k):
+        idx, seq = routing.Start(v), []
+        while not routing.IsEnd(idx):
+            node = manager.IndexToNode(idx)
+            if 1 <= node <= n:
+                seq.append(node - 1)
+            idx = sol.Value(routing.NextVar(idx))
+        if not seq:
+            continue
+        served.update(seq)
+        key, spec, cap_kg = slots[v]
+        load = sum(items[i]["kg"] for i in seq)
+        stations = list(dict.fromkeys(items[i]["station"] for i in seq))
+        trips.append({"type": key, "stream": stream, "stations": stations, "station": stations[0],
+                      "stops": [items[i]["node"] for i in seq], "kg": round(load, 1),
+                      "fill_pct": round(100 * max(load / spec["cap_kg"],
+                                                  load / spec["density"][stream] * 1000 / spec["cap_l"])),
+                      "by_station": {st: round(sum(items[i]["kg"] for i in seq if items[i]["station"] == st), 1)
+                                     for st in stations}})
+    return trips, [it for i, it in enumerate(items) if i not in served]
+
 
 def _schedule_secondary(station_loads: list[dict], fleet: list[dict], mrf: int, start: int, times: RoutingService,
-                        inp: PlanInput, streams: list[str]) -> list[dict]:
-    trucks = []
+                        inp: PlanInput, streams: list[str], time_limit_s: float = 2.0) -> tuple[list[dict], list[dict]]:
+    """Plan single-stream truck trips with OR-Tools, then give each trip to the truck of its type
+    that can start it soonest (longest trips first). Trucks start at `start` (yard or MRF).
+    Returns (trucks, loads left at stations because no trip could take them within the shift)."""
+    specs, trucks = {}, []
     for row in fleet:
-        t = _vehicle(row["type"], streams)
+        spec = specs.setdefault(row["type"], _vehicle(row["type"], streams))
         for k in range(int(row["count"])):
-            trucks.append({"id": f"{t['label']} {k + 1}", "type": row["type"], "spec": t, "at": start,
-                           "busy_s": 0.0, "trips": []})
+            trucks.append({"id": f"{spec['label']} {k + 1}", "type": row["type"], "at": start, "busy_s": 0.0, "trips": []})
     if not trucks:
-        return []
-    queue = []
-    for s in sorted(station_loads, key=lambda s: -s["kg"]):
-        queue.append({"station": s, "left_kg": s["kg"], "left_by_stream": dict(s["kg_by_stream"])})
-    for q in queue:
-        while q["left_kg"] > 0.5:
-            tr = min(trucks, key=lambda t: t["busy_s"] + times.t(t["at"], q["station"]["node"]))
-            spec = tr["spec"]
-            litres = _litres(q["left_by_stream"], spec["density"])
-            frac = min(1.0, spec["cap_kg"] / q["left_kg"], spec["cap_l"] / max(litres, 1e-6))
-            take = {s: x * frac for s, x in q["left_by_stream"].items()}
-            kg = sum(take.values())
-            to_st = times.t(tr["at"], q["station"]["node"])
-            to_mrf = times.t(q["station"]["node"], mrf)
-            dur = to_st + inp.truck_load_min * 60 + to_mrf + inp.truck_unload_min * 60
-            tr["trips"].append({"station": q["station"]["id"], "kg": round(kg, 1), "start_s": tr["busy_s"],
-                                "end_s": tr["busy_s"] + dur, "drive_s": to_st + to_mrf,
-                                "fill_pct": round(100 * max(kg / spec["cap_kg"], _litres(take, spec["density"]) / spec["cap_l"]))})
-            tr["busy_s"] += dur
-            tr["at"] = mrf
-            for s in take:
-                q["left_by_stream"][s] -= take[s]
-            q["left_kg"] -= kg
+        return [], []
+    # Split station loads into pieces the smallest truck can carry.
+    smallest = min(specs.values(), key=lambda t: t["cap_kg"])
+    items = defaultdict(list)
+    for st in station_loads:
+        for stream, kg in st["kg_by_stream"].items():
+            if kg <= 0.5:
+                continue
+            cap = 0.9 * min(smallest["cap_kg"], smallest["cap_l"] / 1000 * smallest["density"][stream])
+            parts = math.ceil(kg / cap)
+            items[stream] += [{"station": st["id"], "node": st["node"], "stream": stream, "kg": kg / parts}] * parts
+    trips, left = [], []
+    for stream in streams:
+        t, lo = _secondary_trips([dict(x) for x in items.get(stream, [])], specs, mrf, times, inp,
+                                 time_limit_s / max(1, len(items)))
+        trips += t
+        left += lo
+    load_s, unload_s = inp.truck_load_min * 60, inp.truck_unload_min * 60
+
+    def duration(at, tr):
+        legs = [at] + tr["stops"] + [mrf]
+        drive = sum(times.t(a, b) for a, b in zip(legs[:-1], legs[1:]))
+        return drive, drive + load_s * len(tr["stops"]) + unload_s
+
+    for tr in sorted(trips, key=lambda x: -duration(mrf, x)[1]):
+        own = [t for t in trucks if t["type"] == tr["type"]]
+        truck = min(own, key=lambda t: t["busy_s"] + duration(t["at"], tr)[1])
+        drive, dur = duration(truck["at"], tr)
+        tr.update({"nodes": [truck["at"]] + tr.pop("stops") + [mrf], "start_s": truck["busy_s"],
+                   "end_s": truck["busy_s"] + dur, "drive_s": drive})
+        truck["trips"].append(tr)
+        truck["busy_s"] += dur
+        truck["at"] = mrf
     for t in trucks:
         t["total_s"] = t["busy_s"]
-        t.pop("spec")
-    return trucks
+    return trucks, [{"station": x["station"], "stream": x["stream"], "kg": round(x["kg"], 1)} for x in left]
 
 
 # ---------- Public entry point ----------
@@ -670,7 +751,8 @@ def plan(inp: PlanInput, progress=None) -> dict:
         s["kg"] = round(sum(s["kg_by_stream"].values()), 1)
         s["primary_trips"] = len(trs)
     report("Scheduling vehicles and trucks", 0.90)
-    trucks = _schedule_secondary([s for s in stations if s["kg"] > 0], secondary_fleet, mrf, truck_start, times, inp, inp.streams)
+    trucks, left_at_stations = _schedule_secondary([s for s in stations if s["kg"] > 0], secondary_fleet, mrf, truck_start,
+                                                   times, inp, inp.streams)
     baseline = None
     if park_on and secondary_fleet:
         # The same stations if the park-bound wet waste went there instead.
@@ -685,7 +767,7 @@ def plan(inp: PlanInput, progress=None) -> dict:
                 kgs["wet"] += extra.get(st["id"], 0.0)
             if sum(kgs.values()) > 0:
                 base_st.append({"id": st["id"], "node": st["node"], "kg": sum(kgs.values()), "kg_by_stream": kgs})
-        bt = _schedule_secondary(base_st, secondary_fleet, mrf, truck_start, times, inp, inp.streams)
+        bt, _ = _schedule_secondary(base_st, secondary_fleet, mrf, truck_start, times, inp, inp.streams)
         baseline = {"truck_trips": sum(len(t["trips"]) for t in bt),
                     "truck_min": round(max((t["total_s"] for t in bt), default=0) / 60, 1),
                     "kg_to_mrf": round(sum(x["kg"] for x in base_st), 1)}
@@ -723,9 +805,11 @@ def plan(inp: PlanInput, progress=None) -> dict:
         s["to_mrf_km"] = round(length / 1000, 2)
         s["haul_min"] = round((times.t(s["node"], mrf) + times.t(mrf, s["node"])) / 60
                               + inp.truck_load_min + inp.truck_unload_min, 1)
-    km_of = {s["id"]: s["to_mrf_km"] for s in stations}
     for t in trucks:
-        t["km"] = round(sum(2 * km_of[tr["station"]] for tr in t["trips"]), 2)
+        for tr in t["trips"]:
+            tr["geometry"], length = paths.route(tr.pop("nodes"))
+            tr["km"] = round(length / 1000, 2)
+        t["km"] = round(sum(tr["km"] for tr in t["trips"]), 2)
         t["total_min"] = round(t.pop("total_s") / 60, 1)
         for tr in t["trips"]:
             tr["minutes"] = round((tr["end_s"] - tr["start_s"]) / 60, 1)
@@ -785,10 +869,13 @@ def plan(inp: PlanInput, progress=None) -> dict:
             "kg_collected": round(sum(collected.values()), 1), "kg_by_stream": collected,
             "uncollected_kg": round(sum(uncollected.values()), 1), "uncollected_by_stream": uncollected,
             "uncollected_points": dropped_ids,
+            "left_at_stations_kg": round(sum(x["kg"] for x in left_at_stations), 1),
+            "left_at_stations": left_at_stations,
             "bwg_wet_excluded_kg": bwg_wet,
             "time_to_complete_min": round(overall, 1), "shift_min": inp.shift_h * 60,
             "within_shift": overall <= inp.shift_h * 60,
-            "vehicles_over_shift": [v["id"] for v in vehicles if not v["within_shift"]],
+            "vehicles_over_shift": [v["id"] for v in vehicles if not v["within_shift"]]
+                                   + [t["id"] for t in trucks if t["total_min"] > inp.shift_h * 60],
             "composting": {
                 "parks_enabled": park_on,
                 "wet_to_parks_kg": to_parks,
@@ -809,6 +896,7 @@ def plan(inp: PlanInput, progress=None) -> dict:
             "Each door-to-door vehicle works its own territory (a wedge of one station's catchment, or adjoining wedges of two neighbouring stations), so routes do not overlap.",
             f"Unloading at a transfer station takes {inp.unload_min:.0f} min; trucks load {inp.truck_load_min:.0f} min and unload {inp.truck_unload_min:.0f} min.",
             "Trucks shuttle while primary collection is under way; completion adds the last haul to the MRF.",
+            "Each truck trip carries one stream and may collect it from several transfer stations; streams are not mixed in transport (SWM Rules 2026, r. 8(h)(v)-(vi)).",
             "Vehicle width limits apply to the streets a vehicle collects from, not to streets it drives through.",
             "Bulk waste generators' wet waste is excluded: processed at source or covered by EBWGR certificates (SWM Rules 2026, r. 6).",
             "Wet waste composted inside buildings (from the survey) is not collected.",
