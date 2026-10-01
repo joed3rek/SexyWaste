@@ -11,9 +11,12 @@ excluded from wet waste (SWM Rules 2026, r. 6(c)-(d)).
 
 from __future__ import annotations
 
+import copy
+import hashlib
 import json
 import math
 import re
+import threading
 from collections import Counter
 from functools import lru_cache
 
@@ -381,12 +384,31 @@ def blocks(pilot_key: str) -> gpd.GeoDataFrame:
 
 # ---------- Public entry point ----------
 
+def survey_fingerprint(surveys: dict) -> str:
+    """Changes whenever any survey record is added, edited or removed."""
+    return hashlib.sha1(json.dumps(surveys, sort_keys=True, default=str).encode("utf-8")).hexdigest()
+
+
+# Building every point takes seconds (mostly pandas overhead per street run), and the same set is
+# asked for by the points, stations and plan endpoints. Keep the latest set per pilot and params;
+# a survey edit changes the fingerprint and so rebuilds it.
+_POINTS_CACHE: dict[tuple, tuple[str, list[dict]]] = {}
+_POINTS_LOCK = threading.Lock()
+
+
 def collection_points(pilot_key: str, surveys: dict, sector: str | None = None,
                       params: dict | None = None) -> list[dict]:
     p = params or {}
-    pts = points_street_runs(pilot_key, surveys, p.get("max_run_m", 150), int(p.get("max_buildings", 40)),
-                             int(p.get("min_buildings", 3)), p.get("merge_radius_m", 120))
-    return [x for x in pts if not sector or x["sector"] == sector]
+    args = (float(p.get("max_run_m", 150)), int(p.get("max_buildings", 40)),
+            int(p.get("min_buildings", 3)), float(p.get("merge_radius_m", 120)))
+    key, fp = (pilot_key, *args), survey_fingerprint(surveys)
+    with _POINTS_LOCK:
+        hit = _POINTS_CACHE.get(key)
+        if hit is None or hit[0] != fp:
+            hit = (fp, points_street_runs(pilot_key, surveys, *args))
+            _POINTS_CACHE[key] = hit
+    # Callers add fields to points, so each gets its own copy.
+    return copy.deepcopy([x for x in hit[1] if not sector or x["sector"] == sector])
 
 
 def summarise(points: list[dict]) -> dict:

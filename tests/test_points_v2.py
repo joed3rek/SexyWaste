@@ -79,3 +79,24 @@ def test_vehicle_reference_every_figure_has_source_or_flag():
             f = c[field]
             assert "value" in f and "sourced" in f
             assert (f["sourced"] and f.get("source")) or not f["sourced"]
+
+
+def test_cached_points_match_a_fresh_build(runs_points):
+    fresh = P.points_street_runs("hsr", {}, 150, 40, 3, 120)
+    assert sorted(runs_points, key=lambda p: p["id"]) == sorted(fresh, key=lambda p: p["id"])
+
+
+def test_cache_rebuilds_when_a_survey_changes():
+    before = P.collection_points("hsr", {}, "Sector 4")
+    target = next(p for p in before if not p.get("is_bwg") and p["use"] == "residential")
+    bid = target["building_ids"][0]
+    after = P.collection_points("hsr", {bid: {"use": "vacant"}}, "Sector 4")
+    assert bid not in {b for p in after for b in p["building_ids"]}, "a vacant building should drop out"
+
+
+def test_callers_cannot_change_cached_points():
+    first = P.collection_points("hsr", {}, "Sector 4")
+    first[0]["kg"]["dry"] = -1
+    first[0]["service_min"] = 99
+    again = P.collection_points("hsr", {}, "Sector 4")
+    assert again[0]["kg"]["dry"] >= 0 and "service_min" not in again[0]
