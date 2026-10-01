@@ -5,18 +5,28 @@
   <link rel="icon" href="data:," />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Role Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
   <link rel="stylesheet" href="style.css" />
 </head>
-<body class="page">
-  <main class="picker">
+<body class="page with-rail">
+  <nav id="appNav"></nav>
+  <main class="doc">
     <p><a href="index.html">← Choose another role</a></p>
-    <h1 id="title"></h1>
-    <p class="sub">This role is a stub in the pilot. The surveyor and planner roles work end to end.</p>
-    <h2>First screen</h2>
-    <p id="first"></p>
-    <h2>Depends on</h2>
-    <ul id="deps"></ul>
+    <header class="page-head">
+      <p><span class="badge">Coming next</span></p>
+      <h1 id="title"></h1>
+      <p class="sub">This role is a stub in the pilot. The surveyor and planner roles work end to end.</p>
+    </header>
+    <div class="card-box">
+      <h3>First screen</h3>
+      <p id="first"></p>
+      <h3>Depends on</h3>
+      <ul id="deps"></ul>
+    </div>
   </main>
+  <script src="ui.js"></script>
   <script>
     const ROLES = {
       generator: {

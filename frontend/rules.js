@@ -2,13 +2,14 @@
 
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const table = (head, rows) => `<table><tr>${head.map((h) => `<th>${h}</th>`).join("")}</tr>${rows.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join("")}</tr>`).join("")}</table>`;
+const date = (d) => `<span class="nowrap">${esc(d)}</span>`;
 const cite = (r) => `<span class="cite">r. ${esc(r)}</span>`;
 
 (async () => {
   const index = await (await fetch("/api/regulations")).json();
   document.getElementById("docs").innerHTML = table(
     ["Document", "Instrument", "In force", "Status"],
-    index.documents.map((d) => [esc(d.title), esc(d.instrument), esc(d.in_force_from), esc(d.status)]),
+    index.documents.map((d) => [esc(d.title), esc(d.instrument), date(d.in_force_from), esc(d.status)]),
   ) + `<p class="hint">Planned additions: ${index.planned.map(esc).join("; ")}.</p>`;
 
   const d = await (await fetch("/api/regulations/swm_rules_2026")).json();
@@ -38,7 +39,7 @@ const cite = (r) => `<span class="cite">r. ${esc(r)}</span>`;
     ${table(["Duty", "Rule"], bwg.duties.map((x) => [esc(x.text), cite(x.rule)]))}
 
     <h3>Key dates</h3>
-    ${table(["Date", "What", "Rule"], d.key_deadlines.map((k) => [esc(k.date), esc(k.what), cite(k.rule)]))}
+    ${table(["Date", "What", "Rule"], d.key_deadlines.map((k) => [date(k.date), esc(k.what), cite(k.rule)]))}
 
     <h3>Reporting calendar</h3>
     ${table(["What", "By", "Rule"], d.reporting_calendar.map((k) => [esc(k.what), esc(k.by), cite(k.rule)]))}

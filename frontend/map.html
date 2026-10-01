@@ -6,22 +6,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Waste Generator Map</title>
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
   <link rel="stylesheet" href="style.css" />
 </head>
-<body>
+<body class="app">
+  <nav id="appNav"></nav>
   <aside id="panel">
-    <nav class="tabs">
-      <a href="index.html">Roles</a>
-      <a href="map.html?role=surveyor" data-role="surveyor">Surveyor</a>
-      <a href="map.html?role=planner" data-role="planner">Planner</a>
-      <a href="builder.html">Route builder</a>
-      <a href="rules.html">Rules</a>
-    </nav>
-    <h1 id="title">Waste Generator Map</h1>
-    <p class="sub">HSR Layout Sectors 1–7 · SWM Rules 2026</p>
-    <p id="status" class="hint">Loading…</p>
+    <header class="panel-head">
+      <p class="eyebrow">HSR Layout · Sectors 1–7</p>
+      <h1 id="title">Waste Generator Map</h1>
+      <p id="status" class="hint status">Loading…</p>
+    </header>
 
     <section>
+      <h2>Map view</h2>
       <label>Colour buildings by
         <select id="colourBy"></select>
       </label>
@@ -58,6 +58,7 @@
   <div id="map"></div>
 
   <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <script src="ui.js"></script>
   <script src="map.js"></script>
 </body>
 </html>

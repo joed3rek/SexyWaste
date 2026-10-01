@@ -6,27 +6,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Route Builder</title>
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
   <link rel="stylesheet" href="style.css" />
 </head>
-<body>
+<body class="app">
+  <nav id="appNav"></nav>
   <aside id="panel">
-    <nav class="tabs">
-      <a href="index.html">Roles</a>
-      <a href="map.html?role=planner">Planner map</a>
-      <a href="builder.html" class="active">Route builder</a>
-      <a href="rules.html">Rules</a>
-    </nav>
-    <h1>Route Builder</h1>
-    <p class="sub">Door to door → transfer station → MRF · HSR Layout</p>
+    <header class="panel-head">
+      <p class="eyebrow">Door to door → transfer station → MRF</p>
+      <h1>Route Builder</h1>
+    </header>
 
     <section>
-      <h2>1 · Sector</h2>
-      <select id="sector"></select>
+      <h2><span class="step">1</span>Sector</h2>
+      <select id="sector" aria-label="Sector"></select>
       <p class="hint" id="sectorInfo"></p>
     </section>
 
     <section>
-      <h2>2 · Places</h2>
+      <h2><span class="step">2</span>Places</h2>
       <div class="place-row">
         <button class="place" id="placeDepot" data-kind="depot"><span class="pin depot"></span>Set start point</button>
         <span id="depotState" class="muted small">not set</span>
@@ -39,7 +39,7 @@
         <label class="inline">Transfer station radius <input id="radius" type="number" min="100" max="3000" step="50" value="500" /> m</label>
       </div>
       <div class="place-row">
-        <button id="suggest">Suggest transfer stations</button>
+        <button id="suggest" class="secondary">Suggest transfer stations</button>
         <button class="place" id="addStation" data-kind="station"><span class="pin station"></span>Add</button>
       </div>
       <p class="hint" id="stationState"></p>
@@ -47,7 +47,7 @@
     </section>
 
     <section>
-      <h2>3 · Vehicles</h2>
+      <h2><span class="step">3</span>Vehicles</h2>
       <h3>Door to door → transfer station</h3>
       <div id="primaryFleet" class="fleet"></div>
       <button class="link" id="addPrimary">+ Add vehicle type</button>
@@ -57,8 +57,10 @@
 
       <details class="advanced">
         <summary>Advanced settings</summary>
-        <label>Shift length (hours) <input id="shift" type="number" min="1" max="16" step="0.5" value="8" /></label>
-        <label>Unloading at transfer station (min) <input id="unload" type="number" min="0" max="120" value="10" /></label>
+        <div class="row">
+          <label>Shift length (h) <input id="shift" type="number" min="1" max="16" step="0.5" value="8" /></label>
+          <label>Unloading (min) <input id="unload" type="number" min="0" max="120" value="10" /></label>
+        </div>
         <label>Optimisation time (s) <input id="timeLimit" type="number" min="5" max="300" value="30" /></label>
         <fieldset class="streams"><legend>Streams collected</legend>
           <label><input type="checkbox" value="wet" checked /> Wet</label>
@@ -70,13 +72,15 @@
       </details>
     </section>
 
-    <button id="optimise" class="primary-btn">Optimise routes</button>
-    <div id="progress" class="progress-box" hidden>
-      <div class="progress-head"><span id="progStage">Starting…</span><span id="progPct">0%</span></div>
-      <div class="progress-track"><div id="progBar" class="progress-fill"></div></div>
-      <div class="progress-foot"><span id="progElapsed">0 s elapsed</span><span id="progEta"></span></div>
+    <div class="sticky-actions">
+      <button id="optimise" class="block lg">Optimise routes</button>
+      <div id="progress" class="progress-box" hidden>
+        <div class="progress-head"><span id="progStage">Starting…</span><span id="progPct">0%</span></div>
+        <div class="progress-track"><div id="progBar" class="progress-fill"></div></div>
+        <div class="progress-foot"><span id="progElapsed">0 s elapsed</span><span id="progEta"></span></div>
+      </div>
+      <p id="status" class="hint"></p>
     </div>
-    <p id="status" class="hint"></p>
 
     <section id="results" hidden>
       <h2>Result</h2>
@@ -87,13 +91,13 @@
         <label><input type="checkbox" id="showHaul" checked /><span class="ln haul"></span>Truck routes: transfer station &rarr; MRF</label>
       </div>
       <h3>Door-to-door vehicles <span class="muted small">hover to highlight · click for trips</span></h3>
-      <table id="vehTable" class="results-table"></table>
+      <div class="scroll"><table id="vehTable" class="results-table"></table></div>
       <div id="tripDetail"></div>
       <h3>Trucks to MRF <span class="muted small">hover to highlight</span></h3>
-      <table id="truckTable" class="results-table"></table>
+      <div class="scroll"><table id="truckTable" class="results-table"></table></div>
       <h3>Transfer stations</h3>
-      <table id="stationTable" class="results-table"></table>
-      <details><summary class="muted small">Assumptions</summary><ul id="assumptions" class="small"></ul></details>
+      <div class="scroll"><table id="stationTable" class="results-table"></table></div>
+      <details><summary class="muted">Assumptions</summary><ul id="assumptions" class="small"></ul></details>
     </section>
   </aside>
   <div id="map"></div>
@@ -103,6 +107,7 @@
   </div>
 
   <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <script src="ui.js"></script>
   <script src="builder.js"></script>
 </body>
 </html>

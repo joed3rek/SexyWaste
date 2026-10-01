@@ -47,6 +47,7 @@ const fmt = (n, d = 0) => (n == null ? "–" : Number(n).toLocaleString("en-IN",
 const fmtQ = (v) => fmt(v, v < 10 ? 2 : 1);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const matchExpr = (prop, colours, fallback = "#e5e7eb") => ["match", ["to-string", ["get", prop]], ...Object.entries(colours).flat(), fallback];
+const kpi = (label, value, sub = "", cls = "") => `<div class="kpi ${cls}"><div class="k">${label}</div><div class="v">${value}</div>${sub ? `<div class="s">${sub}</div>` : ""}</div>`;
 const isPriority = ["in", ["get", "bwg_status"], ["literal", ["bwg", "watch"]]];
 
 async function api(path, options) {
@@ -140,7 +141,10 @@ const map = new maplibregl.Map({
   style: {
     version: 8,
     sources: { osm: { type: "raster", tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"], tileSize: 256, attribution: "© OpenStreetMap contributors" } },
-    layers: [{ id: "osm", type: "raster", source: "osm", paint: { "raster-opacity": 0.45, "raster-saturation": -0.6 } }],
+    layers: [
+      { id: "bg", type: "background", paint: { "background-color": "#f4f5f6" } },
+      { id: "osm", type: "raster", source: "osm", paint: { "raster-opacity": 0.5, "raster-saturation": -1, "raster-contrast": -0.1 } },
+    ],
   },
   center: [77.641, 12.9125],
   zoom: 14.2,
@@ -160,8 +164,7 @@ function boundsOf(geom) {
 map.on("load", async () => {
   try {
     document.title = ROLE === "surveyor" ? "Surveyor Map" : "Planner Map";
-    $("title").textContent = ROLE === "surveyor" ? "Surveyor: building cards" : "Planner: generators and quantities";
-    document.querySelector(`.tabs a[data-role="${ROLE}"]`)?.classList.add("active");
+    $("title").textContent = ROLE === "surveyor" ? "Building survey" : "Generators and quantities";
     $("colourBy").innerHTML = Object.entries(COLOUR_MODES).map(([k, v]) => `<option value="${k}">${v}</option>`).join("");
     $("filterFocusLabel").textContent = ROLE === "surveyor" ? "Only unsurveyed buildings" : "Only potential bulk waste generators";
     $("showLanduse").checked = ROLE === "planner";
@@ -171,7 +174,7 @@ map.on("load", async () => {
     map.addLayer({ id: "landuse", type: "fill", source: "landuse", layout: { visibility: $("showLanduse").checked ? "visible" : "none" }, paint: { "fill-color": matchExpr("lu_class", LANDUSE_COLOURS), "fill-opacity": 0.4 } });
     sectorsFC = sectors;
     map.addSource("sectors", { type: "geojson", data: sectors });
-    map.addLayer({ id: "sectors", type: "line", source: "sectors", paint: { "line-color": "#0f172a", "line-width": 2, "line-dasharray": [3, 2] } });
+    map.addLayer({ id: "sectors", type: "line", source: "sectors", paint: { "line-color": "#0b0b0c", "line-width": 1.5, "line-dasharray": [3, 2], "line-opacity": 0.7 } });
     sectors.features.forEach((f) => {
       $("sector").insertAdjacentHTML("beforeend", `<option>${esc(f.properties.name)}</option>`);
       const el = document.createElement("div");
@@ -179,7 +182,7 @@ map.on("load", async () => {
       el.textContent = f.properties.name;
       new maplibregl.Marker({ element: el }).setLngLat(boundsOf(f.geometry).getCenter()).addTo(map);
     });
-    map.fitBounds(boundsOf({ coordinates: sectors.features.map((f) => f.geometry.coordinates) }), { padding: 20 });
+    map.fitBounds(boundsOf({ coordinates: sectors.features.map((f) => f.geometry.coordinates) }), { padding: mapPadding(map) });
 
     $("status").textContent = "Loading about 11,500 buildings…";
     const [buildings, overrides] = await Promise.all([api(`/api/pilots/${PILOT}/buildings`), api(`/api/pilots/${PILOT}/overrides`)]);
@@ -236,8 +239,12 @@ function renderRoleSections() {
     $("roleSections").innerHTML = `
       <section>
         <h2>Survey progress</h2>
+        <div class="kpis">
+          ${kpi("Surveyed", `${fmt(pct, 1)}<small>%</small>`, `${fmt(s.surveyed)} of ${fmt(s.buildings)} buildings`)}
+          ${kpi("Survey first", fmt(countSurvey().priority), "unsurveyed, at or near BWG threshold")}
+        </div>
         <div class="progress"><div style="width:${pct}%"></div></div>
-        <p class="hint">${fmt(s.surveyed)} of ${fmt(s.buildings)} buildings surveyed (${fmt(pct, 1)}%). OSM gives footprints and ${fmt(s.with_house_number)} house numbers, but building use comes from the survey.</p>
+        <p class="hint"> OSM gives footprints and ${fmt(s.with_house_number)} house numbers, but building use comes from the survey.</p>
         ${bySector([["Sector", (r) => esc(r.sector)], ["Buildings", (r) => fmt(r.buildings)], ["Surveyed", (r) => fmt(r.surveyed)], ["Likely BWG", (r) => fmt(r.bwg)]])}
       </section>
       <section>
@@ -251,12 +258,12 @@ function renderRoleSections() {
     const comp = Object.entries(s.compliance_labels).map(([k, label]) => `<tr><td><span class="swatch" style="background:${COMPLIANCE_COLOURS[k]}"></span>${esc(label)}</td><td>${fmt(s.compliance_counts[k] || 0)}</td></tr>`).join("");
     $("roleSections").innerHTML = `
       <section>
-        <h2>Pilot totals (estimated)</h2>
-        <table>
-          <tr><td>Buildings / surveyed</td><td>${fmt(s.buildings)} / ${fmt(s.surveyed)}</td></tr>
-          <tr><td>Households / population</td><td>${fmt(s.households_est)} / ${fmt(s.population_est)}</td></tr>
-          <tr><td>Total waste</td><td>${fmt(s.total_tpd, 1)} t/day</td></tr>
-        </table>
+        <h2>Pilot totals <span class="badge">Estimated</span></h2>
+        <div class="kpis">
+          ${kpi("Total waste", `${fmt(s.total_tpd, 1)}<small>t/day</small>`, "all four streams", "wide")}
+          ${kpi("Buildings", fmt(s.buildings), `${fmt(s.surveyed)} surveyed`)}
+          ${kpi("Households", fmt(s.households_est), `population ${fmt(s.population_est)}`)}
+        </div>
         <h3>By stream <span class="cite">r. 5(1)(b)</span></h3>
         <table><tr><th>Stream</th><th>Goes in</th><th>t/day</th></tr>${streamRows}</table>
         <h3>Dry waste fractions to MRF <span class="cite">r. 9, r. 3(1)(zw)</span></h3>
@@ -285,7 +292,7 @@ function renderRoleSections() {
 
 function zoomToSector(name) {
   const f = sectorsFC.features.find((x) => x.properties.name === name);
-  if (f) map.fitBounds(boundsOf(f.geometry), { padding: 30 });
+  if (f) map.fitBounds(boundsOf(f.geometry), { padding: mapPadding(map, 30) });
 }
 
 // ---------- Building card ----------
@@ -295,7 +302,7 @@ async function select(id, fly = false) {
   if (!f) return;
   selectedId = id;
   map.setFilter("selected", ["==", ["get", "id"], id]);
-  if (fly) map.fitBounds(boundsOf(f.geometry), { padding: 120, maxZoom: 18 });
+  if (fly) map.fitBounds(boundsOf(f.geometry), { padding: mapPadding(map, 120), maxZoom: 18 });
   $("detail").hidden = false;
   $("detail").innerHTML = `<p class="hint">Loading building card…</p>`;
   const p = await api(`/api/pilots/${PILOT}/building?id=${encodeURIComponent(id)}`);

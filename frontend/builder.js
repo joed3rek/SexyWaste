@@ -22,7 +22,10 @@ const map = new maplibregl.Map({
   style: {
     version: 8,
     sources: { osm: { type: "raster", tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"], tileSize: 256, attribution: "© OpenStreetMap contributors" } },
-    layers: [{ id: "osm", type: "raster", source: "osm", paint: { "raster-opacity": 0.55, "raster-saturation": -0.6 } }],
+    layers: [
+      { id: "bg", type: "background", paint: { "background-color": "#f4f5f6" } },
+      { id: "osm", type: "raster", source: "osm", paint: { "raster-opacity": 0.55, "raster-saturation": -1, "raster-contrast": -0.1 } },
+    ],
   },
   center: [77.641, 12.9125], zoom: 14.3,
 });
@@ -126,8 +129,8 @@ map.on("load", async () => {
     fleetRow($("secondaryFleet"), "secondary", "rear_loader_compactor", 1);
 
     map.addSource("sectors", { type: "geojson", data: sectors });
-    map.addLayer({ id: "sector-fill", type: "fill", source: "sectors", paint: { "fill-color": "#0f172a", "fill-opacity": 0 } });
-    map.addLayer({ id: "sector-line", type: "line", source: "sectors", paint: { "line-color": "#0f172a", "line-width": 1, "line-dasharray": [3, 2] } });
+    map.addLayer({ id: "sector-fill", type: "fill", source: "sectors", paint: { "fill-color": "#0b0b0c", "fill-opacity": 0 } });
+    map.addLayer({ id: "sector-line", type: "line", source: "sectors", paint: { "line-color": "#0b0b0c", "line-width": 1, "line-dasharray": [3, 2] } });
     map.addSource("routes", { type: "geojson", data: empty });
     map.addLayer({ id: "routes", type: "line", source: "routes", layout: { "line-cap": "round", "line-join": "round" },
       paint: { "line-color": ["get", "color"], "line-width": 3, "line-opacity": 0.8 } });
@@ -156,7 +159,7 @@ async function selectSector() {
   map.setPaintProperty("sector-fill", "fill-opacity", ["case", ["==", ["get", "name"], name], 0.06, 0]);
   map.setPaintProperty("sector-line", "line-width", ["case", ["==", ["get", "name"], name], 3, 1]);
   const f = state.sectors.features.find((x) => x.properties.name === name);
-  map.fitBounds(boundsOf([f.geometry]), { padding: 40 });
+  map.fitBounds(boundsOf([f.geometry]), { padding: mapPadding(map, 40) });
   clearResult();
   $("sectorInfo").textContent = "Loading collection points…";
   const d = await api(`/api/pilots/${PILOT}/v2/points?sector=${encodeURIComponent(name)}`);
@@ -365,7 +368,7 @@ function showTrips(id) {
     </table><p class="muted small">Back at the start point by ${clock(v.total_min)}.</p></div>`;
   const b = new maplibregl.LngLatBounds();
   v.trips.forEach((t) => t.geometry.forEach((c) => b.extend(c)));
-  if (!b.isEmpty()) map.fitBounds(b, { padding: 40 });
+  if (!b.isEmpty()) map.fitBounds(b, { padding: mapPadding(map, 40) });
 }
 
 $("showRoutes").addEventListener("change", (e) => map.setLayoutProperty("routes", "visibility", e.target.checked ? "visible" : "none"));
