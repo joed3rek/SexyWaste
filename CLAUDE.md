@@ -1,4 +1,4 @@
-# SWM: Urban Waste Intelligence Platform
+# CityLoom (SWM): Urban Waste Intelligence Platform
 
 GIS and optimisation decision-support app for municipal solid waste management in Indian cities. The pilot is HSR Layout sectors 1-7, Bengaluru. See README.md.
 
@@ -19,10 +19,30 @@ GIS and optimisation decision-support app for municipal solid waste management i
 - Sign-in is a dummy login: role, name and sectors arrive as `X-SWM-*` headers and are unverified (`backend/auth`). Browser writes go through `swmWrite()` in `ui.js`.
 - Surveyor and supervisor text lives in `frontend/strings.json` (en, kn). Use `t()`; do not hard-code UI text in those pages. Server messages carry codes, worded in the browser.
 - Garbage vulnerable points live in the survey database (`backend/survey/gvp.py`): on a street segment, never a property. Reports, photos, events and pickups are append-only. A GVP reaches the route builder only as a one-off pickup after it is cleared; cleaning and transport are separate steps. Size and build-up factors are estimates in `norms.json`.
-- The fleet inventory (`backend/fleet`, `data/ops.db`) caps plans per sector. Tests get an empty fleet store from `tests/conftest.py`.
-- Roles, the survey flow, GVPs and the fleet are described in `docs/roles.md`.
 - When a new regulatory document is provided, add it to the library following `docs/regulations/README.md`. Source PDFs go in `data/regulations/` (git-ignored).
 - Write text files as UTF-8 explicitly. Python's default encoding on this machine is cp1252.
+
+## Planning modules (`data/ops.db`)
+
+- Resource management (`backend/resources`): vehicles (fleet manager), people (HR manager) and machinery (fleet manager). Statuses are available, assigned, in_use, maintenance, unavailable; only the first three count for plans. A sector plans with its own resources plus the shared pool, and plans are labelled hypothetical while the inventory is empty. Changes are logged in the append-only `resource_log`. Tests get an empty store from `tests/conftest.py`.
+- Collection cycle (`backend/cycle`, planner): schedules per stream × generator type, for every sector or one sector's override. Schedules are deactivated, never deleted. The route builder takes the day's plan (built-up days per stream) and uses its window as the shift.
+- Clean City (`backend/cleancity`, planner): street classes from the street graph, public bins on the road, GVP clearing tasks and the workforce calculation. Bins that are full, overflowing or due become route builder demands. Assumptions live in `reference/clean_city.json`.
+- The route builder (`backend/routing/twotier.py`) consumes all of these: door-to-door runs, bulk waste generators, cleared GVP pickups and public bins, capped by the inventory and checked for crew.
+- Assumptions with sources live in `reference/` (vehicles, roads, composting, clean city, collection cycle template), never in the regulations library.
+
+## Roles and pages
+
+- Each role sees only its own pages: the `roles` lists in `NAV` (`frontend/ui.js`), with `canOpen()` and `guardPage()`. Admin sees everything. Role definitions and home pages are in `backend/auth/roles.json`.
+- Sign-in has Public (role `generator`, opens `report.html`) and Official (surveyor, survey supervisor, planner, fleet manager, HR manager, admin).
+- Roles, the survey flow and GVPs are described in `docs/roles.md`; resources, the cycle and Clean City in README section 12.
+
+## Design base: always
+
+- Every page uses the shadcn/ui look in `frontend/style.css`: zinc tokens, 1 px borders, small radii, quiet shadows. Use the CSS tokens (`--ink`, `--surface`, `--line`, `--on-ink` and so on), never hard-coded colours, so both themes work.
+- One font everywhere: Poppins (`--font`). No display fonts per page.
+- App pages default to light, with a light/dark switch in the rail (`theme.js`, `setTheme()` in `ui.js`). The opening page (`index.html`, `landing.css`, `landing.js`) is always dark (`data-theme-fixed="dark"`).
+- New templates the user supplies are adapted onto this base: layout and motion may follow the template, colours, type and components stay on the base. Accent colours only for small touches (type, dots, rules).
+- Every new page loads `theme.js` in `<head>` before `style.css`.
 
 ## Running
 
@@ -31,4 +51,4 @@ GIS and optimisation decision-support app for municipal solid waste management i
 .venv\Scripts\python -m pytest
 ```
 
-OSM data comes through Overpass. The main server often refuses connections, so the code falls back to mirrors (see `backend/osm.py`). Downloaded data is cached in `data/cache/` (git-ignored).
+OSM data comes through Overpass. The main server often refuses connections, so the code falls back to mirrors (see `backend/osm.py`). Downloaded data is cached in `data/cache/` (git-ignored). The server sends frontend files with `Cache-Control: no-cache`, but backend changes need a restart unless it runs with `--reload`.

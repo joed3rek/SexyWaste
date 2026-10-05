@@ -1,6 +1,6 @@
-# Urban Waste Intelligence Platform (SWM)
+# CityLoom: Urban Waste Intelligence Platform (SWM)
 
-**An AI-enabled, GIS-based decision-support desktop application for municipal solid waste management in Indian cities.**
+**CityLoom, Municipal Operations Intelligence.** An AI-enabled, GIS-based decision-support desktop application for municipal solid waste management in Indian cities.**
 
 It covers the full waste value chain: generation, collection, routing, transfer, processing, material recovery, markets and the circular economy. The first pilot is a representative ward cluster in Bengaluru.
 
@@ -414,12 +414,20 @@ Published Indian studies report gains such as route-length reductions of up to 1
 
 ### Current state: HSR Layout pilot as a local web app
 
-The pilot covers HSR Layout Sectors 1-7, Bengaluru, using the sector boundaries mapped in OpenStreetMap. It runs as a local web app and will be wrapped in a desktop shell later.
+The pilot covers HSR Layout Sectors 1-7, Bengaluru, using the sector boundaries mapped in OpenStreetMap. It runs as a local web app called **CityLoom**.
 
-**Opening page: sign-in by role.** Pick a role, type a name and tick sectors. This is a dummy login for the pilot: nothing is stored on the server. Surveyor, survey supervisor and admin are built; the planner uses the map and route builder; the other roles are placeholders. See `docs/roles.md` for every role and the survey section in detail.
+**Opening page.** A dark page with a scroll-driven cover (photos from `frontend/img/hero/`, one at random on each load), the modules, the pilot sectors and the key dates of the SWM Rules 2026. It has two actions: **Report dumped waste** and **Sign in**. Sign-in opens a panel with two options:
+
+- **Public.** Opens the reporting page with no sectors to pick.
+- **Official.** Pick a role, type a name and, for sector roles, tick sectors. The built roles are surveyor, survey supervisor, planner, fleet manager, human resource manager and admin.
+
+Sign-in is a dummy login for the pilot: the role, name and sectors stay in the browser and are sent as unverified `X-SWM-*` headers. Each role sees only its own pages in the side rail, and opening another role's page sends it to its home page. Admin sees everything. See `docs/roles.md` for every role in detail.
+
+**Look and feel.** Every page uses the shadcn/ui look (zinc greys, thin borders, small radii) and one font, Poppins. App pages open in a light theme, with a sun/moon switch at the foot of the side rail for the dark theme; the choice is kept in the browser. The opening page is always dark. Surveyor and supervisor text lives in `frontend/strings.json` in English and Kannada.
 
 - **Surveyor.** Map of the surveyor's sectors, buildings coloured by visit outcome, likely bulk waste generators outlined in red as "survey first". Tap a building to start a visit: outcome, building use, use mix (dwellings, shops, beds and so on), collection arrangement, segregation and home composting. Values are append-only with their source (assumed, surveyed, verified, weighed) and override the OSM-based guess. Surveyors also report map problems and missing buildings.
-- **Garbage mapping.** Surveyors, supervisors and the public report garbage vulnerable points (GVPs) on the street network, with severity, photos and source; nearby reports merge. Supervisors move each GVP through reported → verified → assigned → cleaning → cleared → monitoring (or recurred, or rejected). Verified GVPs are cleaning tasks; clearing one creates a one-off pickup for the route builder. All GVPs download as GeoJSON for publishing (SWM Rules 2026, r. 15(1)).
+- **Garbage mapping.** Surveyors, supervisors and the public report garbage vulnerable points (GVPs). A GVP can only be placed on a road: it snaps to the nearest street segment within 30 m. Each report has a severity, up to 3 photos and its source, and reports near each other merge. Supervisors move each GVP through reported → verified → assigned → cleaning → cleared → monitoring (or recurred, or rejected). Verified GVPs become cleaning tasks in Clean City. A GVP reaches the route builder only after it is cleared, as a one-off pickup. All GVPs download as GeoJSON for publishing (SWM Rules 2026, r. 15(1)).
+- **Public reporting** (`report.html`). Anyone can report dumped waste: the page finds the person's location by device GPS, says which sector they are in and drops the pin on the nearest road. They add a severity, rough size and photos.
 - **Survey supervisor.** Progress by sector and surveyor, a blind spot-check of 5% of each surveyor's visits, mismatch rates, items to review and sector assignments.
 - **Collection planner.** Buildings coloured by estimated quantity, chosen as stream then fraction (for example dry waste, then plastic). Also by generator category, household vs commercial, and bulk waste generator compliance. Includes stream and dry-fraction totals, per-sector figures and a 3D view with height from floors. Each sector links to the route builder, which builds collection stops from the buildings.
 - **Bulk waste generator check.** Computed, not surveyed. Floor area is footprint × floors. Water counts only when a surveyor or BWSSB figure is recorded. Waste is units × typology. Every result shows the criterion met, the source of the value and the rule citation.
@@ -430,8 +438,26 @@ The pilot covers HSR Layout Sectors 1-7, Bengaluru, using the sector boundaries 
   - Small vehicles collect door to door from street-run collection points and make as many trips to the transfer stations as their capacity needs. Trucks carry the loads to the MRF.
   - The result shows the routes, trips per vehicle, fill per trip, truck trips and the time to complete, against the shift length.
   - Collection points are street runs: buildings are snapped to their frontage street and grouped by use, with stable IDs from OSM nodes. Vehicles drive the whole stretch of street; OR-Tools picks which end to enter, and one-way streets are taken the right way. Hovering a point highlights its plots and street.
-  - **Fleet inventory** (`fleet.html`, fleet and workforce manager): the vehicles that exist, by sector or shared pool, with status. A plan cannot use more available vehicles than the sector has; until any are entered, plans are labelled as a hypothetical fleet.
+  - **Plan for** a day of the week: the collection cycle decides which streams and generators are collected that day, and its time window becomes the shift. Without a cycle, the plan collects every stream's daily waste.
+  - Demands come from four sources: door-to-door street runs, bulk waste generators, cleared GVP pickups and public bins that are full, overflowing or due.
+  - The fleet is filled in from the resource inventory. A plan cannot use more available vehicles than the sector has (its own plus the shared pool), and it checks that there are enough drivers and collectors to crew them. Until any vehicles are entered, plans are labelled as a hypothetical fleet.
   - **Suggest fleet** finds the smallest fleet, keeping the chosen vehicle types and mix, that finishes within a target time (5 h by default). It runs the optimiser a few times and says what limits the time. In the HSR plans, collecting at houses takes about 70–75% of vehicle time and driving under 10%, so the number of vehicles matters far more than the number of transfer stations.
+- **Resource management** (`resources.html`). What the municipality actually has, in three tabs:
+  - **Vehicles** (fleet manager): type, registration, home sector or shared pool, status, shift, drivers and collectors needed, GPS device, and specs such as payload, body volume and width.
+  - **People** (human resource manager): worker ID, role (driver, collector, sweeper and so on), skills, hours per day, supervisor and assignment.
+  - **Machinery** (fleet manager): mechanical sweepers, loaders, compactors, handcarts, pressure washers and other equipment, with capacity, condition and service dates.
+  - Statuses are available, assigned, in use, maintenance and unavailable. Plans count only the first three.
+  - Every change is logged and kept. The page warns when vehicles lack GPS, which the rules require above a city population (SWM Rules 2026, r. 8(h)(ix)).
+- **Collection cycle** (`cycle.html`, planner). The weekly schedule for each stream and generator type (households, commercial, institutions, bulk waste generators), with days, a time window, collection method and vehicle types. Entries can cover every sector, or override the schedule for one sector.
+  - A week grid shows what is collected each day. An example template can be loaded from `reference/collection_cycle.json`.
+  - Checks flag streams or generators with no regular collection (SWM Rules 2026, r. 8(h)(iii)). The page also shows the rule that markets are cleaned daily (r. 39(19)).
+  - The route builder reads the day's plan: waste built up since the last collection day is collected in one go.
+- **Clean City** (`cleancity.html`, planner). Street cleaning, public bins and GVP clearing on one map.
+  - **Streets.** Every street segment in the sectors is classified as primary, commercial, market, residential or low intensity from road class and building density. The planner can change a class, and each class has a sweeping frequency (SWM Rules 2026, r. 39(16)).
+  - **Bins.** Public bins sit on the road, with fill level and service times. Bin spacing per street class suggests where bins are missing. Bins that are full, overflowing or due become route builder demands.
+  - **GVP clearing.** Verified GVPs as cleaning tasks, with the equipment their severity needs.
+  - **Workforce.** Worker-hours needed for sweeping, bins and GVPs against the people available. For example, Sector 1 needs about 183 worker-hours a day, about 23 workers on 8-hour shifts.
+  - Assumptions (frequencies, productivity of 120 m per worker-hour, 5 minutes per bin) live in `reference/clean_city.json`.
 - **Park composting.** Public parks (OSM parks and gardens not tagged private) set aside part of their area to compost the neighbourhood's wet waste.
   - The share is by park size, from 5% for parks under 2,000 m² down to 1% for parks over 20,000 m², or a flat 3% average. It can be edited or switched off per park.
   - Capacity = composting area × land norm (vermicomposting 2.5 kg/day per m² or windrow 6.25, CPHEEO Table 3.5), capped at 5 t/day per site so no buffer zone is needed (SWM Rules 2026, r. 3(1)(h)).
@@ -464,7 +490,7 @@ python -m venv .venv
 .venv\Scripts\python -m uvicorn backend.api.main:app --reload
 ```
 
-Then open http://127.0.0.1:8000. The first load downloads OSM data through Overpass and caches it in `data/cache/`, which takes a few minutes. Survey records are stored in `data/survey.db` and photos in `data/photos/`. Run the tests with:
+Then open http://127.0.0.1:8000. The first load downloads OSM data through Overpass and caches it in `data/cache/`, which takes a few minutes. Survey records and GVPs are stored in `data/survey.db`, resources, the collection cycle and Clean City in `data/ops.db`, and photos in `data/photos/`. Run the tests with:
 
 ```powershell
 .venv\Scripts\python -m pytest
@@ -484,26 +510,37 @@ Current code layout:
 
 ```
 backend/
-├── config.py              # Study areas, pilots, road speed assumptions
+├── config.py              # Study areas, pilots, road speed and GVP settings
 ├── osm.py                 # Overpass access with mirror fallback, layer caching
 ├── regulations/           # Regulations library loader
 │   └── library/           # index.json, swm_rules_2026.json
 ├── buildings/
 │   ├── layers.py          # OSM sectors, buildings, land use, POIs for a pilot
 │   ├── generators.py      # Classification, estimates, BWG check, summaries, collection stops
-│   └── norms.json         # ASSUMPTIONS: generation rates, typologies, dry fractions
-├── survey/store.py        # SQLite survey records (building cards)
-├── api/main.py            # FastAPI endpoints and static frontend hosting
+│   └── norms.json         # ASSUMPTIONS: generation rates, typologies, dry fractions, GVP sizes
+├── auth/roles.json        # Roles, their modules, home pages and jurisdictions
+├── survey/                # data/survey.db: append-only field values (db.py), reading them (resolve.py), GVPs (gvp.py)
+├── resources/             # data/ops.db: vehicles, people and machinery, with plan caps and crew checks
+├── cycle/                 # Collection cycle schedules and day plans (data/ops.db)
+├── cleancity/             # Street classes, public bins, cleaning workload (data/ops.db)
+├── api/                   # FastAPI: main.py plus survey, resources, cycle and Clean City routers; serves the frontend
 └── routing/               # Road network, street-run collection points (points.py), park composting (parks.py) and two-tier planner (twotier.py)
 frontend/
-├── index.html             # Role picker
-├── style.css, ui.js       # Design system and shared shell (navigation, icons)
-├── map.html, map.js       # Surveyor and planner map, building card
-├── builder.html, builder.js  # Route builder
-├── rules.html, rules.js   # Rules library viewer
+├── index.html, landing.*  # Opening page and sign-in
+├── style.css, ui.js       # Design system (light and dark themes) and shared shell (navigation by role, icons, strings)
+├── theme.js               # Applies the saved theme before the page draws
+├── strings.json           # UI text in English and Kannada
+├── surveyor.*, supervisor.*, survey_flow.js  # Survey section
+├── report.*               # Public reporting of dumped waste
+├── map.*                  # Planner map and building card
+├── cycle.*, cleancity.*, resources.*  # Collection cycle, Clean City, resource management
+├── builder.*              # Route builder
+├── admin.html, rules.*    # Admin and the rules library viewer
+├── img/hero/              # Opening page cover photos
 └── stub.html              # Placeholder for roles not yet built
-docs/regulations/          # Readable summaries of the regulations library
-tests/                     # Network, points, planner, buildings, survey and regulations tests
+reference/                 # Sourced assumptions: vehicles, roads, composting, clean city, collection cycle template
+docs/                      # roles.md and readable summaries of the regulations library
+tests/                     # Network, points, planner, buildings, survey, GVP, resources, cycle, Clean City, roles, strings and regulations tests
 ```
 
 Known limits:
@@ -512,7 +549,8 @@ Known limits:
 - Generation norms are placeholders until a characterisation survey and weighed data calibrate them.
 - Vehicle width limits apply to the streets a vehicle collects from, not to streets it only drives through.
 - Trucks are assumed to shuttle while door-to-door collection is under way, with enough room at each transfer station.
-- The app has no login yet. Anyone who can open it can edit survey records.
+- Sign-in is a dummy login. Anyone who can open the app can pick any role and edit records.
+- Clean City productivity, bin spacing and sweeping frequencies are assumptions until measured.
 
 ### Full application prerequisites (planned)
 
