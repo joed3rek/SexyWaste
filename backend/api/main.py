@@ -27,6 +27,7 @@ from backend.routing.network import node_lonlat
 from backend.api.cleancity_api import router as cleancity_router
 from backend.api.cycle_api import router as cycle_router
 from backend.api.demand_api import router as demand_router
+from backend.api.facilities_api import router as facilities_router
 from backend.api.resources_api import router as resources_router
 from backend.api.survey_api import router as survey_router
 from backend.survey import service as survey_service
@@ -45,6 +46,7 @@ app.include_router(resources_router)
 app.include_router(cycle_router)
 app.include_router(cleancity_router)
 app.include_router(demand_router)
+app.include_router(facilities_router)
 
 
 @app.get("/api/landing/photos")

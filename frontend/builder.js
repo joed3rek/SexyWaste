@@ -43,21 +43,59 @@ function setPlace(kind, lngLat) {
   state[kind] = [lngLat.lng, lngLat.lat];
   if (!markers[kind]) {
     markers[kind] = new maplibregl.Marker({ element: pinEl(kind, labels[kind]), draggable: true }).setLngLat(lngLat).addTo(map);
-    markers[kind].on("dragend", () => { const p = markers[kind].getLngLat(); state[kind] = [p.lng, p.lat]; placeStates(); clearResult(); });
+    markers[kind].on("dragend", () => { const p = markers[kind].getLngLat(); state[kind] = [p.lng, p.lat]; placesChanged(); placeStates(); clearResult(); });
   } else markers[kind].setLngLat(lngLat);
   placeStates();
   clearResult();
 }
+
+// ---------- Saved places (facilities): a sector's depot and transfer stations, the city's MRF and truck yard ----------
+
+state.stationIds = [];
+function placesChanged() { $("placesSaved").textContent = "Not saved yet."; }
+
+async function loadPlaces(name) {
+  const f = await api(`/api/pilots/${PILOT}/plan-places?sector=${encodeURIComponent(name)}`);
+  const at = (x) => ({ lng: x.lon, lat: x.lat });
+  if (f.depot) setPlace("depot", at(f.depot));
+  if (f.mrf) setPlace("mrf", at(f.mrf));
+  if (f.truck_yard) setPlace("yard", at(f.truck_yard));
+  if (f.transfer_stations.length) {
+    state.stations = f.transfer_stations.map((s) => [s.lon, s.lat]);
+    state.stationIds = f.transfer_stations.map((s) => s.id);
+    state.stationLoads = null;
+    renderStations();
+  }
+  const saved = [f.depot && "start point", f.mrf && "MRF", f.truck_yard && "truck yard",
+    f.transfer_stations.length && `${f.transfer_stations.length} transfer station(s)`].filter(Boolean);
+  $("placesSaved").textContent = saved.length ? `Saved: ${saved.join(", ")}.` : "Nothing saved for this sector yet.";
+  return f;
+}
+
+async function savePlaces() {
+  const pt = (p) => (p ? { lon: p[0], lat: p[1] } : null);
+  try {
+    const f = await swmWrite("PUT", `/api/pilots/${PILOT}/plan-places`, {
+      sector: $("sector").value, depot: pt(state.depot), mrf: pt(state.mrf), truck_yard: pt(state.yard),
+      transfer_stations: state.stations.map((s, i) => ({ id: state.stationIds[i] || null, lon: s[0], lat: s[1] })),
+    });
+    state.stationIds = f.transfer_stations.map((s) => s.id);
+    $("placesSaved").textContent = `Saved for ${$("sector").value}. The MRF and truck yard are shared by every sector.`;
+  } catch (err) {
+    $("placesSaved").textContent = `Not saved: ${err.message}`;
+  }
+}
+$("savePlaces").addEventListener("click", savePlaces);
 
 function renderStations() {
   markers.stations.forEach((m) => m.remove());
   markers.stations = state.stations.map((s, i) => {
     const load = state.stationLoads?.[i];
     const m = new maplibregl.Marker({ element: pinEl("station", load != null ? `TS${i + 1} · ${fmt(load / 1000, 1)} t` : `TS${i + 1}`), draggable: true }).setLngLat(s).addTo(map);
-    m.on("dragend", () => { const p = m.getLngLat(); state.stations[i] = [p.lng, p.lat]; state.stationLoads = null; renderStations(); clearResult(); });
+    m.on("dragend", () => { const p = m.getLngLat(); state.stations[i] = [p.lng, p.lat]; state.stationLoads = null; placesChanged(); renderStations(); clearResult(); });
     m.getElement().addEventListener("click", (e) => {
       e.stopPropagation();
-      if (confirm(`Remove transfer station TS${i + 1}?`)) { state.stations.splice(i, 1); state.stationLoads = null; renderStations(); clearResult(); }
+      if (confirm(`Remove transfer station TS${i + 1}?`)) { state.stations.splice(i, 1); state.stationIds.splice(i, 1); state.stationLoads = null; placesChanged(); renderStations(); clearResult(); }
     });
     return m;
   });
@@ -81,7 +119,7 @@ document.querySelectorAll("button.place").forEach((b) => b.addEventListener("cli
 
 map.on("click", (e) => {
   if (!state.placing) return;
-  if (state.placing === "station") { state.stations.push([e.lngLat.lng, e.lngLat.lat]); state.stationLoads = null; renderStations(); clearResult(); }
+  if (state.placing === "station") { state.stations.push([e.lngLat.lng, e.lngLat.lat]); state.stationIds.push(null); state.stationLoads = null; placesChanged(); renderStations(); clearResult(); }
   else setPlace(state.placing, e.lngLat);
   state.placing = null;
   document.querySelectorAll("button.place").forEach((x) => x.classList.remove("active"));
@@ -189,7 +227,11 @@ async function selectSector() {
   const kg = d.points.reduce((a, p) => a + p.total_kg, 0);
   $("sectorInfo").textContent = `${fmt(d.points.length)} door-to-door collection points (street runs), about ${fmt(kg / 1000, 1)} t/day estimated.`;
   drawPoints();
-  await Promise.all([suggest(), loadParks(), loadAvail(name), loadDay()]);
+  // Saved places first; transfer stations are suggested only when the sector has none saved.
+  let places = null;
+  try { places = await loadPlaces(name); } catch { /* no saved places: suggest as before */ }
+  if (token !== sectorToken) return;
+  await Promise.all([places?.transfer_stations.length ? null : suggest(), loadParks(), loadAvail(name), loadDay()]);
 }
 
 // Building footprints by id, loaded once, for highlighting a point's plots.
@@ -348,7 +390,9 @@ async function suggest() {
     if (token !== sectorToken || name !== $("sector").value) return; // stale answer for another sector
     const st = d.stations;
     state.stations = st.map((s) => [s.lon, s.lat]);
+    state.stationIds = st.map(() => null);
     state.stationLoads = st.map((s) => s.kg);
+    placesChanged();
     renderStations();
     const t = st.map((s) => s.kg / 1000);
     $("stationState").textContent = `${st.length} transfer station(s) on main roads, ${fmt(Math.min(...t), 1)} to ${fmt(Math.max(...t), 1)} t/day each. ` +
