@@ -145,6 +145,12 @@
         "max_minutes": 5,
         "sourced": false,
         "note": "Unsourced planning assumption. Per-building service time = base + kg collected / kg_per_min, clamped to 1-5 minutes."
+      },
+      "crew": {
+        "drivers": 1,
+        "collectors": 1,
+        "sourced": false,
+        "note": "Unsourced planning assumption: one driver plus the collectors who load at each stop. A vehicle record can set its own crew."
       }
     },
     {
@@ -196,6 +202,12 @@
         "max_minutes": 5,
         "sourced": false,
         "note": "Unsourced planning assumption. Per-building service time = base + kg collected / kg_per_min, clamped to 1-5 minutes."
+      },
+      "crew": {
+        "drivers": 1,
+        "collectors": 1,
+        "sourced": false,
+        "note": "Unsourced planning assumption: one driver plus the collectors who load at each stop. A vehicle record can set its own crew."
       }
     },
     {
@@ -259,6 +271,12 @@
         "max_minutes": 5,
         "sourced": false,
         "note": "Unsourced planning assumption. Per-building service time = base + kg collected / kg_per_min, clamped to 1-5 minutes."
+      },
+      "crew": {
+        "drivers": 1,
+        "collectors": 2,
+        "sourced": false,
+        "note": "Unsourced planning assumption: one driver plus the collectors who load at each stop. A vehicle record can set its own crew."
       }
     },
     {
@@ -319,6 +337,12 @@
         "max_minutes": 5,
         "sourced": false,
         "note": "Unsourced planning assumption. Per-building service time = base + kg collected / kg_per_min, clamped to 1-5 minutes."
+      },
+      "crew": {
+        "drivers": 1,
+        "collectors": 2,
+        "sourced": false,
+        "note": "Unsourced planning assumption: one driver plus the collectors who load at each stop. A vehicle record can set its own crew."
       }
     },
     {
@@ -370,6 +394,12 @@
         "max_minutes": 5,
         "sourced": false,
         "note": "Unsourced planning assumption. Per-building service time = base + kg collected / kg_per_min, clamped to 1-5 minutes."
+      },
+      "crew": {
+        "drivers": 1,
+        "collectors": 2,
+        "sourced": false,
+        "note": "Unsourced planning assumption: one driver plus the collectors who load at each stop. A vehicle record can set its own crew."
       }
     }
   ],

@@ -17,14 +17,16 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from backend import auth, fleet, regulations
+from backend import auth, cleancity, cycle, regulations, resources
 from backend.buildings import generators
 from backend.buildings.layers import sectors as pilot_sectors
 from backend.config import FRONTEND_DIR, PILOTS, WASTE_STREAMS
 from backend.routing import points as points_v2
 from backend.routing import parks, twotier
 from backend.routing.network import node_lonlat
-from backend.api.fleet_api import router as fleet_router
+from backend.api.cleancity_api import router as cleancity_router
+from backend.api.cycle_api import router as cycle_router
+from backend.api.resources_api import router as resources_router
 from backend.api.survey_api import router as survey_router
 from backend.survey import service as survey_service
 from backend.survey import gvp
@@ -39,7 +41,17 @@ async def lifespan(_app: FastAPI):
 app = FastAPI(title="SWM Urban Waste Intelligence", lifespan=lifespan)
 app.add_middleware(GZipMiddleware, minimum_size=2000)
 app.include_router(survey_router)
-app.include_router(fleet_router)
+app.include_router(resources_router)
+app.include_router(cycle_router)
+app.include_router(cleancity_router)
+
+
+@app.get("/api/landing/photos")
+def landing_photos():
+    """Cover photos for the opening page: the images in frontend/img/hero/ (licensed photos only)."""
+    folder = FRONTEND_DIR / "img" / "hero"
+    files = sorted(f.name for f in folder.glob("*") if f.suffix.lower() in (".jpg", ".jpeg", ".png", ".webp")) if folder.exists() else []
+    return {"photos": [f"img/hero/{name}" for name in files]}
 
 
 def _pilot(pilot_key: str) -> str:
@@ -136,7 +148,13 @@ def get_points_v2(pilot_key: str, sector: str | None = None,
         raise HTTPException(422, f"streams must be from {WASTE_STREAMS}")
     try:
         pts = points_v2.collection_points(pilot, survey_state.building_states(pilot), sector, params)
-        pts += gvp.collection_points(pilot, sector) if sector else []
+        if sector:
+            pts += gvp.collection_points(pilot, sector)
+            con = cleancity.connect()
+            try:
+                pts += cleancity.bin_demands(con, pilot, sector)
+            finally:
+                con.close()
         points_v2.vehicle_class(vehicle)
     except (ValueError, KeyError) as err:
         raise HTTPException(422, str(err)) from err
@@ -202,6 +220,7 @@ class PlanV2In(BaseModel):
     unload_min: float = Field(10, ge=0, le=120)
     time_limit_s: int = Field(30, ge=5, le=300)
     park: dict | None = None
+    day: str | None = None  # mon..sun: plan that day of the collection cycle
 
 
 @app.get("/api/pilots/{pilot_key}/v2/stations")
@@ -222,9 +241,9 @@ def get_stations_v2(pilot_key: str, sector: str, radius_m: float = 500, trucks: 
 
 
 def _fleet_available(pilot: str, sector: str) -> dict:
-    con = fleet.connect()
+    con = resources.connect()
     try:
-        return fleet.available(con, pilot, sector)
+        return resources.available(con, pilot, sector)
     finally:
         con.close()
 
@@ -235,26 +254,46 @@ def _plan_input(pilot_key: str, body: PlanV2In, check_fleet: bool = True) -> two
         raise HTTPException(404, f"Unknown sector '{body.sector}'")
     if not set(body.streams) <= set(WASTE_STREAMS) or not body.streams:
         raise HTTPException(422, f"streams must be from {WASTE_STREAMS}")
-    if check_fleet:  # a plan may not use more vehicles than the sector has
-        con = fleet.connect()
+    if check_fleet:  # a plan may not use more vehicles, drivers or collectors than the sector has
+        con = resources.connect()
         try:
-            fleet.check_plan_fleet(con, pilot, body.sector, [r.model_dump() for r in body.primary_fleet + body.secondary_fleet])
-        except fleet.FleetError as err:
+            resources.check_plan(con, pilot, body.sector, [r.model_dump() for r in body.primary_fleet + body.secondary_fleet])
+        except resources.ResourceError as err:
             raise HTTPException(err.status, str(err)) from err
         finally:
             con.close()
+    day_plan, shift_h = None, body.shift_h
+    if body.day:
+        con = cycle.connect()
+        try:
+            day_plan = cycle.day_plan(con, pilot, body.sector, body.day)
+        except cycle.CycleError as err:
+            raise HTTPException(err.status, str(err)) from err
+        finally:
+            con.close()
+        if day_plan["scheduled"]:
+            if not day_plan["window"]:
+                raise HTTPException(422, f"Nothing is collected in {body.sector} on {body.day.title()} in the collection cycle.")
+            shift_h = day_plan["window"]["hours"]  # the routes must fit the day's collection window
     return twotier.PlanInput(
-        pilot=pilot, sector=body.sector, depot=body.depot, mrf=body.mrf,
+        pilot=pilot, sector=body.sector, depot=body.depot, mrf=body.mrf, cycle=day_plan,
         primary_fleet=[r.model_dump() for r in body.primary_fleet],
         secondary_fleet=[r.model_dump() for r in body.secondary_fleet],
         stations=body.stations or None, truck_depot=body.truck_depot, radius_m=body.radius_m,
-        streams=body.streams, shift_h=body.shift_h, unload_min=body.unload_min, time_limit_s=body.time_limit_s,
+        streams=body.streams, shift_h=shift_h, unload_min=body.unload_min, time_limit_s=body.time_limit_s,
         park=body.park)
 
 
 def _with_basis(result: dict, available: dict) -> dict:
-    """Say whether the plan's fleet was checked against the inventory or is hypothetical."""
-    result["fleet_basis"] = "inventory" if available["inventory"] else "hypothetical"
+    """Say whether the plan's vehicles and crews were checked against the inventory or are hypothetical,
+    and how many drivers and collectors the plan's vehicles need."""
+    inv = available["inventory"]
+    result["fleet_basis"] = "inventory" if inv["vehicle"] else "hypothetical"
+    result["crew_basis"] = "inventory" if inv["staff"] else "hypothetical"
+    vehicles = [{"type": v["type"], "count": 1} for v in result["primary"]["vehicles"] + result["secondary"]["trucks"]]
+    result["crew"] = {"needed": resources.crew_needed(vehicles, available["crew_per_vehicle"]),
+                      "available": {"drivers": available["staff"].get("driver", {}).get("count", 0),
+                                    "collectors": available["staff"].get("waste_collector", {}).get("count", 0)}}
     return result
 
 
@@ -288,10 +327,12 @@ def start_fleet_job(pilot_key: str, body: FleetIn):
     """Suggest the fleet that finishes within target_h hours (runs the optimiser several times)."""
     inp = _plan_input(pilot_key, body, check_fleet=False)  # the suggestion itself stays within the fleet
     av = _fleet_available(inp.pilot, inp.sector)
-    caps = av["by_type"] if av["inventory"] else None
+    caps = av["vehicles"] if av["inventory"]["vehicle"] else None
+    crew = ({"per_vehicle": av["crew_per_vehicle"], "drivers": av["staff"].get("driver", {}).get("count", 0),
+             "collectors": av["staff"].get("waste_collector", {}).get("count", 0)} if av["inventory"]["staff"] else None)
 
     def run(report):
-        out = twotier.suggest_fleet(inp, body.target_h, report, caps=caps)
+        out = twotier.suggest_fleet(inp, body.target_h, report, caps=caps, crew=crew)
         _with_basis(out["result"], av)
         out["fleet_basis"] = out["result"]["fleet_basis"]
         return out
@@ -352,4 +393,13 @@ def get_regulation(doc_id: str):
         raise HTTPException(404, str(err)) from err
 
 
-app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")
+class FrontendFiles(StaticFiles):
+    """The frontend, revalidated on every load so a changed page, script or stylesheet shows at once."""
+
+    async def get_response(self, path, scope):
+        response = await super().get_response(path, scope)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+
+
+app.mount("/", FrontendFiles(directory=FRONTEND_DIR, html=True), name="frontend")

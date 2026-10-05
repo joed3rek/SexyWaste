@@ -1,0 +1,156 @@
+/* =====================================================================
+   CityLoom opening page: a "label" layout with a scroll-driven portal, on the
+   app's shadcn base. Colours come from the app tokens in style.css, so the page
+   is always dark (index.html fixes the theme); the app pages default to light. One font everywhere (the app's Poppins). Accents (amber, teal) are
+   used only for type, a dot or a rule, never a filled area.
+   ===================================================================== */
+body.lp {
+  --lp-ground: var(--canvas); --lp-ground-2: var(--surface);
+  --lp-ink: var(--ink); --lp-ink-2: var(--ink-2); --lp-muted: var(--ink-3);
+  /* Accents: defaults, replaced at load by the warm and cool colours sampled from the cover photo (landing.js). */
+  --lp-amber: #e8913c; --lp-teal: #2e6b72; --lp-teal-ink: #5fb0b9;
+  --lp-line: var(--line);
+  --lp-display: var(--font);
+  --lp-sans: var(--font);
+  background: var(--lp-ground); color: var(--lp-ink); font-family: var(--lp-sans); font-size: 15px; line-height: 1.55;
+  overflow-x: clip;
+}
+body.lp.page { overflow-y: visible; height: auto; }
+html:has(body.lp) { height: auto; }
+body.lp a { color: inherit; text-decoration: none; }
+.amber { color: var(--lp-amber); }
+.lp-label { font: 500 10.5px/1.4 var(--lp-sans); letter-spacing: .14em; text-transform: uppercase; color: var(--lp-ink-2); margin: 0 0 18px; }
+.lp-label::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--lp-amber); margin-right: 10px; vertical-align: 1px; }
+.lp-h2 { font: 700 clamp(28px, 4vw, 56px)/1.02 var(--lp-display); letter-spacing: -.025em; color: var(--lp-ink); margin: 0 0 20px; display: block; }
+
+/* ---------- Navigation ---------- */
+.lp-nav { position: fixed; z-index: 50; top: 0; left: 0; right: 0; height: 58px; display: flex; align-items: center; gap: 28px; padding: 0 clamp(16px, 3vw, 40px);
+  background: var(--glass); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid var(--lp-line); }
+.lp-brand { font: 700 15px/1 var(--lp-display); letter-spacing: -.01em; }
+.lp-nav nav { display: flex; gap: 22px; margin-left: auto; }
+.lp-nav nav a { font: 500 10.5px/1 var(--lp-sans); letter-spacing: .14em; text-transform: uppercase; color: var(--lp-ink-2); transition: color .2s; }
+.lp-nav nav a:hover { color: var(--lp-amber); }
+.lp-pill { font: 500 10.5px/1 var(--lp-sans); letter-spacing: .14em; text-transform: uppercase; padding: 10px 16px; border-radius: 999px; border: 1px solid var(--lp-ink);
+  color: var(--lp-ink); transition: background .2s, color .2s; }
+.lp-pill:hover { background: var(--lp-ink); color: var(--lp-ground) !important; }
+
+/* ---------- Portal hero ---------- */
+.lp-hero { position: relative; height: 250vh; }
+.lp-stage { position: sticky; top: 0; height: 100vh; height: 100svh; overflow: hidden; isolation: isolate;
+  background: var(--lp-ground); color: var(--lp-ink); }
+.lp-image { position: absolute; inset: 0; width: 100%; height: 100%; transform: scale(var(--img-s, 1.14)); transform-origin: 50% 50%; }
+.lp-duotone { position: absolute; inset: 0; background: linear-gradient(120deg, var(--lp-teal), var(--lp-amber)); mix-blend-mode: overlay; opacity: var(--duo, 0); }
+.lp-veil { position: absolute; inset: 0; background: radial-gradient(ellipse at center, color-mix(in srgb, var(--lp-ground) 38%, transparent) 30%, color-mix(in srgb, var(--lp-ground) 82%, transparent) 100%); }
+.lp-panel { position: absolute; top: 0; bottom: 0; width: 51%; background: var(--lp-ground-2); z-index: 2; }
+.lp-panel.left { left: 0; transform: translateX(calc(var(--open, 0) * -110%)); border-right: 1px solid var(--lp-line); }
+.lp-panel.right { right: 0; transform: translateX(calc(var(--open, 0) * 110%)); border-left: 1px solid var(--lp-line); }
+.lp-dot { position: absolute; z-index: 3; left: 50%; top: 50%; width: 7px; height: 7px; margin: -3.5px; border-radius: 50%; }
+.amber-dot { background: var(--lp-amber); box-shadow: 0 0 12px var(--lp-amber); transform: translate(calc(var(--open, 0) * -42vw), calc(var(--open, 0) * -38vh - 64px)); }
+.teal-dot { background: var(--lp-teal-ink); box-shadow: 0 0 12px var(--lp-teal-ink); transform: translate(calc(var(--open, 0) * 42vw), calc(var(--open, 0) * 38vh + 64px)); }
+.lp-title { position: absolute; z-index: 4; left: 0; right: 0; top: 50%; margin: 0; display: flex; justify-content: center; white-space: nowrap;
+  font: 800 clamp(30px, 6.4vw, 124px)/.9 var(--lp-display); letter-spacing: var(--track, .04em); color: var(--lp-ink);
+  transform: translateY(-50%) scale(var(--title-s, 1)); transform-origin: 50% 50%; }
+.lp-title .a { display: inline-block; transform: translateX(calc(var(--open, 0) * -50%)); }
+.lp-title .b { display: inline-block; transform: translateX(calc(var(--open, 0) * 50%)); }
+.lp-meta { position: absolute; z-index: 4; margin: 0; font: 500 10.5px/1.4 var(--lp-sans); letter-spacing: .14em; text-transform: uppercase; color: var(--lp-ink-2); }
+.lp-meta.tl { top: 82px; left: clamp(16px, 3vw, 40px); }
+.lp-meta.tr { top: 82px; right: clamp(16px, 3vw, 40px); }
+.lp-meta.bl { bottom: 28px; left: clamp(16px, 3vw, 40px); }
+.lp-meta.br { bottom: 28px; right: clamp(16px, 3vw, 40px); }
+.lp-meta.br::after { content: ""; display: inline-block; width: 28px; height: 1px; background: var(--lp-amber); margin-left: 10px; vertical-align: 3px; }
+
+/* ---------- Statement fold ---------- */
+.lp-statement { position: relative; min-height: 100vh; padding: 18vh clamp(16px, 6vw, 96px); overflow: hidden; border-top: 1px solid var(--lp-line); }
+.lp-big { font: 600 clamp(24px, 3.6vw, 52px)/1.12 var(--lp-display); letter-spacing: -.02em; max-width: 22ch; margin: 0; position: relative; z-index: 2; }
+.lp-orb { position: absolute; right: -12vw; top: 14vh; width: min(60vw, 720px); height: min(60vw, 720px); border-radius: 50%; opacity: .7;
+  transform: translateY(var(--orb-y, 0px)) rotate(var(--orb-r, 0deg)); border: 1px solid var(--lp-line); }
+
+/* ---------- Releases: modules with a throwable deck ---------- */
+.lp-releases { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(32px, 6vw, 96px); align-items: center;
+  padding: 16vh clamp(16px, 6vw, 96px); border-top: 1px solid var(--lp-line); }
+.lp-lede { color: var(--lp-ink-2); max-width: 46ch; font-size: 16px; margin: 0 0 28px; }
+.lp-buttons { display: flex; flex-wrap: wrap; gap: 12px; }
+.lp-btn { display: inline-flex; align-items: center; min-height: 44px; padding: 0 22px; border-radius: 999px; border: 1px solid var(--lp-line);
+  font: 500 10.5px/1 var(--lp-sans); letter-spacing: .14em; text-transform: uppercase; color: var(--lp-ink); transition: border-color .2s, color .2s, background .2s; }
+.lp-btn:hover { border-color: var(--lp-amber); color: var(--lp-amber); }
+.lp-btn.solid { background: var(--lp-ink); color: var(--lp-ground); border-color: var(--lp-ink); }
+.lp-btn.solid:hover { background: transparent; color: var(--lp-ink); }
+.lp-deck { position: relative; width: min(100%, 460px); aspect-ratio: 1; margin: 0 auto; touch-action: pan-y; outline: none; user-select: none; }
+.lp-deck:focus-visible { box-shadow: 0 0 0 1px var(--lp-amber); border-radius: 14px; }
+.lp-card { position: absolute; inset: 0; border-radius: 14px; background: var(--lp-ground-2); border: 1px solid var(--lp-line); padding: 28px;
+  display: flex; flex-direction: column; justify-content: space-between; cursor: grab; will-change: transform;
+  box-shadow: var(--sh-3); transition: transform .45s cubic-bezier(.2, .8, .2, 1), opacity .35s; }
+.lp-card.dragging { transition: none; cursor: grabbing; }
+.lp-card .code { font: 500 10.5px/1 var(--lp-sans); letter-spacing: .14em; text-transform: uppercase; color: var(--lp-muted); display: flex; justify-content: space-between; }
+.lp-card .code .who { color: var(--lp-teal-ink); }
+.lp-card h3 { font: 700 clamp(26px, 3vw, 40px)/1.02 var(--lp-display); letter-spacing: -.02em; margin: 0; display: block; color: var(--lp-ink); }
+.lp-card p { color: var(--lp-ink-2); margin: 12px 0 0; font-size: 14.5px; }
+.lp-card .rule { height: 1px; background: var(--lp-amber); width: 48px; }
+.lp-hint { text-align: center; color: var(--lp-muted); font-size: 12px; letter-spacing: .04em; margin: 18px 0 8px; }
+.lp-progress { display: flex; justify-content: center; gap: 8px; }
+.lp-progress i { width: 6px; height: 6px; border-radius: 50%; background: var(--lp-line); }
+.lp-progress i.on { background: var(--lp-amber); }
+
+/* ---------- Roster and dates ---------- */
+.lp-roster, .lp-dates { padding: 14vh clamp(16px, 6vw, 96px); border-top: 1px solid var(--lp-line); }
+.lp-rows .row { display: grid; grid-template-columns: 140px 1fr auto; align-items: baseline; gap: 18px; padding: 18px 0; border-bottom: 1px solid var(--lp-line); }
+.lp-rows .row:first-child { border-top: 1px solid var(--lp-line); }
+.lp-rows .tag { font: 500 10.5px/1 var(--lp-sans); letter-spacing: .14em; text-transform: uppercase; color: var(--lp-amber); }
+.lp-rows .name { font: 700 clamp(22px, 2.6vw, 34px)/1.05 var(--lp-display); letter-spacing: -.02em; }
+.lp-rows .count { color: var(--lp-ink-2); font-variant-numeric: tabular-nums; font-size: 14px; }
+.lp-table { width: 100%; border-collapse: collapse; margin: 0; font-size: 14.5px; background: none; border: 0; box-shadow: none; }
+.lp-table th { text-align: left; font: 500 10.5px/1 var(--lp-sans); letter-spacing: .14em; text-transform: uppercase; color: var(--lp-ink-2);
+  padding: 0 16px 14px 0; border-bottom: 1px solid var(--lp-line); background: none; }
+.lp-table td { text-align: left; padding: 18px 16px 18px 0; border-bottom: 1px solid var(--lp-line); color: var(--lp-ink-2); vertical-align: baseline; background: none !important; }
+.lp-table td:first-child { font: 700 clamp(18px, 2vw, 26px)/1.1 var(--lp-display); color: var(--lp-ink); white-space: nowrap; }
+.lp-table td.rule { font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--lp-teal-ink); }
+.lp-table tr.next td:first-child::after { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--lp-amber); margin-left: 10px; vertical-align: 6px; }
+
+/* ---------- Close ---------- */
+.lp-close { padding: 16vh clamp(16px, 6vw, 96px) 0; border-top: 1px solid var(--lp-line); overflow: hidden; }
+.lp-close-row { display: flex; justify-content: space-between; align-items: flex-end; gap: 32px; flex-wrap: wrap; }
+.lp-fine { color: var(--lp-muted); font-size: 12.5px; margin: 0; }
+.lp-foot { display: flex; justify-content: space-between; gap: 16px; margin-top: 12vh; padding: 18px 0; border-top: 1px solid var(--lp-line);
+  font: 500 10.5px/1.4 var(--lp-sans); letter-spacing: .14em; text-transform: uppercase; color: var(--lp-ink-2); }
+.lp-foot a:hover { color: var(--lp-amber); }
+.lp-closemark { margin: 0; font: 800 15.5vw/.8 var(--lp-display); letter-spacing: -.035em; white-space: nowrap; color: var(--lp-ink);
+  padding: 2vh 0 6vh; text-align: center; }
+
+/* ---------- Sign-in panel: a sheet with the app's standard controls ---------- */
+.lp-scrim { position: fixed; inset: 0; z-index: 70; background: rgb(0 0 0 / .5); }
+.lp-sheet { position: fixed; z-index: 80; top: 0; right: 0; bottom: 0; width: min(520px, 100%); max-width: none; margin: 0; overflow-y: auto;
+  padding: 72px 28px 32px; background: var(--surface); border-left: 1px solid var(--line); color: var(--ink); box-shadow: var(--sh-3);
+  animation: lp-sheet-in .35s cubic-bezier(.2, .8, .2, 1); }
+@keyframes lp-sheet-in { from { transform: translateX(40px); opacity: 0; } }
+body.lp-sheet-open { overflow: hidden; }
+.lp-x { position: absolute; top: 18px; right: 18px; width: 36px; min-height: 36px; padding: 0; font-size: 20px; }
+.lp-sheet h1 { font: 700 30px/1.1 var(--font); letter-spacing: -.025em; color: var(--ink); }
+.lp-sheet .card-box { background: transparent; border: 0; box-shadow: none; padding: 0; }
+
+/* ---------- Entry reveals: only with motion allowed (class set by landing.js), fire once ---------- */
+.lp-motion .lp-reveal { opacity: 0; transform: translateY(24px); transition: opacity .9s ease, transform .9s cubic-bezier(.2, .7, .1, 1); }
+.lp-motion .lp-reveal.in { opacity: 1; transform: none; }
+
+/* ---------- Narrow screens ---------- */
+@media (max-width: 860px) {
+  .lp-nav nav a:not([data-open]) { display: none; }
+  .lp-nav { gap: 14px; }
+  .lp-releases { grid-template-columns: 1fr; }
+  .lp-rows .row { grid-template-columns: 1fr auto; }
+  .lp-rows .tag { grid-column: 1 / -1; }
+  .lp-table thead { display: none; }
+  .lp-table tr { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 14px 0; border-bottom: 1px solid var(--lp-line); }
+  .lp-table td { border: 0; padding: 0; }
+  .lp-table td:nth-child(2) { grid-column: 1 / -1; grid-row: 2; }
+  .lp-meta.tr { display: none; }
+}
+@media (max-width: 520px) {
+  .lp-nav nav { display: none; }
+  .lp-pill { margin-left: auto; }
+}
+
+/* Cover photo (random on each load, when photos are present); the street drawing is the fallback. */
+.lp-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scale(var(--img-s, 1.14)); transform-origin: 50% 50%; }
+.lp-photo[hidden] { display: none; }
+.lp-releases { overflow-x: hidden; }
+.lp-nav .theme-toggle { color: var(--lp-ink-2); }

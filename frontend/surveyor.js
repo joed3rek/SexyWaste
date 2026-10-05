@@ -18,7 +18,7 @@ let fc = null;
 const byId = new Map();
 let pinMode = null; // "missing" or "gvp" while the next tap places a pin
 
-if (!SESSION || !["surveyor", "survey_supervisor"].includes(SESSION.role)) location.replace("index.html");
+if (!SESSION || !["surveyor", "survey_supervisor", "admin"].includes(SESSION.role)) location.replace("index.html");
 
 const map = new maplibregl.Map({
   container: "map",

@@ -1,0 +1,21 @@
+{
+  "_about": "An EXAMPLE starting schedule for the Collection Cycle page. Not a rule: the SWM Rules 2026 ask for collection at regular intervals (r. 8(h)(iii)) and day-to-day collection from markets (r. 39(19)); the days and windows here are planning choices to be edited by the municipality.",
+  "template": [
+    {"stream": "wet", "generator": "households", "days": ["mon", "tue", "wed", "thu", "fri", "sat"], "start": "06:00", "end": "11:00", "method": "door_to_door"},
+    {"stream": "wet", "generator": "commercial", "days": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"], "start": "06:00", "end": "11:00", "method": "door_to_door"},
+    {"stream": "wet", "generator": "institutions", "days": ["mon", "tue", "wed", "thu", "fri", "sat"], "start": "06:00", "end": "11:00", "method": "door_to_door"},
+    {"stream": "wet", "generator": "bulk_generators", "days": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"], "start": "06:00", "end": "11:00", "method": "door_to_door"},
+    {"stream": "dry", "generator": "households", "days": ["tue", "fri"], "start": "07:00", "end": "12:00", "method": "door_to_door"},
+    {"stream": "dry", "generator": "commercial", "days": ["mon", "wed", "fri"], "start": "07:00", "end": "12:00", "method": "door_to_door"},
+    {"stream": "dry", "generator": "institutions", "days": ["tue", "fri"], "start": "07:00", "end": "12:00", "method": "door_to_door"},
+    {"stream": "dry", "generator": "bulk_generators", "days": ["mon", "wed", "fri"], "start": "07:00", "end": "12:00", "method": "door_to_door"},
+    {"stream": "sanitary", "generator": "households", "days": ["wed", "sat"], "start": "07:00", "end": "12:00", "method": "door_to_door"},
+    {"stream": "sanitary", "generator": "commercial", "days": ["wed", "sat"], "start": "07:00", "end": "12:00", "method": "door_to_door"},
+    {"stream": "sanitary", "generator": "institutions", "days": ["wed", "sat"], "start": "07:00", "end": "12:00", "method": "door_to_door"},
+    {"stream": "sanitary", "generator": "bulk_generators", "days": ["wed", "sat"], "start": "07:00", "end": "12:00", "method": "door_to_door"},
+    {"stream": "special", "generator": "households", "days": ["sat"], "start": "09:00", "end": "12:00", "method": "door_to_door"},
+    {"stream": "special", "generator": "commercial", "days": ["sat"], "start": "09:00", "end": "12:00", "method": "door_to_door"},
+    {"stream": "special", "generator": "institutions", "days": ["sat"], "start": "09:00", "end": "12:00", "method": "door_to_door"},
+    {"stream": "special", "generator": "bulk_generators", "days": ["sat"], "start": "09:00", "end": "12:00", "method": "door_to_door"}
+  ]
+}

@@ -1,0 +1,114 @@
+{
+  "_about": "Clean City planning standards. PLANNING CHOICES AND ESTIMATES, not rules: the SWM Rules 2026 ask that street sweeping waste is collected separately and regularly depending on population density, commercial activity and local situation (r. 39(16)) and that waste from public places is collected on a schedule (r. 39(13)). Every value here can be changed by the municipality.",
+  "classes": {
+    "primary": {
+      "label": "Primary / busy street",
+      "cleanings_per_week": 7,
+      "bin_spacing_m": 30,
+      "bin_services_per_day": 2,
+      "note": "Major roads and high-activity corridors, and streets in front of hospitals."
+    },
+    "commercial": {
+      "label": "Commercial street",
+      "cleanings_per_week": 7,
+      "bin_spacing_m": 100,
+      "bin_services_per_day": 1,
+      "note": "Commercial and mixed-use streets."
+    },
+    "market": {
+      "label": "Market street",
+      "cleanings_per_week": 14,
+      "bin_spacing_m": 30,
+      "bin_services_per_day": 3,
+      "note": "High-intensity market environment; more than one cleaning a day."
+    },
+    "residential": {
+      "label": "Residential street",
+      "cleanings_per_week": 3.5,
+      "bin_spacing_m": 100,
+      "bin_services_per_day": 0.5,
+      "note": "Normal residential roads, cleaned daily or on alternate days."
+    },
+    "low_intensity": {
+      "label": "Low-intensity street",
+      "cleanings_per_week": 2,
+      "bin_spacing_m": null,
+      "bin_services_per_day": 0,
+      "note": "Dead ends and low-activity internal roads. No public bins unless the street has a GVP history."
+    }
+  },
+  "classification": {
+    "_note": "How a street's suggested class is worked out from the road and the buildings along it. Estimates to be checked on the ground.",
+    "primary_road_classes": [
+      "trunk",
+      "primary",
+      "secondary"
+    ],
+    "commercial_share": 0.3,
+    "commercial_min_buildings": 4,
+    "busy_frontage_categories": [
+      "healthcare"
+    ],
+    "commercial_categories": [
+      "commercial_retail",
+      "food_service",
+      "commercial_office",
+      "hotel",
+      "mixed_use",
+      "market"
+    ],
+    "market_categories": [
+      "market"
+    ],
+    "low_intensity_max_buildings_per_100m": 1.5,
+    "low_intensity_road_classes": [
+      "living_street"
+    ]
+  },
+  "productivity": {
+    "_note": "ESTIMATES (unsourced) to be replaced with timings observed in HSR.",
+    "street_m_per_worker_hour": 120,
+    "bin_service_minutes": 5,
+    "gvp_clearing_worker_hours": {
+      "low": 1,
+      "medium": 2,
+      "high": 4,
+      "critical": 8
+    }
+  },
+  "bins": {
+    "_note": "ESTIMATES for turning a bin's state into kilograms for the route builder.",
+    "default_capacity_l": 120,
+    "fill_when": {
+      "near_capacity": 0.8,
+      "full": 1.0,
+      "overflowing": 1.3,
+      "due": 0.6
+    },
+    "min_gap_to_existing_m": 15
+  },
+  "cleaning_roles": [
+    "sweeper",
+    "cleaning_worker",
+    "gvp_response_worker"
+  ],
+  "gvp_equipment": {
+    "_note": "Planning choice: equipment a cleaning team takes to clear a GVP, by severity.",
+    "low": [
+      "handcart"
+    ],
+    "medium": [
+      "handcart",
+      "cleaning_kit"
+    ],
+    "high": [
+      "tricycle",
+      "loader"
+    ],
+    "critical": [
+      "loader",
+      "compactor",
+      "pressure_washer"
+    ]
+  }
+}

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <link rel="icon" href="data:," />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Clean City</title>
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" />
+  <script src="theme.js"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="app">
+  <nav id="appNav"></nav>
+  <aside id="panel">
+    <header class="panel-head">
+      <p class="eyebrow">Streets · public bins · GVP clearing · workforce</p>
+      <h1>Clean City</h1>
+    </header>
+
+    <section>
+      <select id="sector" aria-label="Sector"></select>
+      <div id="legend" class="cc-legend"></div>
+      <label class="check small"><input type="checkbox" id="showRec" checked /> Show suggested bin places</label>
+      <p class="hint small" id="rules"></p>
+    </section>
+
+    <section>
+      <h2>Workforce</h2>
+      <div id="workload"></div>
+    </section>
+
+    <div class="tabs" role="tablist">
+      <button type="button" data-tab="street" class="on">Street</button>
+      <button type="button" data-tab="bins">Bins</button>
+      <button type="button" data-tab="gvp">GVP clearing</button>
+    </div>
+    <section data-pane="street"><div id="street"><p class="hint">Tap a street on the map to see and change its cleaning plan.</p></div></section>
+    <section data-pane="bins" hidden>
+      <button type="button" id="addBin" class="secondary">Add a bin: tap the street where it stands</button>
+      <p class="hint small" id="binHint"></p>
+      <div id="bins"></div>
+    </section>
+    <section data-pane="gvp" hidden><div id="tasks"></div></section>
+  </aside>
+  <div id="map"></div>
+  <div id="toast" class="toast" hidden></div>
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <script src="ui.js"></script>
+  <script src="cleancity.js"></script>
+</body>
+</html>

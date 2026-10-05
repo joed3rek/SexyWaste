@@ -12,6 +12,10 @@ const ICONS = {
   recycle: '<path d="M19.5 11A7.5 7.5 0 0 0 6 6.6L4.5 8"/><path d="M4.5 4v4h4"/><path d="M4.5 13A7.5 7.5 0 0 0 18 17.4l1.5-1.4"/><path d="M19.5 20v-4h-4"/>',
   ward: '<path d="M4 20V10M10 20V4M16 20v-7M20 20H3"/>',
   arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>',
+  broom: '<path d="M14 4 9 13"/><path d="M6 13h7l2 7H4z"/><path d="M8 16v4M11 16v4"/>',
+  calendar: '<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"/>',
+  moon: '<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>',
   truck: '<path d="M3 6.5h11v9H3z"/><path d="M14 9.5h3.5l3 3v3H14"/><circle cx="7" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/>',
 };
 
@@ -23,16 +27,26 @@ function icon(name) {
 // frontend, so its data pages forward here (see renderShell).
 const FULL_APP_URL = "https://swm-urban-waste.onrender.com/";
 
+// Each page and who may open it. A role sees only its own pages in the menu, and opening another
+// role's page sends it to its home page. Admin sees everything. (The dummy login is not security:
+// this keeps each role's screen focused, it does not protect data.)
 const NAV = [
   { key: "home", href: "index.html", icon: "home" },
-  { key: "surveyor", href: "surveyor.html", icon: "survey", hide: ["generator"] },
-  { key: "report", href: "report.html", icon: "household", role: "generator" },
-  { key: "supervisor", href: "supervisor.html", icon: "ward", role: "survey_supervisor" },
-  { key: "planner", href: "map.html?role=planner", icon: "planner", hide: ["generator"] },
-  { key: "builder", href: "builder.html", icon: "routes", hide: ["generator"] },
-  { key: "fleet", href: "fleet.html", icon: "truck", role: ["fleet_workforce_manager", "admin", "planner"] },
-  { key: "rules", href: "rules.html", icon: "rules" },
+  { key: "surveyor", href: "surveyor.html", icon: "survey", roles: ["surveyor", "survey_supervisor"] },
+  { key: "supervisor", href: "supervisor.html", icon: "ward", roles: ["survey_supervisor"] },
+  { key: "report", href: "report.html", icon: "household", roles: ["generator"] },
+  { key: "planner", href: "map.html?role=planner", icon: "planner", roles: ["planner"] },
+  { key: "cycle", href: "cycle.html", icon: "calendar", roles: ["planner"] },
+  { key: "cleancity", href: "cleancity.html", icon: "broom", roles: ["planner"] },
+  { key: "builder", href: "builder.html", icon: "routes", roles: ["planner"] },
+  { key: "fleet", href: "resources.html", icon: "truck", roles: ["fleet_workforce_manager", "hr_manager", "planner"] },
+  { key: "admin", href: "admin.html", icon: "ward", roles: [] },
+  { key: "rules", href: "rules.html", icon: "rules", roles: ["surveyor", "survey_supervisor", "planner", "fleet_workforce_manager", "hr_manager", "generator"] },
 ];
+
+function canOpen(item, role) {
+  return !item.roles || role === "admin" || item.roles.includes(role);
+}
 
 // ---------- Strings ----------
 // Every user-facing string of the built roles lives in strings.json, keyed by id, with English
@@ -156,17 +170,47 @@ function activeNavKey() {
   const page = location.pathname.split("/").pop() || "index.html";
   if (page.startsWith("map")) return "planner";
   if (page.startsWith("surveyor")) return "surveyor";
-  if (page.startsWith("fleet")) return "fleet";
+  if (page.startsWith("resources")) return "fleet";
+  if (page.startsWith("cycle")) return "cycle";
+  if (page.startsWith("cleancity")) return "cleancity";
   if (page.startsWith("report")) return "report";
   if (page.startsWith("supervisor")) return "supervisor";
   if (page.startsWith("builder")) return "builder";
   if (page.startsWith("rules")) return "rules";
+  if (page.startsWith("admin")) return "admin";
   return "home";
 }
 
 const UI_READY = loadStrings().then(renderShell);
 
+function guardPage() {
+  const page = NAV.find((n) => n.key === activeNavKey());
+  if (!page || !page.roles) return true;
+  const s = getSession();
+  if (s && canOpen(page, s.role)) return true;
+  location.replace(s?.home || "index.html");
+  return false;
+}
+
+// Light or dark theme (theme.js applies the saved choice before the page draws).
+function setTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  try { localStorage.setItem("swm.theme", theme); } catch { /* storage blocked: lasts this page only */ }
+  document.dispatchEvent(new CustomEvent("swm:theme", { detail: theme }));
+}
+function themeButton() {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = "theme-toggle";
+  b.title = t("theme.toggle");
+  b.setAttribute("aria-label", b.title);
+  b.innerHTML = `<span class="sun">${icon("sun")}</span><span class="moon">${icon("moon")}</span>`;
+  b.addEventListener("click", () => setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark"));
+  return b;
+}
+
 function renderShell() {
+  if (!guardPage()) return;
   document.querySelectorAll("[data-icon]").forEach((el) => (el.innerHTML = icon(el.dataset.icon)));
   applyStrings();
 
@@ -176,9 +220,11 @@ function renderShell() {
     nav.className = "rail";
     nav.setAttribute("aria-label", "Main");
     const role = (getSession() || {}).role;
-    nav.innerHTML = `<a class="logo" href="index.html" title="Urban Waste Intelligence">${icon("logo")}</a>` +
-      NAV.filter((n) => (!n.role || [].concat(n.role).includes(role)) && !(n.hide || []).includes(role)).map((n) => `<a class="item${n.key === active ? " active" : ""}" href="${n.href}"${n.key === active ? ' aria-current="page"' : ""}>${icon(n.icon)}<span>${t(`nav.${n.key}`)}</span></a>`).join("");
+    nav.innerHTML = `<a class="logo" href="index.html" title="CityLoom">${icon("logo")}</a>` +
+      NAV.filter((n) => canOpen(n, role) && (n.key !== "home" || role)).map((n) => `<a class="item${n.key === active ? " active" : ""}" href="${n.href}"${n.key === active ? ' aria-current="page"' : ""}>${icon(n.icon)}<span>${t(`nav.${n.key}`)}</span></a>`).join("");
+    nav.append(themeButton());
   }
+  document.querySelectorAll(".theme-slot").forEach((slot) => slot.replaceWith(themeButton()));
 
   if (location.hostname.endsWith("github.io")) {
     // Every page needs the API (sign-in reads the role list), so open the full app instead.

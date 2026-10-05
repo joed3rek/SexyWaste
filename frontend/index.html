@@ -1,39 +1,120 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme-fixed="dark">
 <head>
   <meta charset="utf-8" />
   <link rel="icon" href="data:," />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Urban Waste Intelligence</title>
+  <title>CityLoom</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" />
+  <script src="theme.js"></script>
   <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="landing.css" />
 </head>
-<body class="page">
-  <header class="topbar">
-    <a class="brand" href="index.html"><span class="logo" data-icon="logo"></span><span class="name">Urban Waste Intelligence</span></a>
-    <nav aria-label="Planning tools">
-      <a href="map.html?role=planner" data-t="signin.planner_map"></a>
-      <a href="builder.html" data-t="signin.route_builder"></a>
+<body class="page lp">
+  <header class="lp-nav">
+    <a class="lp-brand" href="index.html">CityLoom<span class="amber">.</span></a>
+    <nav aria-label="Sections">
+      <a href="#modules">Modules</a>
+      <a href="#sectors">Sectors</a>
+      <a href="#dates">Dates</a>
       <a href="rules.html" data-t="signin.rules"></a>
+      <a href="#signin" data-open="report" data-t="signin.link_report"></a>
     </nav>
+    <a class="lp-pill" href="#signin" data-open="signin" data-t="signin.hero_cta"></a>
   </header>
 
-  <main class="signin">
-    <p class="eyebrow" data-t="signin.eyebrow"></p>
-    <h1 data-t="signin.title"></h1>
+  <!-- Portal hero: a tall section with a sticky stage; scroll opens the panels and the title. -->
+  <section class="lp-hero" id="hero" aria-label="CityLoom">
+    <div class="lp-stage">
+      <canvas class="lp-image" id="heroImage" aria-hidden="true"></canvas>
+      <img class="lp-photo" id="heroPhoto" alt="" hidden />
+      <div class="lp-duotone" aria-hidden="true"></div>
+      <div class="lp-veil" aria-hidden="true"></div>
+      <div class="lp-panel left" aria-hidden="true"></div>
+      <div class="lp-panel right" aria-hidden="true"></div>
+      <span class="lp-dot amber-dot" aria-hidden="true"></span>
+      <span class="lp-dot teal-dot" aria-hidden="true"></span>
+      <h1 class="lp-title" id="portalTitle" aria-label="CityLoom"><span class="a" aria-hidden="true">CITY</span><span class="b" aria-hidden="true">LOOM</span></h1>
+      <p class="lp-meta tl">HSR Layout · Sectors 1–7</p>
+      <p class="lp-meta bl" data-t="signin.hero_sub"></p>
+      <p class="lp-meta br">Scroll</p>
+    </div>
+  </section>
 
-    <div id="current" class="card-box current" hidden>
-      <p><span data-t="signin.signed_in_as"></span> <b id="currentName"></b> · <span id="currentRole"></span></p>
-      <div class="row">
-        <a id="continueBtn" class="btn block" href="#" data-t="signin.continue"></a>
-        <button id="signOutBtn" type="button" class="secondary block" data-t="common.sign_out"></button>
+  <!-- Statement fold -->
+  <section class="lp-statement">
+    <p class="lp-label">What it does</p>
+    <p class="lp-big lp-reveal">Every street, bin and garbage vulnerable point in HSR Layout, <span class="amber">planned, cleaned and collected</span> on one map.</p>
+    <canvas class="lp-orb" id="orb" aria-hidden="true"></canvas>
+  </section>
+
+  <!-- Modules: a throwable deck -->
+  <section class="lp-releases" id="modules">
+    <div class="lp-col">
+      <p class="lp-label">Modules</p>
+      <h2 class="lp-h2 lp-reveal">Six modules, one connected city.</h2>
+      <p class="lp-lede lp-reveal">Surveyors map buildings, the public reports dumped waste, managers keep the vehicles and people on record, planners set the collection cycle and clean streets, and the route builder plans the trucks from all of it.</p>
+      <div class="lp-buttons lp-reveal">
+        <a class="lp-btn solid" href="#signin" data-open="signin" data-t="signin.hero_cta"></a>
+        <a class="lp-btn" href="#signin" data-open="report" data-t="signin.link_report"></a>
       </div>
     </div>
+    <div class="lp-col">
+      <div class="lp-deck" id="deck" tabindex="0" role="listbox" aria-label="Modules: drag a card aside, or use the left and right arrow keys"></div>
+      <p class="lp-hint">Drag a card aside, or use ← → to flip through.</p>
+      <div class="lp-progress" id="deckDots" aria-hidden="true"></div>
+    </div>
+  </section>
+
+  <!-- Roster: the pilot's sectors -->
+  <section class="lp-roster" id="sectors">
+    <p class="lp-label">The pilot</p>
+    <h2 class="lp-h2 lp-reveal">HSR Layout, sector by sector.</h2>
+    <div id="roster" class="lp-rows"></div>
+  </section>
+
+  <!-- Dates: from the regulations library -->
+  <section class="lp-dates" id="dates">
+    <h2 class="lp-h2 lp-reveal">Key dates.</h2>
+    <table class="lp-table" id="dateTable">
+      <thead><tr><th>Date</th><th>What</th><th>Rule</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <!-- Close -->
+  <section class="lp-close">
+    <div class="lp-close-row">
+      <div>
+        <h2 class="lp-h2">Start with your street.</h2>
+        <p class="lp-fine">Pilot: HSR Layout sectors 1–7, Bengaluru. Sign-in is a pilot build and is not checked.</p>
+      </div>
+      <div class="lp-buttons">
+        <a class="lp-btn solid" href="#signin" data-open="signin" data-t="signin.hero_cta"></a>
+        <a class="lp-btn" href="#signin" data-open="report" data-t="signin.link_report"></a>
+      </div>
+    </div>
+    <div class="lp-foot"><span>CityLoom<span class="amber">.</span> Municipal Operations Intelligence</span><a href="rules.html" data-t="signin.rules"></a></div>
+    <p class="lp-closemark" aria-hidden="true">CITYLOOM</p>
+  </section>
+
+  <!-- Sign in: a panel that slides in over the page -->
+  <div class="lp-scrim" id="scrim" hidden></div>
+  <main class="signin lp-sheet" id="signin" hidden aria-labelledby="signinTitle">
+    <button type="button" class="lp-x ghost" id="closeSignin" aria-label="Close">×</button>
+    <p class="eyebrow" data-t="signin.eyebrow"></p>
+    <h1 id="signinTitle" data-t="signin.title"></h1>
 
     <form id="signinForm" class="card-box" novalidate>
-      <fieldset class="choice-group">
+      <div class="tabs audience" role="tablist" aria-label="Who is signing in">
+        <button type="button" role="tab" data-audience="public" data-t="signin.audience_public"></button>
+        <button type="button" role="tab" data-audience="official" data-t="signin.audience_official"></button>
+      </div>
+      <p class="hint" id="audienceHint"></p>
+      <input type="radio" name="role" value="generator" id="publicRole" hidden />
+      <fieldset class="choice-group" id="roleBox">
         <legend data-t="signin.role"></legend>
         <div id="roleChoices" class="choices"><p class="hint" data-t="signin.loading_roles"></p></div>
       </fieldset>
@@ -49,11 +130,10 @@
       <button type="submit" class="block lg" data-t="signin.submit"></button>
       <p class="hint small" data-t="signin.note"></p>
     </form>
-
-    <p class="hint small" data-t="signin.footer"></p>
   </main>
 
   <script src="ui.js"></script>
+  <script src="landing.js"></script>
   <script>
     const PILOT = "hsr";
     const $ = (id) => document.getElementById(id);
@@ -70,15 +150,42 @@
       $("sectorBox").hidden = !role || role.jurisdiction !== "sector";
     }
 
-    function showCurrent() {
-      const s = getSession();
-      const role = s && ROLES.find((x) => x.key === s.role);
-      $("current").hidden = !role;
-      if (!role) return;
-      $("currentName").textContent = s.name;
-      $("currentRole").textContent = t(`role.${role.key}`) + (s.sectors?.length ? ` · ${s.sectors.join(", ")}` : "");
-      $("continueBtn").href = role.home;
+    // Two ways in: Public (just a name, to report dumped waste) or Official (choose the official role).
+    function setAudience(a) {
+      document.querySelectorAll("[data-audience]").forEach((b) => b.classList.toggle("on", b.dataset.audience === a));
+      $("roleBox").hidden = a === "public";
+      $("audienceHint").textContent = t(a === "public" ? "signin.public_hint" : "signin.official_hint");
+      if (a === "public") $("publicRole").checked = true;
+      else if ($("publicRole").checked) $("publicRole").checked = false;
+      updateFields();
     }
+    document.querySelectorAll("[data-audience]").forEach((b) => b.addEventListener("click", () => setAudience(b.dataset.audience)));
+
+    // The sign-in panel slides in from "Sign in" or "Report dumped waste" (Public, chosen for them).
+    function openSignin(roleKey) {
+      $("signin").hidden = false;
+      $("scrim").hidden = false;
+      document.body.classList.add("lp-sheet-open");
+      const s = getSession();
+      setAudience(roleKey === "generator" || (!roleKey && s?.role === "generator") ? "public" : "official");
+      if (roleKey && roleKey !== "generator") {
+        const el = document.querySelector(`input[name="role"][value="${CSS.escape(roleKey)}"]`);
+        if (el) { el.checked = true; el.dispatchEvent(new Event("change")); }
+      }
+      setTimeout(() => $("name").focus({ preventScroll: true }), 300);
+    }
+    function closeSignin() {
+      $("signin").hidden = true;
+      $("scrim").hidden = true;
+      document.body.classList.remove("lp-sheet-open");
+    }
+    document.querySelectorAll("[data-open]").forEach((a) => a.addEventListener("click", (e) => {
+      e.preventDefault();
+      openSignin(a.dataset.open === "report" ? "generator" : null);
+    }));
+    $("closeSignin").addEventListener("click", closeSignin);
+    $("scrim").addEventListener("click", closeSignin);
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("signin").hidden) closeSignin(); });
 
     // Sectors a supervisor assigned to this name are ticked (still editable: login is a dummy).
     async function preselectAssigned() {
@@ -100,19 +207,21 @@
       try {
         const [reg, sectors] = await Promise.all([apiFetch("/api/roles"), apiFetch(`/api/pilots/${PILOT}/sectors`)]);
         ROLES = reg.roles;
-        $("roleChoices").innerHTML = ROLES.filter((r) => r.built).map((r) => `
+        $("roleChoices").innerHTML = ROLES.filter((r) => r.built && r.module !== "public").map((r) => `
           <label class="choice"><input type="radio" name="role" value="${esc(r.key)}" />
             <span><b>${esc(t(`role.${r.key}`))}</b><span class="muted small">${esc(t(`role.${r.key}.description`))}</span></span></label>`).join("");
         $("sectorChoices").innerHTML = sectors.features.map((f) => f.properties.name).map((n) => `
           <label class="chip"><input type="checkbox" name="sector" value="${esc(n)}" /><span>${esc(n)}</span></label>`).join("");
         document.querySelectorAll('input[name="role"]').forEach((el) => el.addEventListener("change", () => { updateFields(); preselectAssigned(); }));
         const s = getSession();
+        setAudience(s?.role === "generator" ? "public" : "official");
         if (s) {
           $("name").value = s.name || "";
-          document.querySelector(`input[name="role"][value="${CSS.escape(s.role)}"]`)?.click();
+          if (s.role !== "generator") document.querySelector(`input[name="role"][value="${CSS.escape(s.role)}"]`)?.click();
           (s.sectors || []).forEach((n) => { const c = document.querySelector(`input[name="sector"][value="${CSS.escape(n)}"]`); if (c) c.checked = true; });
         }
-        showCurrent();
+        const askedRole = new URLSearchParams(location.search).get("role");  // e.g. index.html?role=generator
+        if (askedRole) openSignin(askedRole);
       } catch (err) {
         $("roleChoices").innerHTML = `<p class="warn">${esc(err.message)}</p>`;
       }
@@ -133,10 +242,9 @@
       $("formError").textContent = problem;
       if (problem) return;
       setSession({ role: role.key, name, sectors: role.jurisdiction === "sector" ? sectors : [], language: $("language").value,
-                   signed_in_at: new Date().toISOString() });
+                   home: role.home, signed_in_at: new Date().toISOString() });
       location.href = role.home;
     });
-    $("signOutBtn").addEventListener("click", signOut);
     $("signinForm").addEventListener("input", () => { $("formError").hidden = true; });
   </script>
 </body>

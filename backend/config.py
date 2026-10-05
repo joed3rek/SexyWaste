@@ -51,6 +51,9 @@ class Pilot:
     name: str
     # OSM relation ids of the sector boundaries that make up the pilot area.
     sector_relations: tuple[str, ...]
+    city: str = ""
+    # ESTIMATE of the city's population, for rules with population thresholds (e.g. vehicle tracking).
+    city_population: int = 0
 
 
 PILOTS: dict[str, Pilot] = {
@@ -58,6 +61,8 @@ PILOTS: dict[str, Pilot] = {
         "hsr",
         "HSR Layout Sectors 1-7, Bengaluru",
         ("R17168009", "R17168008", "R17168007", "R17168006", "R17168005", "R17168004", "R17168003"),
+        city="Bengaluru",
+        city_population=13_000_000,  # estimate for Bengaluru (BBMP area); replace with the census figure in use
     ),
 }
 

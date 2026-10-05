@@ -66,6 +66,9 @@ class PlanInput:
     time_limit_s: int = 20
     # Park composting: {"enabled", "method", "share_mode", "dropoff_pct", "radius_m", "overrides", "excluded"}
     park: dict | None = None
+    # Collection cycle for the planned day (backend.cycle.day_plan): which streams each generator type has
+    # due and how many days of waste have built up. None: every stream, one day's waste.
+    cycle: dict | None = None
 
 
 # ---------- Graph helpers ----------
@@ -116,11 +119,24 @@ def _litres(kg_by_stream: dict, density: dict) -> float:
 def _sector_points(inp: PlanInput) -> list[dict]:
     from backend.survey import gvp, state
     pts = P.collection_points(inp.pilot, state.building_states(inp.pilot), inp.sector)
-    # Active garbage vulnerable points are stops on the routes too.
-    pts += gvp.collection_points(inp.pilot, inp.sector) if inp.sector else []
+    # Other collection demands: waste cleared from GVPs, and public bins that need emptying (Clean City).
+    if inp.sector:
+        from backend import cleancity
+        pts += gvp.collection_points(inp.pilot, inp.sector)
+        con = cleancity.connect()
+        try:
+            pts += cleancity.bin_demands(con, inp.pilot, inp.sector)
+        finally:
+            con.close()
     out = []
+    factors = inp.cycle["factors"] if inp.cycle and inp.cycle.get("scheduled") else None
     for p in pts:
         kg = {s: (0.0 if s == "wet" and p.get("wet_excluded") else p["kg"][s]) for s in inp.streams}
+        if factors is not None:  # only the streams due today, with the waste built up since the last collection
+            from backend.cycle import generator_of
+            g = generator_of(p)
+            if g:
+                kg = {s: x * factors[g][s] for s, x in kg.items()}
         if sum(kg.values()) <= 0:
             continue
         out.append({**p, "load": kg, "load_kg": sum(kg.values())})
@@ -390,6 +406,17 @@ def _solve_group(pts: list[dict], station: int, t: dict, times: RoutingService, 
     # Longest trips first leaves the short top-up trip for the end of the shift.
     trips.sort(key=lambda x: -x["kg"])
     return trips, [p for i, p in enumerate(pts) if i not in served]
+
+
+def _demand_summary(pts: list[dict]) -> dict:
+    """Collection demands by type: they stay separate data types even on the same route."""
+    out = {}
+    for p in pts:
+        kind = "gvp_pickup" if p.get("is_gvp") else "public_bin" if p.get("is_bin") else "bulk_generator" if p.get("is_bwg") else "door_to_door"
+        d = out.setdefault(kind, {"points": set(), "kg": 0.0})
+        d["points"].add(p.get("parent_id", p["id"]))
+        d["kg"] += p["load_kg"]
+    return {k: {"points": len(v["points"]), "kg": round(v["kg"], 1)} for k, v in out.items()}
 
 
 def _drive_between(station: int, drive: list[list[int]], parks: list[int], times: RoutingService) -> float:
@@ -924,6 +951,10 @@ def plan(inp: PlanInput, progress=None) -> dict:
 
     return {
         "sector": inp.sector,
+        "cycle": ({"day": inp.cycle["day"], "window": inp.cycle["window"],
+                   "due": {g: [s for s, n in f.items() if n] for g, f in inp.cycle["factors"].items()},
+                   "days_built_up": {g: {s: n for s, n in f.items() if n} for g, f in inp.cycle["factors"].items()}}
+                  if inp.cycle and inp.cycle.get("scheduled") else None),
         "depot": node_lonlat(G, depot), "mrf": node_lonlat(G, mrf), "truck_depot": node_lonlat(G, truck_start),
         "stations": stations,
         "parks": park_out,
@@ -941,6 +972,7 @@ def plan(inp: PlanInput, progress=None) -> dict:
             "left_at_stations_kg": round(sum(x["kg"] for x in left_at_stations), 1),
             "left_at_stations": left_at_stations,
             "bwg_wet_excluded_kg": bwg_wet,
+            "demands": _demand_summary(pts),
             "time_to_complete_min": round(overall, 1), "shift_min": inp.shift_h * 60,
             "within_shift": overall <= inp.shift_h * 60,
             "primary_time_split_min": {k: round(x / 60, 1) for k, x in split.items()},
@@ -1013,12 +1045,35 @@ def _cap(rows: list[dict], caps: dict | None, short: dict) -> list[dict]:
     return out
 
 
-def suggest_fleet(inp: PlanInput, target_h: float, progress=None, rounds: int = 4, caps: dict | None = None) -> dict:
+def _trim_to_crew(primary: list[dict], secondary: list[dict], crew: dict | None, short: dict) -> tuple[list[dict], list[dict]]:
+    """Drop vehicles, from the most numerous type, until the sector's drivers and collectors can crew them.
+    Notes how many more drivers or collectors the wanted fleet would need."""
+    if crew is None:
+        return primary, secondary
+    rows = [dict(r) for r in primary + secondary]
+    per = crew["per_vehicle"]
+
+    def need(key):
+        return sum(r["count"] * per.get(r["type"], {}).get(key, 1) for r in rows)
+    for key in ("drivers", "collectors"):
+        if need(key) > crew[key]:
+            short[key] = max(short.get(key, 0), round(need(key) - crew[key]))
+    while any(need(k) > crew[k] + 1e-9 for k in ("drivers", "collectors")) and sum(r["count"] for r in rows) > 1:
+        biggest = max((r for r in rows if r["count"] > 0), key=lambda r: r["count"])
+        biggest["count"] -= 1
+    n = len(primary)
+    keep = lambda rs: [r for r in rs if r["count"] > 0]  # noqa: E731
+    return keep(rows[:n]), keep(rows[n:])
+
+
+def suggest_fleet(inp: PlanInput, target_h: float, progress=None, rounds: int = 4, caps: dict | None = None,
+                  crew: dict | None = None) -> dict:
     """Find the smallest fleet, keeping the chosen vehicle types and their mix, whose plan finishes
     within `target_h` hours. Each round runs the full optimiser and rescales the tier that is too
     slow (door-to-door vehicles, or trucks) by how far over or under the target it ran.
-    `caps` ({type: vehicles available}) holds the suggestion to the fleet that exists; None means
-    no inventory has been entered. Returns the fleet, its plan, every round tried, and advice."""
+    `caps` ({type: vehicles available}) holds the suggestion to the fleet that exists, and `crew`
+    ({drivers, collectors, per_vehicle}) to the people who can crew it; None means that inventory is
+    empty. Returns the fleet, its plan, every round tried, and advice."""
     report = progress or (lambda stage, frac: None)
     target = target_h * 60
     short: dict[str, int] = {}
@@ -1026,6 +1081,7 @@ def suggest_fleet(inp: PlanInput, target_h: float, progress=None, rounds: int = 
     secondary = [dict(r) for r in inp.secondary_fleet if int(r.get("count", 0)) > 0]
     if caps is not None:
         primary, secondary = _cap(primary, caps, {}), _cap(secondary, caps, {})
+    primary, secondary = _trim_to_crew(primary, secondary, crew, {})
     if not primary:
         raise ValueError("None of the chosen door-to-door vehicles is available for this sector" if caps is not None
                          else "Add at least one primary vehicle")
@@ -1062,6 +1118,9 @@ def suggest_fleet(inp: PlanInput, target_h: float, progress=None, rounds: int = 
         n_s = min(n_s, 50)
         primary = _cap(_resize(primary, n_p), caps, short)
         secondary = _cap(_resize(secondary, n_s), caps, short) if secondary else []
+        primary, secondary = _trim_to_crew(primary, secondary, crew, short)
+        if not primary:
+            break
     if best is None:  # nothing fitted: return the fastest plan found
         fastest = min(range(len(tried)), key=lambda k: tried[k]["time_min"])
         best = (tried[fastest]["primary_fleet"], tried[fastest]["secondary_fleet"], plans[fastest])
@@ -1072,7 +1131,9 @@ def suggest_fleet(inp: PlanInput, target_h: float, progress=None, rounds: int = 
     if short and not fits:  # the fleet that exists is the limit, not the search
         advice = [a for a in advice if a["code"] != "not_reached"]
         advice.append({"code": "fleet_short", "needs": [{"type": k, "label": _vehicle(k, inp.streams)["label"], "more": n}
-                                                        for k, n in short.items()]})
+                                                        for k, n in short.items() if k not in ("drivers", "collectors")]})
+        if short.get("drivers") or short.get("collectors"):
+            advice.append({"code": "crew_short", "drivers": short.get("drivers", 0), "collectors": short.get("collectors", 0)})
     return {"target_h": target_h, "fits": fits, "primary_fleet": primary, "secondary_fleet": secondary,
             "rounds": tried, "advice": advice, "result": r}
 

@@ -102,7 +102,7 @@ function fleetRow(container, tier, type, count) {
     <button class="x" title="Remove">×</button>`;
   const sel = row.querySelector("select");
   sel.addEventListener("change", () => { row.querySelector("img").src = opts.find((o) => o.key === sel.value).icon; clearResult(); renderAvail(); });
-  row.querySelector("input").addEventListener("change", clearResult);
+  row.querySelector("input").addEventListener("change", () => { state.fleetEdited = true; clearResult(); });
   row.querySelector("input").addEventListener("input", renderAvail);
   row.querySelector(".x").addEventListener("click", () => { row.remove(); clearResult(); renderAvail(); });
   container.appendChild(row);
@@ -158,10 +158,10 @@ map.on("load", async () => {
     map.addSource("points", { type: "geojson", data: empty });
     map.addLayer({ id: "points", type: "circle", source: "points", paint: {
       "circle-radius": ["interpolate", ["linear"], ["get", "kg"], 0, 2.5, 100, 5, 500, 9],
-      "circle-color": ["coalesce", ["get", "color"], "#64748b"], "circle-stroke-color": ["case", ["get", "is_gvp"], "#dc2626", "#fff"], "circle-stroke-width": ["case", ["get", "is_gvp"], 3, 1], "circle-opacity": 0.9 } });
+      "circle-color": ["coalesce", ["get", "color"], "#64748b"], "circle-stroke-color": ["case", ["get", "is_gvp"], "#dc2626", ["get", "is_bin"], "#7c3aed", "#fff"], "circle-stroke-width": ["case", ["any", ["get", "is_gvp"], ["get", "is_bin"]], 3, 1], "circle-opacity": 0.9 } });
     map.on("mousemove", "points", (e) => {
       const p = e.features[0].properties;
-      const what = p.is_gvp ? "one-off pickup: waste cleared from a garbage vulnerable point" : `${esc(p.use)} · ${fmt(p.buildings)} buildings`;
+      const what = p.is_gvp ? "one-off pickup: waste cleared from a garbage vulnerable point" : p.is_bin ? "public bin that needs emptying (Clean City)" : `${esc(p.use)} · ${fmt(p.buildings)} buildings`;
       popup.setLngLat(e.lngLat).setHTML(`<b>${esc(p.label)}</b><br>${what} · ${fmt(p.kg, 1)} kg/day (est.)${p.station ? `<br>→ ${esc(p.station)}` : ""}`).addTo(map);
       highlightPoint(p.id, p.color);
     });
@@ -189,7 +189,7 @@ async function selectSector() {
   const kg = d.points.reduce((a, p) => a + p.total_kg, 0);
   $("sectorInfo").textContent = `${fmt(d.points.length)} door-to-door collection points (street runs), about ${fmt(kg / 1000, 1)} t/day estimated.`;
   drawPoints();
-  await Promise.all([suggest(), loadParks(), loadAvail(name)]);
+  await Promise.all([suggest(), loadParks(), loadAvail(name), loadDay()]);
 }
 
 // Building footprints by id, loaded once, for highlighting a point's plots.
@@ -215,13 +215,57 @@ function highlightPoint(id, color) {
     ? [{ type: "Feature", geometry: { type: "LineString", coordinates: p.street }, properties: { color: c } }] : [] });
 }
 
+// ---------- Collection cycle: plan one day's collections ----------
+
+const DAY_NAMES = { mon: "Monday", tue: "Tuesday", wed: "Wednesday", thu: "Thursday", fri: "Friday", sat: "Saturday", sun: "Sunday" };
+const STREAM_NAMES = { wet: "wet", dry: "dry", sanitary: "sanitary", special: "special care" };
+let cycleChecked = false;
+
+async function loadDay() {
+  const day = $("planDay").value;
+  if (!cycleChecked) {  // first time: default to today when a collection cycle exists
+    cycleChecked = true;
+    try {
+      const c = await api(`/api/pilots/${PILOT}/cycle`);
+      if (c.entries.some((e) => e.active) && !day) {
+        $("planDay").value = Object.keys(DAY_NAMES)[(new Date().getDay() + 6) % 7];
+        return loadDay();
+      }
+    } catch { /* no cycle: plan every stream */ }
+  }
+  if (!day) { $("dayNote").textContent = "No collection cycle used: every stream, one day's waste, within the shift length."; return; }
+  try {
+    const p = await api(`/api/pilots/${PILOT}/cycle/day?sector=${encodeURIComponent($("sector").value)}&day=${day}`);
+    if (!p.scheduled) { $("dayNote").innerHTML = `No collection cycle set yet: every stream is planned. <a href="cycle.html">Set the cycle</a>.`; return; }
+    if (!p.window) { $("dayNote").innerHTML = `<span class="warn">Nothing is collected in ${esc($("sector").value)} on ${DAY_NAMES[day]}.</span>`; return; }
+    const due = Object.entries(p.factors).map(([g, f]) => [g, Object.entries(f).filter(([, n]) => n)]).filter(([, l]) => l.length)
+      .map(([g, l]) => `${g.replace("_", " ")}: ${l.map(([st, n]) => `${STREAM_NAMES[st]}${n > 1 ? ` (${n} days)` : ""}`).join(", ")}`);
+    $("dayNote").innerHTML = `${DAY_NAMES[day]}, ${p.window.start}–${p.window.end} (the shift for this plan). Due: ${esc(due.join("; "))}.`;
+  } catch (err) {
+    $("dayNote").textContent = err.message;
+  }
+}
+$("planDay").addEventListener("change", () => { clearResult(); loadDay(); });
+
 // ---------- Fleet inventory: a plan may not use more vehicles than the sector has ----------
 
 async function loadAvail(sector) {
   try {
-    state.avail = await api(`/api/pilots/${PILOT}/fleet/available?sector=${encodeURIComponent(sector)}`);
+    state.avail = await api(`/api/pilots/${PILOT}/resources/available?sector=${encodeURIComponent(sector)}`);
   } catch {
     state.avail = null;
+  }
+  // No double entry: when the sector's vehicles are on record, start from them instead of typed counts.
+  if (state.avail && state.avail.inventory.vehicle && !state.fleetEdited) {
+    const tierOf = (k) => state.vehicles.find((v) => v.key === k)?.tier;
+    const rows = Object.entries(state.avail.vehicles);
+    if (rows.length) {
+      $("primaryFleet").innerHTML = "";
+      $("secondaryFleet").innerHTML = "";
+      rows.filter(([k]) => tierOf(k) === "primary").forEach(([k, n]) => fleetRow($("primaryFleet"), "primary", k, n));
+      rows.filter(([k]) => tierOf(k) === "secondary").forEach(([k, n]) => fleetRow($("secondaryFleet"), "secondary", k, n));
+      state.fleetFromInventory = true;
+    }
   }
   renderAvail();
 }
@@ -230,12 +274,20 @@ function renderAvail() {
   const av = state.avail;
   const note = $("fleetNote");
   if (!note) return;
-  if (!av || !av.inventory) {
-    note.innerHTML = `No fleet inventory entered yet, so these counts are hypothetical. <a href="fleet.html">Enter the fleet</a> to plan with the vehicles that exist.`;
-  } else {
-    const n = Object.values(av.by_type).reduce((a, b) => a + b, 0);
-    note.innerHTML = `${n} vehicle(s) available for ${esc($("sector").value)} (based here or in the shared pool). <a href="fleet.html">Fleet</a>`;
+  const vehiclesKnown = av && av.inventory.vehicle, staffKnown = av && av.inventory.staff;
+  const rows = [...document.querySelectorAll(".fleet-row")].map((row) => ({ type: row.querySelector("select").value, count: +row.querySelector("input").value || 0 }));
+  const lines = [];
+  if (!vehiclesKnown) lines.push(`No vehicles entered yet, so these counts are hypothetical. <a href="resources.html">Enter the vehicles</a> to plan with what exists.`);
+  else lines.push(`${Object.values(av.vehicles).reduce((a, b) => a + b, 0)} vehicle(s) available for ${esc($("sector").value)} (based here or in the shared pool)${state.fleetFromInventory && !state.fleetEdited ? "; the counts below come from Resources" : ""}.`);
+  if (av) {
+    const need = { drivers: 0, collectors: 0 };
+    rows.forEach((r) => { const c = av.crew_per_vehicle[r.type] || { drivers: 1, collectors: 1 }; need.drivers += r.count * c.drivers; need.collectors += r.count * c.collectors; });
+    const have = { drivers: av.staff.driver?.count || 0, collectors: av.staff.waste_collector?.count || 0 };
+    const short = staffKnown && (need.drivers > have.drivers || need.collectors > have.collectors);
+    lines.push(`<span class="${short ? "warn" : ""}">Crew needed: ${Math.round(need.drivers)} drivers, ${Math.round(need.collectors)} collectors` +
+      (staffKnown ? ` (available: ${have.drivers} and ${have.collectors}).` : `. No staff entered yet, so crews are not checked.`) + `</span>`);
   }
+  note.innerHTML = lines.join("<br>") + ` <a href="resources.html">Resources</a>`;
   const used = {};
   document.querySelectorAll(".fleet-row").forEach((row) => {
     const type = row.querySelector("select").value;
@@ -244,8 +296,8 @@ function renderAvail() {
   document.querySelectorAll(".fleet-row").forEach((row) => {
     let tag = row.querySelector(".fleet-avail");
     if (!tag) { tag = document.createElement("span"); tag.className = "fleet-avail"; row.querySelector("input").after(tag); }
-    if (!av || !av.inventory) { tag.textContent = ""; row.querySelector("input").removeAttribute("max"); return; }
-    const type = row.querySelector("select").value, have = av.by_type[type] || 0;
+    if (!av || !av.inventory.vehicle) { tag.textContent = ""; row.querySelector("input").removeAttribute("max"); return; }
+    const type = row.querySelector("select").value, have = av.vehicles[type] || 0;
     tag.textContent = `of ${have}`;
     tag.classList.toggle("over", used[type] > have);
     tag.title = used[type] > have ? `Only ${have} available for this sector` : `${have} available for this sector`;
@@ -256,7 +308,7 @@ function renderAvail() {
 function drawPoints(assign) {
   map.getSource("points").setData({ type: "FeatureCollection", features: state.points.map((p) => ({
     type: "Feature", geometry: { type: "Point", coordinates: [p.lon, p.lat] },
-    properties: { id: p.id, is_gvp: !!p.is_gvp, public: !!p.reported_by_public, label: p.label, use: p.use, buildings: p.buildings, kg: p.total_kg, station: assign?.[p.id]?.station || "", color: assign?.[p.id]?.color || null },
+    properties: { id: p.id, is_gvp: !!p.is_gvp, is_bin: !!p.is_bin, public: !!p.reported_by_public, label: p.label, use: p.use, buildings: p.buildings, kg: p.total_kg, station: assign?.[p.id]?.station || "", color: assign?.[p.id]?.color || null },
   })) });
 }
 
@@ -329,7 +381,7 @@ async function runPlan(targetH) {
     stations: state.stations, radius_m: +$("radius").value,
     primary_fleet: primary, secondary_fleet: fleetOf("secondaryFleet"),
     streams: [...document.querySelectorAll(".streams input:checked")].map((x) => x.value),
-    shift_h: +$("shift").value, unload_min: +$("unload").value, time_limit_s: +$("timeLimit").value,
+    shift_h: +$("shift").value, unload_min: +$("unload").value, time_limit_s: +$("timeLimit").value, day: $("planDay").value || null,
     park: {
       enabled: $("parkOn").checked, method: $("parkMethod").value, share_mode: $("parkShare").value,
       dropoff_pct: +$("dropoff").value, radius_m: +$("parkRadius").value,
@@ -390,7 +442,8 @@ function showFleetAdvice(s) {
     if (a.code === "stations_little_effect") return `More transfer stations would save little: they only shorten driving, which is ${a.driving_pct}% of the time. The number of vehicles is what sets the time.`;
     if (a.code === "stations_over_capacity") return `${a.stations.map(esc).join(", ")} hold more than their capacity: add a transfer station near them.`;
     if (a.code === "trucks_limit") return `Trucks set the finish time (${hm(a.truck_min)}): an extra truck finishes sooner.`;
-    if (a.code === "fleet_short") return `The fleet that exists is not enough: it would take ${a.needs.map((x) => `${x.more} more ${esc(x.label)}`).join(" and ")} to finish in time. Add them on the <a href="fleet.html">Fleet</a> page, or raise the target time.`;
+    if (a.code === "fleet_short") return `The fleet that exists is not enough: it would take ${a.needs.map((x) => `${x.more} more ${esc(x.label)}`).join(" and ")} to finish in time. Add them on the <a href="resources.html">Resources</a> page, or raise the target time.`;
+    if (a.code === "crew_short") return `Not enough people to crew more vehicles: ${[a.drivers && `${a.drivers} more driver(s)`, a.collectors && `${a.collectors} more collector(s)`].filter(Boolean).join(" and ")} would be needed. Add them on the <a href="resources.html">Resources</a> page.`;
     if (a.code === "not_reached") return `The target was not reached in ${s.rounds.length} round${s.rounds.length === 1 ? "" : "s"}. This is the fastest plan found (${hm(a.time_min)}); press Suggest fleet again to continue from it.`;
     return "";
   }).filter(Boolean);
@@ -454,7 +507,14 @@ function renderResult() {
   ].map(([k, v, sub, bad]) => `<div class="kpi ${bad ? "bad" : ""}"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${sub}</div></div>`).join("");
 
   const warn = [];
-  if (r.fleet_basis === "hypothetical") warn.push(`Hypothetical fleet: no fleet inventory has been entered, so these vehicles may not exist. <a href="fleet.html">Enter the fleet</a>.`);
+  if (s.demands) {
+    const names = { door_to_door: "door to door", bulk_generator: "bulk waste generators", gvp_pickup: "cleared GVP pickups", public_bin: "public bins" };
+    warn.push(`<span class="muted">Collection demands: ${Object.entries(s.demands).map(([k, d]) => `${names[k] || k} ${fmt(d.points)} (${fmt(d.kg)} kg)`).join(" · ")}.</span>`);
+  }
+  if (r.cycle) warn.push(`<span class="muted">Collection cycle: ${DAY_NAMES[r.cycle.day]}, ${r.cycle.window.start}–${r.cycle.window.end}.</span>`);
+  if (r.fleet_basis === "hypothetical") warn.push(`Hypothetical fleet: no vehicles have been entered, so these vehicles may not exist. <a href="resources.html">Enter them</a>.`);
+  if (r.crew) warn.push(`<span class="muted">Crew for this plan: ${r.crew.needed.drivers} drivers and ${r.crew.needed.collectors} collectors` +
+    (r.crew_basis === "inventory" ? ` (available: ${r.crew.available.drivers} and ${r.crew.available.collectors}).` : `; no staff entered, so crews are hypothetical.`) + `</span>`);
   if (!s.within_shift) warn.push(`The work takes ${hm(s.time_to_complete_min)}, longer than the ${hm(s.shift_min)} shift. Add vehicles or plan a second shift.`);
   if (s.vehicles_over_shift.length) warn.push(`Over shift: ${s.vehicles_over_shift.map(esc).join(", ")}.`);
   if (s.uncollected_kg > 0) warn.push(`${fmt(s.uncollected_kg)} kg/day at ${s.uncollected_points.length} point(s) could not be collected (street too narrow for every vehicle, or not enough capacity).`);

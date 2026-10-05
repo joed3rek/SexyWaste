@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <link rel="icon" href="data:," />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Resources</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" />
+  <script src="theme.js"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="page with-rail">
+  <nav id="appNav"></nav>
+  <main class="doc">
+    <header class="page-head">
+      <p class="eyebrow">Planning · Resource management</p>
+      <h1>Resources</h1>
+      <p class="sub" id="who"></p>
+    </header>
+    <p class="hint">What the municipality actually has. Plans and routes never use more than this: a sector can use what is
+      based there plus the shared pool, counting only resources that are <b>available</b>, <b>assigned</b> or <b>in use</b>
+      (not in maintenance or unavailable). Until an inventory has entries, plans are marked hypothetical.</p>
+
+    <h2>Available for planning</h2>
+    <div class="scroll" id="summary"></div>
+    <p class="hint" id="gpsNote"></p>
+
+    <div class="tabs" role="tablist">
+      <button type="button" role="tab" data-tab="vehicle" class="on">Vehicles</button>
+      <button type="button" role="tab" data-tab="staff">People</button>
+      <button type="button" role="tab" data-tab="equipment">Machinery</button>
+    </div>
+
+    <div class="row fleet-filters">
+      <label>Based in <select id="filterSector"><option value="">All</option><option value="_pool">Shared pool</option></select></label>
+      <label>Status <select id="filterStatus"><option value="">Any status</option></select></label>
+    </div>
+    <div class="scroll" id="list"></div>
+
+    <section id="editor" hidden>
+      <h2 id="formTitle"></h2>
+      <form id="form" class="fleet-form"></form>
+    </section>
+    <p id="readOnly" class="hint" hidden>Only the fleet and workforce manager or an admin can change resources.</p>
+  </main>
+  <script src="ui.js"></script>
+  <script src="resources.js"></script>
+</body>
+</html>

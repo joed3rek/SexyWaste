@@ -8,9 +8,10 @@ const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<
 const SESSION = getSession();
 const STREAM_KEYS = ["wet", "dry", "sanitary", "special"];
 let CONFIG = null;
+let SECTORS = null;
 let pin = null;
 
-if (!SESSION || SESSION.role !== "generator") location.replace("index.html");
+if (!SESSION || !["generator", "admin"].includes(SESSION.role)) location.replace("index.html");
 
 const map = new maplibregl.Map({
   container: "map",
@@ -26,7 +27,35 @@ const map = new maplibregl.Map({
   zoom: 15,
 });
 map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
-map.addControl(new maplibregl.GeolocateControl({ positionOptions: { enableHighAccuracy: true }, trackUserLocation: true }), "bottom-right");
+const geo = new maplibregl.GeolocateControl({ positionOptions: { enableHighAccuracy: true }, trackUserLocation: true });
+map.addControl(geo, "bottom-right");
+let here = null;  // the phone's last GPS position
+
+// Which sector a position is in (the sector outlines are already on the map).
+function sectorAt(lng, lat) {
+  const inRing = (ring) => {
+    let inside = false;
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const [xi, yi] = ring[i], [xj, yj] = ring[j];
+      if ((yi > lat) !== (yj > lat) && lng < ((xj - xi) * (lat - yi)) / (yj - yi) + xi) inside = !inside;
+    }
+    return inside;
+  };
+  const f = (SECTORS?.features || []).find((x) => (x.geometry.type === "Polygon" ? [x.geometry.coordinates] : x.geometry.coordinates).some((poly) => inRing(poly[0])));
+  return f ? f.properties.name : null;
+}
+
+function showWhere() {
+  if (!here) return;
+  const sector = sectorAt(here.lng, here.lat);
+  $("whereNote").textContent = sector ? t("pub.you_are_in", { sector }) : t("pub.outside_area");
+}
+
+geo.on("geolocate", (e) => {
+  here = { lng: e.coords.longitude, lat: e.coords.latitude };
+  showWhere();
+});
+geo.on("error", () => ($("whereNote").textContent = t("pub.no_gps")));
 
 function toast(text) {
   $("toast").textContent = text;
@@ -48,12 +77,14 @@ map.on("load", async () => {
   try {
     const [sectors, config] = await Promise.all([apiFetch(`/api/pilots/${PILOT}/sectors`), apiFetch("/api/survey/config")]);
     CONFIG = config;
+    SECTORS = sectors;
     map.addSource("sectors", { type: "geojson", data: sectors });
     map.addLayer({ id: "sectors", type: "line", source: "sectors", paint: { "line-color": "#0b0b0c", "line-width": 1.5, "line-dasharray": [3, 2] } });
     map.addSource("gvps", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
     map.addLayer({ id: "gvps", type: "circle", source: "gvps", paint: {
       "circle-radius": ["interpolate", ["linear"], ["zoom"], 14, 5, 18, 10], "circle-color": "#dc2626", "circle-stroke-color": "#fff", "circle-stroke-width": 2 } });
     await loadGvps();
+    geo.trigger();  // ask for the phone's location straight away; the browser asks the user's permission
   } catch (err) {
     toast(err.message);
   }
@@ -132,3 +163,13 @@ async function send(lngLat) {
 }
 
 $("signOut").addEventListener("click", signOut);
+
+// "Use my location": put the pin where the phone is (the server moves it onto the nearest street).
+$("useGps").addEventListener("click", () => {
+  if (!here) { geo.trigger(); $("whereNote").textContent = t("pub.finding"); return; }
+  const lngLat = new maplibregl.LngLat(here.lng, here.lat);
+  map.easeTo({ center: lngLat, zoom: Math.max(map.getZoom(), 17) });
+  if (pin) pin.remove();
+  pin = new maplibregl.Marker({ color: "#0b0b0c" }).setLngLat(lngLat).addTo(map);
+  form(lngLat);
+});

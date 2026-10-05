@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <link rel="icon" href="data:," />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Collection cycle</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" />
+  <script src="theme.js"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="page with-rail">
+  <nav id="appNav"></nav>
+  <main class="doc">
+    <header class="page-head">
+      <p class="eyebrow">Planning · Collection cycle</p>
+      <h1>Collection cycle</h1>
+      <p class="sub">When each waste stream is collected, from which generators, in which window. The route builder plans each
+        day from this: only the streams due that day, with the waste built up since their last collection, within the day's window.</p>
+    </header>
+    <div id="rules" class="hint"></div>
+    <div id="empty" class="card-box" hidden>
+      <p>No collection cycle yet. Start from an example schedule and edit it, or add entries one by one below.</p>
+      <button type="button" id="useTemplate">Start from the example schedule</button>
+    </div>
+    <div id="checks"></div>
+
+    <h2>Week by sector</h2>
+    <label class="inline">Sector <select id="sector"></select></label>
+    <div class="scroll" id="weekGrid"></div>
+
+    <h2>Schedule entries</h2>
+    <p class="hint">An entry for one sector overrides the entry for every sector. Switching an entry off keeps its history.</p>
+    <div class="scroll" id="entries"></div>
+
+    <section id="editor">
+      <h2 id="formTitle">Add an entry</h2>
+      <form id="form" class="fleet-form">
+        <div class="row">
+          <label>Waste stream <select id="fStream"></select></label>
+          <label>Generator type <select id="fGen"></select></label>
+          <label>Sector <select id="fSector"><option value="">Every sector</option></select></label>
+        </div>
+        <fieldset class="streams"><legend>Days</legend><div id="fDays"></div></fieldset>
+        <div class="row">
+          <label>Window starts <input id="fStart" type="time" value="06:00" /></label>
+          <label>Window ends <input id="fEnd" type="time" value="11:00" /></label>
+          <label>Method <select id="fMethod"></select></label>
+        </div>
+        <fieldset class="streams"><legend>Vehicle types (none ticked: any)</legend><div id="fVehicles"></div></fieldset>
+        <p id="formErr" class="warn" hidden></p>
+        <div class="row"><button type="submit" id="fSave">Add entry</button><button type="button" class="secondary" id="fCancel" hidden>Cancel</button></div>
+      </form>
+    </section>
+    <p id="readOnly" class="hint" hidden>Only a planner or an admin can change the collection cycle.</p>
+  </main>
+  <script src="ui.js"></script>
+  <script src="cycle.js"></script>
+</body>
+</html>

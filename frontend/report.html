@@ -8,7 +8,8 @@
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" />
+  <script src="theme.js"></script>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body class="app surveyor">
@@ -21,6 +22,8 @@
       <button type="button" id="signOut" class="ghost small" data-t="common.sign_out"></button>
     </div>
     <p class="hint small sv-hint" data-t="pub.hint"></p>
+    <p class="small sv-hint" id="whereNote"></p>
+    <button type="button" class="block" id="useGps" data-t="pub.use_location"></button>
   </header>
 
   <div id="toast" class="toast" hidden></div>

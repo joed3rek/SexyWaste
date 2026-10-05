@@ -10,7 +10,8 @@ Roles are defined in `backend/auth/roles.json`. Each role has a key, a label, a 
 | Survey supervisor | Yes | `supervisor.html` | Assigns sectors, spot-checks surveys and resolves map problems |
 | Admin | Yes | `admin.html` | Manages users, roles and jurisdictions (role list only for now) |
 | Planner | Partly | `map.html?role=planner` | Waste profile, routes and transfer stations (map and route builder) |
-| Fleet and workforce manager | Fleet only | `fleet.html` | Vehicle inventory now; staff, shifts and PPE records later |
+| Fleet manager | Yes | `resources.html` | Vehicles and machinery: inventory, shifts and status |
+| Human resource manager | Yes | `resources.html?tab=staff` | People: drivers, collectors, sweepers and other staff, with roles, shifts and hours |
 | Driver | No | | Assigned route and navigation only |
 | Collector (pourakarmika) | No | | Shift, collection confirmations, missed pickups, GVPs, unsafe conditions |
 | Operations supervisor | No | | Live command centre, route reassignment, penalty validation |
@@ -19,7 +20,7 @@ Roles are defined in `backend/auth/roles.json`. Each role has a key, a label, a 
 | Recycler (formal or informal) | No | | Pickups, materials and volumes |
 | Ward officer | No | | Coverage, BWGs, compliance and analytics for the ward |
 | Trainer | No | | Training modules and completion |
-| Generator (household, RWA, BWG) | GVP reports only | `report.html` | Reports dumped waste now; their building, schedule, status and complaints later |
+| Public (households, RWAs, BWGs, visitors) | GVP reports only | `report.html` | Reports dumped waste now; their building, schedule, status and complaints later |
 
 Roles that are not built open `stub.html`.
 

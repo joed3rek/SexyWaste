@@ -1074,15 +1074,15 @@
    "kn": ""
   },
   "role.planner.description": {
-   "en": "Reads the waste profile and designs collection cycles, routes and transfer stations.",
+   "en": "Plans collection cycles, Clean City streets and bins, resources and routes.",
    "kn": ""
   },
   "role.fleet_workforce_manager": {
-   "en": "Fleet and workforce manager",
+   "en": "Fleet manager",
    "kn": ""
   },
   "role.fleet_workforce_manager.description": {
-   "en": "Maintains the vehicle inventory, staff, shifts and PPE records.",
+   "en": "Keeps the inventories of vehicles and machinery, with shifts and status.",
    "kn": ""
   },
   "role.driver": {
@@ -1150,11 +1150,11 @@
    "kn": ""
   },
   "role.generator": {
-   "en": "Generator (household, RWA, BWG)",
+   "en": "Public",
    "kn": ""
   },
   "role.generator.description": {
-   "en": "Sees their building, schedule and status, and reports complaints.",
+   "en": "Residents, shops and visitors: report dumped waste on a street. Later: your building, collection days and status.",
    "kn": ""
   },
   "role.admin": {
@@ -1230,7 +1230,7 @@
    "kn": ""
   },
   "nav.fleet": {
-   "en": "Fleet",
+   "en": "Resources",
    "kn": ""
   },
   "sv.report_gvp": {
@@ -1747,6 +1747,86 @@
   },
   "col.reports": {
    "en": "Reports",
+   "kn": ""
+  },
+  "nav.admin": {
+   "en": "Admin",
+   "kn": ""
+  },
+  "nav.cycle": {
+   "en": "Cycle",
+   "kn": ""
+  },
+  "nav.cleancity": {
+   "en": "Clean City",
+   "kn": ""
+  },
+  "signin.hero_sub": {
+   "en": "Municipal Operations Intelligence",
+   "kn": ""
+  },
+  "signin.hero_cta": {
+   "en": "Sign in",
+   "kn": ""
+  },
+  "signin.hero_blurb": {
+   "en": "Survey, garbage mapping, resources, collection cycles, clean streets and routes for one city, on one map.",
+   "kn": ""
+  },
+  "signin.link_report": {
+   "en": "Report dumped waste",
+   "kn": ""
+  },
+  "signin.hero_who": {
+   "en": "Sign in is for officials and the public. Anyone can report dumped waste on a street.",
+   "kn": ""
+  },
+  "signin.audience_public": {
+   "en": "Public",
+   "kn": ""
+  },
+  "signin.audience_official": {
+   "en": "Official",
+   "kn": ""
+  },
+  "signin.public_hint": {
+   "en": "For residents, shops and visitors: report dumped waste on a street. Only your name is needed.",
+   "kn": ""
+  },
+  "signin.official_hint": {
+   "en": "For municipal staff: choose your role.",
+   "kn": ""
+  },
+  "role.hr_manager": {
+   "en": "Human resource manager",
+   "kn": ""
+  },
+  "role.hr_manager.description": {
+   "en": "Keeps the inventory of people: drivers, collectors, sweepers and other staff, with roles, shifts and hours.",
+   "kn": ""
+  },
+  "pub.use_location": {
+   "en": "Use my location",
+   "kn": ""
+  },
+  "pub.you_are_in": {
+   "en": "You are in {sector}.",
+   "kn": ""
+  },
+  "pub.outside_area": {
+   "en": "You seem to be outside the HSR pilot area. Tap the map where the waste is.",
+   "kn": ""
+  },
+  "pub.no_gps": {
+   "en": "Your location is not available. Tap the map where the waste is.",
+   "kn": ""
+  },
+  "pub.finding": {
+   "en": "Finding your location…",
+   "kn": ""
+  },
+  "theme.toggle": {
+   "en": "Switch between light and dark theme",
    "kn": ""
   }
  }
