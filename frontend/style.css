@@ -959,3 +959,9 @@ p.warn::before { background: transparent; border: 1.5px solid currentColor; colo
 .rail .theme-toggle { margin: auto auto 12px; }
 @media (max-width: 760px) { .rail .theme-toggle { margin: auto 0; flex: none; } }
 .maplibregl-map, .maplibregl-ctrl-attrib { font-family: var(--font); }
+
+/* Route plan feasibility (route builder) */
+.plan-box { margin: var(--s-3) 0; padding: var(--s-3); border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); }
+.plan-box p { margin: 0 0 var(--s-2); }
+.plan-exceptions { margin: 0 0 var(--s-3); padding-left: 18px; font-size: var(--fs-md); }
+.plan-exceptions li { margin-bottom: var(--s-2); }

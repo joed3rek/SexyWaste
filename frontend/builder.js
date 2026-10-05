@@ -544,6 +544,35 @@ function showProgress(st, expected, localElapsed) {
   $("busyEta").textContent = etaText;
 }
 
+// ---------- The saved plan: feasibility, exceptions and adoption ----------
+
+const FEASIBLE_TEXT = { feasible: "Feasible", feasible_with_warnings: "Feasible, with warnings", infeasible: "Infeasible" };
+function renderPlanBox(plan, adopted) {
+  const box = $("planBox");
+  if (!plan) { box.innerHTML = ""; return; }
+  const cls = { feasible: "ok", feasible_with_warnings: "warn", infeasible: "bad" }[plan.feasibility];
+  const ex = plan.exceptions.map((e) => `<li><b>${esc(e.reason)}</b>${e.actions?.length ? `<br><span class="muted small">Options: ${e.actions.map(esc).join(" · ")}</span>` : ""}</li>`).join("");
+  let action;
+  if (adopted) action = `<p class="small">${esc(adopted)}</p>`;
+  else if (!plan.date) action = `<p class="muted small">Saved as a what-if plan. Choose a date under "Plan for" to make a plan that can be adopted.</p>`;
+  else action = `<button id="adoptPlan" class="${plan.feasibility === "infeasible" ? "secondary" : ""}">${plan.feasibility === "infeasible" ? "Adopt anyway" : "Adopt this plan"} for ${esc(plan.date)}</button>
+    <p class="muted small">Adopting makes it the sector's plan for the day: the demands it serves become planned, and vehicles and crews are assigned from Resources.</p>`;
+  box.innerHTML = `<p><span class="badge ${cls}">${FEASIBLE_TEXT[plan.feasibility]}</span> <span class="muted small">Plan ${esc(plan.id.slice(0, 8))}, saved as a draft.</span></p>` +
+    (ex ? `<ul class="plan-exceptions">${ex}</ul>` : "") + action;
+  $("adoptPlan")?.addEventListener("click", async () => {
+    if (plan.feasibility === "infeasible" && !confirm("This plan leaves demand unserved or runs past the window. Adopt it anyway?")) return;
+    try {
+      const p = await swmWrite("POST", `/api/pilots/${PILOT}/route-plans/${plan.id}/adopt`, { accept_exceptions: plan.feasibility === "infeasible" });
+      const withVehicle = p.routes.filter((r) => r.vehicle_id).length;
+      renderPlanBox(plan, `Adopted. ${p.demands_changed.planned} demand(s) planned` +
+        (p.demands_changed.open ? `, ${p.demands_changed.open} back to open` : "") + `. Vehicles assigned to ${withVehicle} of ${p.routes.length} route(s).` +
+        (p.assignment_notes.length ? ` ${p.assignment_notes.length} gap(s): ${p.assignment_notes.slice(0, 3).join(" ")}` : ""));
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+}
+
 function renderResult() {
   const r = state.result, s = r.summary;
   const colorOf = {};
@@ -621,6 +650,7 @@ function renderResult() {
     `<tr><td>${esc(x.id)}${x.on_main_road ? "" : ' <span class="muted small">(side road)</span>'}</td><td>${fmt(x.points)}</td><td>${fmt(x.kg / 1000, 2)}</td><td class="${x.kg > r.station_capacity_kg ? "over" : ""}">${fmt(100 * x.kg / r.station_capacity_kg)}%</td><td>${fmt(x.primary_trips)}</td><td>${fmt(truckTrips[x.id] || 0)}</td><td>${fmt(x.to_mrf_km, 1)} km</td></tr>`).join("");
   $("assumptions").innerHTML = r.assumptions.map((a) => `<li>${esc(a)}</li>`).join("");
   renderParkResults(r);
+  renderPlanBox(r.plan);
   $("results").hidden = false;
   $("results").scrollIntoView({ behavior: "smooth", block: "start" });
 }

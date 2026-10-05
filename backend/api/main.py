@@ -17,7 +17,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from backend import auth, cycle, demand, regulations, resources
+from backend import auth, cycle, demand, plans, regulations, resources
 from backend.buildings import generators
 from backend.buildings.layers import sectors as pilot_sectors
 from backend.config import FRONTEND_DIR, PILOTS, WASTE_STREAMS
@@ -28,6 +28,7 @@ from backend.api.cleancity_api import router as cleancity_router
 from backend.api.cycle_api import router as cycle_router
 from backend.api.demand_api import router as demand_router
 from backend.api.facilities_api import router as facilities_router
+from backend.api.plans_api import router as plans_router
 from backend.api.resources_api import router as resources_router
 from backend.api.survey_api import router as survey_router
 from backend.survey import service as survey_service
@@ -47,6 +48,7 @@ app.include_router(cycle_router)
 app.include_router(cleancity_router)
 app.include_router(demand_router)
 app.include_router(facilities_router)
+app.include_router(plans_router)
 
 
 @app.get("/api/landing/photos")
@@ -307,11 +309,31 @@ def _with_basis(result: dict, available: dict) -> dict:
     return result
 
 
+def _who(request: Request) -> dict:
+    """The signed-in person if any (plans run without sign-in are recorded as anonymous)."""
+    try:
+        return auth.actor(request.headers)
+    except KeyError:
+        return {"name": None, "role": None}
+
+
+def _record(inp: twotier.PlanInput, body: PlanV2In, result: dict, actor: dict) -> dict:
+    """Keep the optimiser's result as a draft route plan, with its feasibility and exceptions."""
+    con = plans.connect()
+    try:
+        result["plan"] = plans.save(con, inp.pilot, inp.sector, inp.date,
+                                    body.model_dump(exclude={"park"}) | {"date": inp.date, "shift_h": inp.shift_h}, result, actor)
+        result["plan"]["date"] = inp.date
+    finally:
+        con.close()
+    return result
+
+
 @app.post("/api/pilots/{pilot_key}/v2/plan")
-def post_plan_v2(pilot_key: str, body: PlanV2In):
+def post_plan_v2(pilot_key: str, body: PlanV2In, request: Request):
     inp = _plan_input(pilot_key, body)
     try:
-        return _with_basis(twotier.plan(inp), _fleet_available(inp.pilot, inp.sector))
+        return _record(inp, body, _with_basis(twotier.plan(inp), _fleet_available(inp.pilot, inp.sector)), _who(request))
     except (ValueError, KeyError) as err:
         raise HTTPException(422, str(err)) from err
 
@@ -326,14 +348,14 @@ class FleetIn(PlanV2In):
 
 
 @app.post("/api/pilots/{pilot_key}/v2/plan/jobs")
-def start_plan_job(pilot_key: str, body: PlanV2In):
+def start_plan_job(pilot_key: str, body: PlanV2In, request: Request):
     inp = _plan_input(pilot_key, body)
-    av = _fleet_available(inp.pilot, inp.sector)
-    return _start_job(lambda report: _with_basis(twotier.plan(inp, report), av), body.time_limit_s + 10)
+    av, who = _fleet_available(inp.pilot, inp.sector), _who(request)
+    return _start_job(lambda report: _record(inp, body, _with_basis(twotier.plan(inp, report), av), who), body.time_limit_s + 10)
 
 
 @app.post("/api/pilots/{pilot_key}/v2/fleet/jobs")
-def start_fleet_job(pilot_key: str, body: FleetIn):
+def start_fleet_job(pilot_key: str, body: FleetIn, request: Request):
     """Suggest the fleet that finishes within target_h hours (runs the optimiser several times)."""
     inp = _plan_input(pilot_key, body, check_fleet=False)  # the suggestion itself stays within the fleet
     av = _fleet_available(inp.pilot, inp.sector)
@@ -341,9 +363,11 @@ def start_fleet_job(pilot_key: str, body: FleetIn):
     crew = ({"per_vehicle": av["crew_per_vehicle"], "drivers": av["staff"].get("driver", {}).get("count", 0),
              "collectors": av["staff"].get("waste_collector", {}).get("count", 0)} if av["inventory"]["staff"] else None)
 
+    who = _who(request)
+
     def run(report):
         out = twotier.suggest_fleet(inp, body.target_h, report, caps=caps, crew=crew)
-        _with_basis(out["result"], av)
+        _record(inp, body, _with_basis(out["result"], av), who)
         out["fleet_basis"] = out["result"]["fleet_basis"]
         return out
     return _start_job(run, 4 * (body.time_limit_s + 10))
