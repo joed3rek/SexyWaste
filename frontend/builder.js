@@ -161,7 +161,7 @@ map.on("load", async () => {
       "circle-color": ["coalesce", ["get", "color"], "#64748b"], "circle-stroke-color": ["case", ["get", "is_gvp"], "#dc2626", "#fff"], "circle-stroke-width": ["case", ["get", "is_gvp"], 3, 1], "circle-opacity": 0.9 } });
     map.on("mousemove", "points", (e) => {
       const p = e.features[0].properties;
-      const what = p.is_gvp ? `garbage vulnerable point, ${p.public ? "reported by the public" : "from survey observations"}` : `${esc(p.use)} · ${fmt(p.buildings)} buildings`;
+      const what = p.is_gvp ? "one-off pickup: waste cleared from a garbage vulnerable point" : `${esc(p.use)} · ${fmt(p.buildings)} buildings`;
       popup.setLngLat(e.lngLat).setHTML(`<b>${esc(p.label)}</b><br>${what} · ${fmt(p.kg, 1)} kg/day (est.)${p.station ? `<br>→ ${esc(p.station)}` : ""}`).addTo(map);
       highlightPoint(p.id, p.color);
     });

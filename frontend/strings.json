@@ -1242,11 +1242,7 @@
    "kn": ""
   },
   "legend.gvp": {
-   "en": "Garbage vulnerable point (GVP)",
-   "kn": ""
-  },
-  "legend.gvp_off": {
-   "en": "GVP cleared, closed or off routes",
+   "en": "GVP: waste on the street",
    "kn": ""
   },
   "gvp.title": {
@@ -1301,38 +1297,6 @@
    "en": "Saved, but the photo did not upload: {message}",
    "kn": ""
   },
-  "gvp.add_obs": {
-   "en": "Add observation",
-   "kn": ""
-  },
-  "gvp.obs_title": {
-   "en": "How does it look today?",
-   "kn": ""
-  },
-  "gvp.obs_saved": {
-   "en": "Observation saved.",
-   "kn": ""
-  },
-  "gvp.kg_day": {
-   "en": "About {kg} kg/day (estimate)",
-   "kn": ""
-  },
-  "gvp.on_routes": {
-   "en": "On collection routes",
-   "kn": ""
-  },
-  "gvp.off_routes": {
-   "en": "Not on collection routes",
-   "kn": ""
-  },
-  "gvp.observations": {
-   "en": "Observations",
-   "kn": ""
-  },
-  "gvp.obs_line": {
-   "en": "{date} · {name}: {kg} kg, {freq}",
-   "kn": ""
-  },
   "gvp.interventions": {
    "en": "Interventions and changes",
    "kn": ""
@@ -1349,10 +1313,6 @@
    "en": "Status",
    "kn": ""
   },
-  "gvp.collect": {
-   "en": "Collect on routes while active",
-   "kn": ""
-  },
   "gvp.pick_stream": {
    "en": "Tick at least one kind of waste.",
    "kn": ""
@@ -1362,27 +1322,11 @@
    "kn": ""
   },
   "gvp.event_status": {
-   "en": "Status set to {value}",
-   "kn": ""
-  },
-  "gvp.event_collect_on": {
-   "en": "Put on collection routes",
-   "kn": ""
-  },
-  "gvp.event_collect_off": {
-   "en": "Taken off collection routes",
-   "kn": ""
-  },
-  "gvp.status.active": {
-   "en": "Active",
+   "en": "Status: {value}",
    "kn": ""
   },
   "gvp.status.cleared": {
    "en": "Cleared",
-   "kn": ""
-  },
-  "gvp.status.closed": {
-   "en": "Closed",
    "kn": ""
   },
   "freq.daily": {
@@ -1427,10 +1371,6 @@
   },
   "src.unknown": {
    "en": "Not known",
-   "kn": ""
-  },
-  "int.cleared": {
-   "en": "Cleared",
    "kn": ""
   },
   "int.bin_placed": {
@@ -1486,7 +1426,7 @@
    "kn": ""
   },
   "sup.gvp_count": {
-   "en": "{n} mapped in your sectors so far, {active} active. Deadline: {date}.",
+   "en": "{n} mapped in your sectors, {open} with waste on the street, {pickup} waiting for pickup. Deadline: {date}.",
    "kn": ""
   },
   "sup.gvp_export": {
@@ -1511,10 +1451,6 @@
   },
   "col.interventions": {
    "en": "Interventions",
-   "kn": ""
-  },
-  "col.routes": {
-   "en": "Routes",
    "kn": ""
   },
   "pub.title": {
@@ -1561,10 +1497,6 @@
    "en": "Send report",
    "kn": ""
   },
-  "pub.thanks": {
-   "en": "Thank you. The spot is now on the collection routes.",
-   "kn": ""
-  },
   "pub.merged": {
    "en": "Thank you. This spot was already reported; your report has been added to it.",
    "kn": ""
@@ -1575,6 +1507,246 @@
   },
   "nav.report": {
    "en": "Report",
+   "kn": ""
+  },
+  "legend.gvp_pickup": {
+   "en": "GVP cleared, waste waiting for pickup",
+   "kn": ""
+  },
+  "legend.gvp_watch": {
+   "en": "GVP being monitored",
+   "kn": ""
+  },
+  "gvp.status.reported": {
+   "en": "Reported",
+   "kn": ""
+  },
+  "gvp.status.verified": {
+   "en": "Verified",
+   "kn": ""
+  },
+  "gvp.status.assigned": {
+   "en": "Assigned",
+   "kn": ""
+  },
+  "gvp.status.cleaning": {
+   "en": "Cleaning in progress",
+   "kn": ""
+  },
+  "gvp.status.monitoring": {
+   "en": "Monitoring",
+   "kn": ""
+  },
+  "gvp.status.recurred": {
+   "en": "Recurred",
+   "kn": ""
+  },
+  "gvp.status.rejected": {
+   "en": "Rejected",
+   "kn": ""
+  },
+  "sev.low": {
+   "en": "Low",
+   "kn": ""
+  },
+  "sev.medium": {
+   "en": "Medium",
+   "kn": ""
+  },
+  "sev.high": {
+   "en": "High",
+   "kn": ""
+  },
+  "sev.critical": {
+   "en": "Critical",
+   "kn": ""
+  },
+  "sev.low.help": {
+   "en": "Small or occasional",
+   "kn": ""
+  },
+  "sev.medium.help": {
+   "en": "Keeps coming back",
+   "kn": ""
+  },
+  "sev.high.help": {
+   "en": "Large or persistent",
+   "kn": ""
+  },
+  "sev.critical.help": {
+   "en": "Health, environment or traffic hazard",
+   "kn": ""
+  },
+  "rsrc.surveyor": {
+   "en": "Surveyor",
+   "kn": ""
+  },
+  "rsrc.worker": {
+   "en": "Worker",
+   "kn": ""
+  },
+  "rsrc.supervisor": {
+   "en": "Supervisor",
+   "kn": ""
+  },
+  "rsrc.citizen": {
+   "en": "Citizen",
+   "kn": ""
+  },
+  "rsrc.other": {
+   "en": "Other",
+   "kn": ""
+  },
+  "gvp.severity": {
+   "en": "How serious is it?",
+   "kn": ""
+  },
+  "gvp.photos": {
+   "en": "Photos (up to {n})",
+   "kn": ""
+  },
+  "gvp.too_many_photos": {
+   "en": "Choose at most {n} photos.",
+   "kn": ""
+  },
+  "gvp.reports": {
+   "en": "Reports",
+   "kn": ""
+  },
+  "gvp.report_line": {
+   "en": "{date} · {name} ({source}): {kg} kg, {freq}, {severity}",
+   "kn": ""
+  },
+  "gvp.report_again": {
+   "en": "Report waste here again",
+   "kn": ""
+  },
+  "gvp.report_again_title": {
+   "en": "Waste here today",
+   "kn": ""
+  },
+  "gvp.saved_merged": {
+   "en": "Added to the GVP already mapped here.",
+   "kn": ""
+  },
+  "gvp.quantity_now": {
+   "en": "About how many kg are there?",
+   "kn": ""
+  },
+  "gvp.street": {
+   "en": "{street} · street segment {seg}",
+   "kn": ""
+  },
+  "gvp.pickup": {
+   "en": "{kg} kg cleared and waiting for pickup since {date}",
+   "kn": ""
+  },
+  "gvp.respond_by": {
+   "en": "Clear by {date}",
+   "kn": ""
+  },
+  "gvp.recurrences": {
+   "en": "Recurred {n} time(s)",
+   "kn": ""
+  },
+  "gvp.assigned_to": {
+   "en": "Assigned to {name}",
+   "kn": ""
+  },
+  "gvp.history": {
+   "en": "History",
+   "kn": ""
+  },
+  "gvp.event_severity": {
+   "en": "Severity: {value}",
+   "kn": ""
+  },
+  "gvp.event_collected": {
+   "en": "Pickup collected",
+   "kn": ""
+  },
+  "gvp.manage": {
+   "en": "Supervisor",
+   "kn": ""
+  },
+  "gvp.verify_severity": {
+   "en": "Severity",
+   "kn": ""
+  },
+  "gvp.assign_to": {
+   "en": "Team or person",
+   "kn": ""
+  },
+  "gvp.clear_kg": {
+   "en": "kg left for pickup",
+   "kn": ""
+  },
+  "gvp.photo_open": {
+   "en": "Photo",
+   "kn": ""
+  },
+  "act.verify": {
+   "en": "Verify",
+   "kn": ""
+  },
+  "act.reject": {
+   "en": "Reject: not a GVP",
+   "kn": ""
+  },
+  "act.assign": {
+   "en": "Assign for cleaning",
+   "kn": ""
+  },
+  "act.start": {
+   "en": "Start cleaning",
+   "kn": ""
+  },
+  "act.clear": {
+   "en": "Mark cleared: waste left for pickup",
+   "kn": ""
+  },
+  "act.collected": {
+   "en": "Mark pickup collected",
+   "kn": ""
+  },
+  "act.severity": {
+   "en": "Change severity",
+   "kn": ""
+  },
+  "pub.thanks_new": {
+   "en": "Thank you. A supervisor will verify it and send a cleaning team.",
+   "kn": ""
+  },
+  "sup.tasks": {
+   "en": "Cleaning tasks: GVPs to clear",
+   "kn": ""
+  },
+  "sup.tasks_help": {
+   "en": "Verified GVPs, most severe first. Clearing one sends its waste to the route builder as a pickup.",
+   "kn": ""
+  },
+  "sup.tasks_empty": {
+   "en": "No GVPs waiting to be cleared.",
+   "kn": ""
+  },
+  "col.severity": {
+   "en": "Severity",
+   "kn": ""
+  },
+  "col.source": {
+   "en": "Reported by",
+   "kn": ""
+  },
+  "col.respond_by": {
+   "en": "Clear by",
+   "kn": ""
+  },
+  "col.assigned": {
+   "en": "Assigned to",
+   "kn": ""
+  },
+  "col.reports": {
+   "en": "Reports",
    "kn": ""
   }
  }

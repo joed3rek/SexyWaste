@@ -41,6 +41,9 @@ def test_every_value_shown_to_surveyors_has_a_label():
     needed += [f"int.{k}" for k in db.GVP_INTERVENTIONS] + [f"gvp.status.{k}" for k in db.GVP_STATUSES]
     from backend.survey import gvp
     needed += [f"pub.size.{k}" for k in gvp.size_kg()]
+    needed += [f"sev.{k}" for k in db.GVP_SEVERITIES] + [f"sev.{k}.help" for k in db.GVP_SEVERITIES]
+    needed += [f"rsrc.{k}" for k in db.GVP_REPORT_SOURCES]
+    needed += [f"act.{k}" for k in ("verify", "reject", "assign", "start", "clear", "collected", "severity")]
     needed += [f"role.{r['key']}" for r in auth.roles()] + [f"role.{r['key']}.description" for r in auth.roles()]
     missing = [k for k in needed if k not in STRINGS]
     assert not missing, missing

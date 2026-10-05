@@ -80,7 +80,8 @@ map.on("load", async () => {
   $("legend").innerHTML = LEGEND.map(([k, c]) => `<div><span class="swatch" style="background:${c}"></span>${esc(t(k))}</div>`).join("") +
     `<div><span class="swatch outline"></span>${esc(t("legend.survey_first"))}</div>` +
     `<div><span class="swatch dot" style="background:#dc2626"></span>${esc(t("legend.gvp"))}</div>` +
-    `<div><span class="swatch dot" style="background:#9ca3af"></span>${esc(t("legend.gvp_off"))}</div>`;
+    `<div><span class="swatch dot" style="background:#f59e0b"></span>${esc(t("legend.gvp_pickup"))}</div>` +
+    `<div><span class="swatch dot" style="background:#9ca3af"></span>${esc(t("legend.gvp_watch"))}</div>`;
   if (!SESSION.sectors?.length) {
     $("progress").innerHTML = `<span class="warn">${esc(t("sv.no_sectors"))}</span>`;
     return;
@@ -120,7 +121,7 @@ map.on("load", async () => {
     map.addSource("gvps", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
     map.addLayer({ id: "gvps", type: "circle", source: "gvps", paint: {
       "circle-radius": ["interpolate", ["linear"], ["zoom"], 14, 6, 18, 11],
-      "circle-color": ["case", ["get", "on_routes"], "#dc2626", "#9ca3af"], "circle-stroke-color": "#fff", "circle-stroke-width": 2 } });
+      "circle-color": ["match", ["get", "state"], "pickup", "#f59e0b", "watch", "#9ca3af", "#dc2626"], "circle-stroke-color": "#fff", "circle-stroke-width": 2 } });
     await loadGvps();
     $("toast").hidden = true;
     const params = new URLSearchParams(location.search);
@@ -236,73 +237,80 @@ map.on("click", (e) => {
 $("legendBtn").addEventListener("click", () => ($("legend").hidden = !$("legend").hidden));
 $("signOut").addEventListener("click", signOut);
 
-// ---------- Garbage vulnerable points (SWM Rules 2026, r. 15(1)) ----------
+// ---------- Garbage mapping: GVPs (SWM Rules 2026, r. 15(1)) ----------
+// Reports go on the street network. Supervisors move a GVP through its lifecycle; clearing it
+// leaves a pickup for the route builder.
 
 const GVPS = new Map();
 const QUANTITY_CHIPS = [5, 20, 50, 100, 250];
+const OPEN_STATES = ["reported", "verified", "assigned", "cleaning", "recurred"];
 const fmtDate = (iso) => (iso || "").slice(0, 10);
+
+function gvpState(g) {
+  if (g.pickup) return "pickup";
+  return OPEN_STATES.includes(g.status) ? "open" : "watch";
+}
 
 async function loadGvps() {
   try {
     const { gvps } = await apiFetch(`/api/pilots/${PILOT}/gvps`);
     GVPS.clear();
-    gvps.filter((g) => SESSION.sectors.includes(g.sector)).forEach((g) => GVPS.set(g.id, g));
+    gvps.filter((g) => SESSION.sectors.includes(g.sector) && g.status !== "rejected").forEach((g) => GVPS.set(g.id, g));
     map.getSource("gvps").setData({ type: "FeatureCollection", features: [...GVPS.values()].map((g) => ({
-      type: "Feature", geometry: { type: "Point", coordinates: [g.lon, g.lat] }, properties: { id: g.id, on_routes: g.on_routes } })) });
+      type: "Feature", geometry: { type: "Point", coordinates: [g.lon, g.lat] }, properties: { id: g.id, state: gvpState(g) } })) });
   } catch (err) {
     toast(err.message);
   }
 }
 
-function checks(name, keys, prefix, chosen) {
-  return `<div class="chips">${keys.map((k) => `<label class="chip"><input type="checkbox" name="${name}" value="${k}" ${chosen.includes(k) ? "checked" : ""} /><span>${esc(t(`${prefix}.${k}`))}</span></label>`).join("")}</div>`;
+function chipSet(name, keys, label, type, chosen = []) {
+  return `<div class="chips">${keys.map((k) => `<label class="chip"><input type="${type}" name="${name}" value="${k}" ${chosen.includes(k) ? "checked" : ""} /><span>${label(k)}</span></label>`).join("")}</div>`;
 }
 
-// New GVP at a pinned place, or a new observation of an existing one.
+function severityChips(chosen) {
+  return chipSet("gSev", CONFIG.gvp.severities, (k) => `${esc(t(`sev.${k}`))} <small class="muted">${esc(t(`sev.${k}.help`))}</small>`, "radio", [chosen]);
+}
+
+// Report waste: at a pinned place (a new GVP, or added to one already mapped close by), or again at a GVP.
 function gvpForm(g, lngLat) {
   $("tapHint").hidden = true;
   const cfg = CONFIG.gvp;
-  const last = g?.observation_log?.[g.observation_log.length - 1];
+  const last = g?.report_log?.[g.report_log.length - 1];
+  const where = g ? { lng: g.lon, lat: g.lat } : lngLat;
   const sheet = $("sheet");
   sheet.hidden = false;
   sheet.innerHTML = `
-    <div class="sheet-head"><b>${esc(t(g ? "gvp.obs_title" : "gvp.new_title"))}</b>
+    <div class="sheet-head"><b>${esc(t(g ? "gvp.report_again_title" : "gvp.new_title"))}</b>
       <button type="button" class="close" id="sheetClose" aria-label="${esc(t("common.close"))}">×</button></div>
     ${g ? "" : `<label>${esc(t("gvp.landmark"))}<input id="gLandmark" maxlength="120" placeholder="${esc(t("gvp.landmark_ph"))}" /></label>`}
-    <p class="label">${esc(t("gvp.streams"))}</p>${checks("gStream", ["wet", "dry", "sanitary", "special"], "stream", last?.streams || [])}
-    <label>${esc(t("gvp.quantity"))}<input id="gQty" type="number" min="1" max="20000" step="1" inputmode="numeric" value="${last?.quantity_kg ?? ""}" /></label>
+    <p class="label">${esc(t("gvp.streams"))}</p>${chipSet("gStream", ["wet", "dry", "sanitary", "special"], (k) => esc(t(`stream.${k}`)), "checkbox", last?.streams || [])}
+    <label>${esc(t("gvp.quantity_now"))}<input id="gQty" type="number" min="1" max="20000" step="1" inputmode="numeric" value="${last?.quantity_kg ?? ""}" /></label>
     <div class="chips">${QUANTITY_CHIPS.map((q) => `<button type="button" class="chip-btn" data-q="${q}">${q} kg</button>`).join("")}</div>
+    <p class="label">${esc(t("gvp.severity"))}</p>${severityChips(last?.severity || g?.severity || "medium")}
     <label>${esc(t("gvp.frequency"))}<select id="gFreq">${cfg.frequencies.map((f) => `<option value="${f}" ${f === (last?.frequency || "daily") ? "selected" : ""}>${esc(t(`freq.${f}`))}</option>`).join("")}</select></label>
-    <p class="label">${esc(t("gvp.sources"))}</p>${checks("gSource", cfg.sources, "src", last?.sources || [])}
-    <label>${esc(t("gvp.photo"))} <span class="muted small">(${esc(t("common.optional"))})</span><input id="gPhoto" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" /></label>
+    <p class="label">${esc(t("gvp.sources"))}</p>${chipSet("gSource", cfg.sources, (k) => esc(t(`src.${k}`)), "checkbox", last?.sources || [])}
+    <label>${esc(t("gvp.photos", { n: cfg.max_photos }))} <span class="muted small">(${esc(t("common.optional"))})</span><input id="gPhoto" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" multiple /></label>
     <label>${esc(t("gvp.note"))} <span class="muted small">(${esc(t("common.optional"))})</span><textarea id="gNote" rows="2" maxlength="500"></textarea></label>
     <p id="gErr" class="warn" hidden></p>
-    <button type="button" class="lg block" id="gSave">${esc(t(g ? "common.save" : "gvp.save"))}</button>`;
+    <button type="button" class="lg block" id="gSave">${esc(t("gvp.save"))}</button>`;
   $("sheetClose").addEventListener("click", closeSheet);
   sheet.querySelectorAll("[data-q]").forEach((b) => b.addEventListener("click", () => ($("gQty").value = b.dataset.q)));
   $("gSave").addEventListener("click", async () => {
     const err = (m) => { $("gErr").textContent = m; $("gErr").hidden = false; };
     const streams = [...sheet.querySelectorAll("input[name=gStream]:checked")].map((x) => x.value);
     const qty = +$("gQty").value;
+    const files = [...$("gPhoto").files];
     if (!streams.length) return err(t("gvp.pick_stream"));
     if (!(qty > 0)) return err(t("gvp.pick_quantity"));
-    const body = { streams, quantity_kg: qty, frequency: $("gFreq").value,
-      sources: [...sheet.querySelectorAll("input[name=gSource]:checked")].map((x) => x.value), note: $("gNote").value || null };
+    if (files.length > cfg.max_photos) return err(t("gvp.too_many_photos", { n: cfg.max_photos }));
     $("gSave").disabled = true;
     try {
-      const saved = g
-        ? await swmWrite("POST", `/api/pilots/${PILOT}/gvps/${g.id}/observations`, body)
-        : await swmWrite("POST", `/api/pilots/${PILOT}/gvps`, { ...body, lon: lngLat.lng, lat: lngLat.lat, landmark: $("gLandmark").value || null });
-      const file = $("gPhoto").files[0];
-      let note = t(g ? "gvp.obs_saved" : "gvp.saved");
-      if (file) {
-        const obs = saved.observation_log[saved.observation_log.length - 1];
-        try {
-          await swmWrite("POST", `/api/pilots/${PILOT}/gvp-observations/${obs.id}/photo`, file, file.type || "image/jpeg");
-        } catch (e) {
-          note = t("gvp.photo_failed", { message: e.message });
-        }
-      }
+      const saved = await swmWrite("POST", `/api/pilots/${PILOT}/gvps`, {
+        lon: where.lng, lat: where.lat, streams, quantity_kg: qty, frequency: $("gFreq").value,
+        severity: sheet.querySelector("input[name=gSev]:checked")?.value || "medium",
+        sources: [...sheet.querySelectorAll("input[name=gSource]:checked")].map((x) => x.value),
+        landmark: g ? null : $("gLandmark").value || null, note: $("gNote").value || null });
+      const note = await uploadPhotos(saved.report_id, files, where, t(saved.merged && !g ? "gvp.saved_merged" : "gvp.saved"));
       await loadGvps();
       toast(note);
       gvpSheet(saved.id);
@@ -313,11 +321,29 @@ function gvpForm(g, lngLat) {
   });
 }
 
+async function uploadPhotos(reportId, files, where, okText) {
+  for (const file of files) {
+    try {
+      await swmWrite("POST", `/api/pilots/${PILOT}/gvp-reports/${reportId}/photos?lon=${where.lng}&lat=${where.lat}`, file, file.type || "image/jpeg");
+    } catch (e) {
+      return t("gvp.photo_failed", { message: e.message });
+    }
+  }
+  return okText;
+}
+
 function eventText(e) {
   if (e.kind === "status") return t("gvp.event_status", { value: t(`gvp.status.${e.value}`) });
-  if (e.kind === "collect") return t(e.value === "1" ? "gvp.event_collect_on" : "gvp.event_collect_off");
+  if (e.kind === "severity") return t("gvp.event_severity", { value: t(`sev.${e.value}`) });
+  if (e.kind === "collected") return t("gvp.event_collected");
   return t(`int.${e.kind}`);
 }
+
+// Which lifecycle actions fit the GVP's status (the server checks again).
+const ACTIONS = {
+  reported: ["verify", "reject"], recurred: ["verify", "assign", "reject"], verified: ["assign"],
+  assigned: ["start", "clear", "assign"], cleaning: ["clear"], cleared: [], monitoring: [], rejected: [],
+};
 
 async function gvpSheet(id) {
   closeSheet();
@@ -333,33 +359,44 @@ async function gvpSheet(id) {
     return;
   }
   const cfg = CONFIG.gvp;
-  const sup = SESSION.role === "survey_supervisor";
-  const obs = g.observation_log.slice(-5).reverse();
+  const manager = cfg.managers.includes(SESSION.role);
+  const cleaner = cfg.cleaners.includes(SESSION.role);
+  const actions = (ACTIONS[g.status] || []).filter((a) => (["start", "clear"].includes(a) ? cleaner : manager));
+  if (g.pickup && cleaner) actions.push("collected");
+  const reports = g.report_log.slice().reverse();
   sheet.innerHTML = `
-    <div class="sheet-head"><div><b>${esc(g.landmark || t("gvp.title"))}</b>
-      <br><span class="muted small">${esc(g.sector || "")} · ${esc(t(`gvp.status.${g.status}`))} · ${esc(t(g.on_routes ? "gvp.on_routes" : "gvp.off_routes"))}${g.reported_by_public ? ` · ${esc(t("gvp.reported_by_public"))}` : ""}${g.road_name ? `<br>${esc(g.road_name)}` : ""}</span></div>
+    <div class="sheet-head"><div><b>${esc(g.landmark || g.road_name || t("gvp.title"))}</b>
+      <br><span class="muted small">${esc(g.sector || "")} · ${esc(t(`gvp.status.${g.status}`))} · <span class="sev sev-${g.severity}">${esc(t(`sev.${g.severity}`))}</span></span></div>
       <button type="button" class="close" id="sheetClose" aria-label="${esc(t("common.close"))}">×</button></div>
-    <p><b>${esc(t("gvp.kg_day", { kg: g.kg_per_day }))}</b><br><span class="small">${g.streams.map((s) => esc(t(`stream.${s}`))).join(", ")}</span></p>
-    <p class="label">${esc(t("gvp.observations"))}</p>
-    <ul class="small gvp-log">${obs.map((o) => `<li>${esc(t("gvp.obs_line", { date: fmtDate(o.at), name: o.user_name || "", kg: o.quantity_kg, freq: t(`freq.${o.frequency}`) }))}${o.note ? ` · ${esc(o.note)}` : ""}</li>`).join("")}</ul>
-    <p class="label">${esc(t("gvp.interventions"))}</p>
+    <p class="small">${esc(t("gvp.street", { street: g.road_name || "–", seg: g.seg_id || "–" }))}
+      ${g.assigned_to ? `<br>${esc(t("gvp.assigned_to", { name: g.assigned_to }))}` : ""}
+      ${g.respond_by ? `<br><b>${esc(t("gvp.respond_by", { date: fmtDate(g.respond_by) }))}</b>` : ""}
+      ${g.pickup ? `<br><b>${esc(t("gvp.pickup", { kg: g.pickup.kg, date: fmtDate(g.pickup.since) }))}</b>` : ""}
+      ${g.recurrences ? `<br>${esc(t("gvp.recurrences", { n: g.recurrences }))}` : ""}</p>
+    <p class="label">${esc(t("gvp.reports"))}</p>
+    <ul class="small gvp-log">${reports.map((o) => `<li>${esc(t("gvp.report_line", { date: fmtDate(o.at), name: o.user_name || "", source: t(`rsrc.${o.source}`),
+      kg: o.quantity_kg, freq: t(`freq.${o.frequency}`), severity: t(`sev.${o.severity}`) }))}${o.note ? ` · ${esc(o.note)}` : ""}
+      ${o.photos.map((p, i) => ` <a href="/api/pilots/${PILOT}/gvp-photos/${p.id}" target="_blank" rel="noopener">${esc(t("gvp.photo_open"))} ${i + 1}</a>`).join("")}</li>`).join("")}</ul>
+    <p class="label">${esc(t("gvp.history"))}</p>
     <ul class="small gvp-log">${g.events.length ? g.events.slice().reverse().map((e) => `<li>${esc(fmtDate(e.at))} · ${esc(e.user_name || "")}: ${esc(eventText(e))}${e.note ? ` · ${esc(e.note)}` : ""}</li>`).join("") : `<li class="muted">${esc(t("gvp.none_yet"))}</li>`}</ul>
-    <button type="button" class="lg block" id="gObserve">${esc(t("gvp.add_obs"))}</button>
-    ${sup ? `
-      <div class="gvp-manage">
+    <button type="button" class="secondary block" id="gAgain">${esc(t("gvp.report_again"))}</button>
+    ${actions.length || manager ? `<div class="gvp-manage"><p class="label">${esc(t("gvp.manage"))}</p>
+      ${actions.includes("verify") ? `<label>${esc(t("gvp.verify_severity"))}<select id="gVerifySev">${cfg.severities.map((k) => `<option value="${k}" ${k === g.severity ? "selected" : ""}>${esc(t(`sev.${k}`))}</option>`).join("")}</select></label>` : ""}
+      ${actions.includes("assign") ? `<label>${esc(t("gvp.assign_to"))}<input id="gAssignTo" maxlength="120" value="${esc(g.assigned_to || "")}" /></label>` : ""}
+      ${actions.includes("clear") ? `<label>${esc(t("gvp.clear_kg"))}<input id="gClearKg" type="number" min="1" step="1" value="${g.quantity_kg ?? ""}" /></label>` : ""}
+      ${actions.map((a) => `<button type="button" class="${a === "reject" ? "secondary" : ""} block" data-act="${a}">${esc(t(`act.${a}`))}</button>`).join("")}
+      ${manager ? `
+        ${actions.includes("verify") ? "" : `<label>${esc(t("act.severity"))}<select id="gSevChange">${cfg.severities.map((k) => `<option value="${k}" ${k === g.severity ? "selected" : ""}>${esc(t(`sev.${k}`))}</option>`).join("")}</select></label>`}
         <label>${esc(t("gvp.record"))}<select id="gInt">${cfg.interventions.map((k) => `<option value="${k}">${esc(t(`int.${k}`))}</option>`).join("")}</select></label>
         <input id="gIntNote" maxlength="500" placeholder="${esc(t("gvp.note"))}" />
-        <button type="button" class="secondary block" id="gIntSave">${esc(t("gvp.record"))}</button>
-        <label>${esc(t("gvp.set_status"))}<select id="gStatus">${cfg.statuses.map((k) => `<option value="${k}" ${k === g.status ? "selected" : ""}>${esc(t(`gvp.status.${k}`))}</option>`).join("")}</select></label>
-        <label class="check"><input type="checkbox" id="gCollect" ${g.collect ? "checked" : ""} /> ${esc(t("gvp.collect"))}</label>
-      </div>` : ""}
+        <button type="button" class="secondary block" id="gIntSave">${esc(t("gvp.record"))}</button>` : ""}
+    </div>` : ""}
     <p id="gErr" class="warn" hidden></p>`;
   $("sheetClose").addEventListener("click", closeSheet);
-  $("gObserve").addEventListener("click", () => gvpForm(g));
-  if (!sup) return;
-  const event = async (body) => {
+  $("gAgain").addEventListener("click", () => gvpForm(g));
+  const act = async (body) => {
     try {
-      await swmWrite("POST", `/api/pilots/${PILOT}/gvps/${g.id}/events`, body);
+      await swmWrite("POST", `/api/pilots/${PILOT}/gvps/${g.id}/actions`, body);
       await loadGvps();
       gvpSheet(g.id);
     } catch (e) {
@@ -367,7 +404,14 @@ async function gvpSheet(id) {
       $("gErr").hidden = false;
     }
   };
-  $("gIntSave").addEventListener("click", () => event({ kind: $("gInt").value, note: $("gIntNote").value || null }));
-  $("gStatus").addEventListener("change", () => event({ kind: "status", value: $("gStatus").value }));
-  $("gCollect").addEventListener("change", () => event({ kind: "collect", value: $("gCollect").checked ? "true" : "false" }));
+  sheet.querySelectorAll("[data-act]").forEach((b) => b.addEventListener("click", () => {
+    const a = b.dataset.act;
+    if (a === "verify") return act({ action: a, value: $("gVerifySev").value });
+    if (a === "assign") return act({ action: a, value: $("gAssignTo").value });
+    if (a === "clear") return act({ action: a, kg: +$("gClearKg").value || null });
+    return act({ action: a });
+  }));
+  if (!manager) return;
+  $("gSevChange")?.addEventListener("change", () => act({ action: "severity", value: $("gSevChange").value }));
+  $("gIntSave").addEventListener("click", () => act({ action: $("gInt").value, note: $("gIntNote").value || null }));
 }

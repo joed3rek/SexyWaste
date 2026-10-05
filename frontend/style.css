@@ -718,3 +718,8 @@ body.surveyor #map { inset: 0 0 0 var(--rail-w); }
 .gvp-log { margin: 4px 0 10px; padding-left: 18px; }
 .gvp-log li { margin: 2px 0; }
 .gvp-manage { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line, #e4e7ec); display: grid; gap: 8px; }
+
+.sev { font-weight: 600; }
+.sev-high { color: #c2410c; }
+.sev-critical { color: #b91c1c; }
+.chip small { font-weight: 400; margin-left: 4px; }

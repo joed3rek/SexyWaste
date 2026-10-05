@@ -82,18 +82,35 @@ Stored in SQLite at `data/survey.db` (`backend/survey/db.py`).
 - **Items to review:** contradictions, GPS distance, spot-check mismatches, and map problems, each with a link to the building.
 - **Sector assignments:** which surveyor works which sector.
 
-### Garbage vulnerable points
+### Garbage mapping: garbage vulnerable points
 
-SWM Rules 2026, r. 15(1): every garbage vulnerable point (GVP) is to be geo-mapped and assessed for accumulation by the deadline in the regulations library (31 October 2026), and published on the portal and the local body website.
+A garbage vulnerable point (GVP) is a place where waste repeatedly accumulates outside the intended system. SWM Rules 2026, r. 15(1): every GVP is to be geo-mapped and assessed for accumulation by the deadline in the regulations library (31 October 2026), and published on the portal and the local body website. Code: `backend/survey/gvp.py`.
 
-- **Who maps them.** Surveyors and survey supervisors (in their own sectors) from the surveyor screen, with **Report GVP**; and the public (the generator role) anywhere in the pilot from `report.html`, "Report dumped waste".
-- **On the road.** A GVP is always on a road. The pin is moved to the nearest point on the nearest road, and refused when no road is within 30 m (`GVP_MAX_ROAD_DISTANCE_M`). The road is stored, and the collection vehicle drives it.
-- **No duplicates.** A report within 25 m (`GVP_MERGE_DISTANCE_M`) of a GVP that is not closed is added to that GVP as a new observation. If it had been cleared, it becomes active again.
-- **The form.** Surveyors give waste streams seen, roughly how many kg build up each time, how often, who probably dumps there, a landmark, a photo and a note. The public picks the kind of waste ("mixed / not sure" counts as wet and dry), a size instead of kg (small, medium, large, turned into kg by estimates in `norms.json`), how often, a landmark and a photo.
-- **Assessing accumulation.** Each later visit adds an observation beside the earlier ones (`gvp_observation`, append-only). The latest observation sets the estimate: kg per build-up × build-ups per day, with the factors in `backend/buildings/norms.json` (`gvp`). Shown as an estimate.
-- **Interventions and status.** A survey supervisor records interventions (cleared, bin placed, signage, CCTV, beautification, awareness drive, notice issued, other), sets the status (active, cleared, closed) and can take a GVP off the routes. All in `gvp_event`, append-only. GVPs are never deleted, only closed.
-- **On the routes.** As soon as it is saved, an active GVP marked for collection, whoever reported it, becomes a stop in the route builder on its road, its waste split evenly over the streams seen. It is not sent to park composting. Public reports are not checked first; a supervisor can close a false report or take it off the routes.
-- **Publishing.** The supervisor page shows the rule, the deadline and how many GVPs are mapped, and links to `/api/pilots/hsr/gvps.geojson` with every GVP's location, status and latest assessment.
+**One database, many reporters.** Surveyors and survey supervisors report from the surveyor screen (**Report GVP**), the public from `report.html` ("Report dumped waste"). Each report records its source: surveyor, worker, supervisor, citizen or other (workers and other organisations once their roles are built).
+
+**On the street, not a property.** The pin is moved to the nearest street and the GVP is linked to that **street segment ID**, street name and sector. A pin with no street within 30 m (`GVP_MAX_ROAD_DISTANCE_M`) is refused. A report within 25 m (`GVP_MERGE_DISTANCE_M`) of a GVP already mapped is added to it.
+
+**A report** gives the waste streams seen, about how many kg (the public picks small, medium or large, turned into kg by estimates in `norms.json`), how often it builds up, likely dumpers, a **severity** (low: small or occasional; medium: keeps coming back; high: large or persistent; critical: health, environment or traffic hazard) and up to 3 photos. Each photo keeps its time, place, reporter and report ID.
+
+**Lifecycle**, moved on by a survey supervisor (or operations supervisor later):
+
+| Status | Meaning | Next |
+|---|---|---|
+| Reported | New, not yet checked | Verified, or Rejected (not a GVP) |
+| Verified | Confirmed; the supervisor sets the severity | Assigned |
+| Assigned | Given to a cleaning team or person | Cleaning in progress, or Cleared |
+| Cleaning in progress | The team is at work | Cleared |
+| Cleared | Waste piled up for pickup | Monitoring, once the pickup is collected |
+| Monitoring | Clean; watched | Recurred if waste is reported again |
+| Recurred | Waste is back | Verified, Assigned or Rejected |
+
+A supervisor's own report is verified at once. Severity changes and interventions (bin placed, signage, CCTV, beautification, awareness drive, notice issued, other) are logged. Reports, photos, events and pickups are never rewritten or deleted.
+
+**GVP → Clean City.** Verified, assigned, in-progress and recurred GVPs are cleaning tasks (`/api/pilots/hsr/gvps/tasks`): location, street segment, severity, waste type, quantity, assignee, priority and a clear-by time (verification + `GVP_RESPONSE_HOURS` by severity, an operating target, not regulation). The supervisor page lists them most severe first.
+
+**GVP → route builder.** Cleaning a GVP and transporting its waste are separate. When the team marks it cleared, they enter the kg left for pickup; that becomes a one-off collection demand. The route builder includes open pickups as stops on the GVP's street (not sent to park composting). Marking the pickup collected closes the demand and the GVP moves to monitoring.
+
+**Publishing.** `/api/pilots/hsr/gvps.geojson` lists every GVP except rejected reports, with street segment, status, severity and the latest assessment. The supervisor page shows the rule, the deadline and the counts.
 
 ### What the survey changes downstream
 

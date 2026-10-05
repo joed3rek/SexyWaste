@@ -37,7 +37,7 @@ function toast(text) {
 
 async function loadGvps() {
   const { gvps } = await apiFetch(`/api/pilots/${PILOT}/gvps`);
-  map.getSource("gvps").setData({ type: "FeatureCollection", features: gvps.filter((g) => g.status !== "closed").map((g) => ({
+  map.getSource("gvps").setData({ type: "FeatureCollection", features: gvps.filter((g) => !["rejected", "monitoring"].includes(g.status)).map((g) => ({
     type: "Feature", geometry: { type: "Point", coordinates: [g.lon, g.lat] }, properties: { id: g.id } })) });
 }
 
@@ -81,9 +81,11 @@ function form(lngLat) {
     ${chips("pStream", [...STREAM_KEYS, "mixed"], (k) => (k === "mixed" ? t("pub.mixed") : t(`stream.${k}`)))}
     <p class="label">${esc(t("pub.size"))}</p>
     ${chips("pSize", cfg.sizes, (k) => t(`pub.size.${k}`), "radio")}
+    <p class="label">${esc(t("gvp.severity"))}</p>
+    ${chips("pSev", cfg.severities, (k) => `${t(`sev.${k}`)}: ${t(`sev.${k}.help`)}`, "radio")}
     <label>${esc(t("gvp.frequency"))}<select id="pFreq">${cfg.frequencies.map((f) => `<option value="${f}">${esc(t(`freq.${f}`))}</option>`).join("")}</select></label>
     <label>${esc(t("gvp.landmark"))}<input id="pLandmark" maxlength="120" placeholder="${esc(t("gvp.landmark_ph"))}" /></label>
-    <label>${esc(t("gvp.photo"))} <span class="muted small">(${esc(t("common.optional"))})</span><input id="pPhoto" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" /></label>
+    <label>${esc(t("gvp.photos", { n: cfg.max_photos }))} <span class="muted small">(${esc(t("common.optional"))})</span><input id="pPhoto" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" multiple /></label>
     <label>${esc(t("gvp.note"))} <span class="muted small">(${esc(t("common.optional"))})</span><textarea id="pNote" rows="2" maxlength="500"></textarea></label>
     <p id="pErr" class="warn" hidden></p>
     <button type="button" class="lg block" id="pSend">${esc(t("pub.send"))}</button>`;
@@ -101,21 +103,23 @@ async function send(lngLat) {
   const picked = [...document.querySelectorAll("input[name=pStream]:checked")].map((x) => x.value);
   const streams = [...new Set(picked.flatMap((k) => (k === "mixed" ? ["wet", "dry"] : [k])))];
   const size = document.querySelector("input[name=pSize]:checked")?.value;
+  const severity = document.querySelector("input[name=pSev]:checked")?.value || "medium";
+  const files = [...$("pPhoto").files];
   if (!streams.length) return err(t("gvp.pick_stream"));
   if (!size) return err(t("pub.pick_size"));
+  if (files.length > CONFIG.gvp.max_photos) return err(t("gvp.too_many_photos", { n: CONFIG.gvp.max_photos }));
   $("pSend").disabled = true;
   try {
     const saved = await swmWrite("POST", `/api/pilots/${PILOT}/gvps`, {
-      lon: lngLat.lng, lat: lngLat.lat, streams, size, frequency: $("pFreq").value,
+      lon: lngLat.lng, lat: lngLat.lat, streams, size, severity, frequency: $("pFreq").value,
       landmark: $("pLandmark").value || null, note: $("pNote").value || null });
-    let note = t(saved.merged ? "pub.merged" : "pub.thanks");
-    const file = $("pPhoto").files[0];
-    if (file) {
-      const obs = saved.observation_log[saved.observation_log.length - 1];
+    let note = t(saved.merged ? "pub.merged" : "pub.thanks_new");
+    for (const file of files) {
       try {
-        await swmWrite("POST", `/api/pilots/${PILOT}/gvp-observations/${obs.id}/photo`, file, file.type || "image/jpeg");
+        await swmWrite("POST", `/api/pilots/${PILOT}/gvp-reports/${saved.report_id}/photos?lon=${lngLat.lng}&lat=${lngLat.lat}`, file, file.type || "image/jpeg");
       } catch (e) {
         note = t("gvp.photo_failed", { message: e.message });
+        break;
       }
     }
     close();

@@ -8,11 +8,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
 from backend import auth
-from backend.config import PILOTS
+from backend.config import GVP_MAX_PHOTOS, GVP_RESPONSE_HOURS, PILOTS
 from backend.survey import db, gvp, service, uses
 from backend.survey.service import SurveyError
 
@@ -58,8 +58,10 @@ def survey_config():
         "building_fields": {k: (list(v) if isinstance(v, tuple) else v) for k, v in db.BUILDING_FIELDS.items()},
         "geometry_flag_kinds": db.FLAG_KINDS,
         "sources": db.SOURCES,
-        "gvp": {"statuses": db.GVP_STATUSES, "frequencies": db.GVP_FREQUENCIES, "sources": db.GVP_SOURCES,
-                "interventions": db.GVP_INTERVENTIONS, "sizes": list(gvp.size_kg()), "rule": gvp.rule()},
+        "gvp": {"statuses": db.GVP_STATUSES, "severities": db.GVP_SEVERITIES, "report_sources": db.GVP_REPORT_SOURCES,
+                "frequencies": db.GVP_FREQUENCIES, "sources": db.GVP_SOURCES, "interventions": db.GVP_INTERVENTIONS,
+                "sizes": list(gvp.size_kg()), "max_photos": GVP_MAX_PHOTOS, "response_hours": GVP_RESPONSE_HOURS,
+                "managers": gvp.MANAGERS, "cleaners": gvp.CLEANERS, "rule": gvp.rule()},
     }
 
 
@@ -246,26 +248,25 @@ def end_assignment(pilot_key: str, assignment_id: str, request: Request):
     return {"status": "ended"}
 
 
-# ---------- Garbage vulnerable points ----------
+# ---------- Garbage mapping: garbage vulnerable points ----------
 
-class GvpObservationIn(BaseModel):
+class GvpIn(BaseModel):
+    lon: float
+    lat: float
     streams: list[str]
     quantity_kg: float | None = None
     size: str | None = None  # the public's choice instead of kg: small, medium or large
     frequency: str
+    severity: str = "medium"
     sources: list[str] = []
+    landmark: str | None = Field(None, max_length=120)
     note: str | None = Field(None, max_length=500)
 
 
-class GvpIn(GvpObservationIn):
-    lon: float
-    lat: float
-    landmark: str | None = Field(None, max_length=120)
-
-
-class GvpEventIn(BaseModel):
-    kind: str
-    value: str | None = None
+class GvpActionIn(BaseModel):
+    action: str
+    value: str | None = Field(None, max_length=120)
+    kg: float | None = None
     note: str | None = Field(None, max_length=500)
 
 
@@ -280,6 +281,12 @@ def gvps_geojson(pilot_key: str):
     return _run(gvp.geojson, _pilot(pilot_key))
 
 
+@router.get("/api/pilots/{pilot_key}/gvps/tasks")
+def gvp_cleaning_tasks(pilot_key: str, sector: str | None = None):
+    """GVP -> Clean City: verified GVPs to clear, highest priority first."""
+    return {"tasks": _run(gvp.cleaning_tasks, _pilot(pilot_key), sector)}
+
+
 @router.get("/api/pilots/{pilot_key}/gvps/{gvp_id}")
 def gvp_detail(pilot_key: str, gvp_id: str):
     return _run(gvp.detail, _pilot(pilot_key), gvp_id)
@@ -287,23 +294,27 @@ def gvp_detail(pilot_key: str, gvp_id: str):
 
 @router.post("/api/pilots/{pilot_key}/gvps")
 def report_gvp(pilot_key: str, body: GvpIn, request: Request):
+    """Report waste at a place: a new GVP, or a new report of one already mapped close by."""
     return _run(gvp.report, _pilot(pilot_key), _actor(request), body.lon, body.lat, body.streams, body.quantity_kg,
-                body.frequency, body.sources, body.landmark, body.note, body.size)
+                body.frequency, body.sources, body.landmark, body.note, body.size, body.severity)
 
 
-@router.post("/api/pilots/{pilot_key}/gvps/{gvp_id}/observations")
-def observe_gvp(pilot_key: str, gvp_id: str, body: GvpObservationIn, request: Request):
-    return _run(gvp.observe, _pilot(pilot_key), gvp_id, _actor(request), body.streams, body.quantity_kg, body.frequency,
-                body.sources, body.note, body.size)
+@router.post("/api/pilots/{pilot_key}/gvps/{gvp_id}/actions")
+def gvp_action(pilot_key: str, gvp_id: str, body: GvpActionIn, request: Request):
+    return _run(gvp.act, _pilot(pilot_key), gvp_id, _actor(request), body.action, body.value, body.kg, body.note)
 
 
-@router.post("/api/pilots/{pilot_key}/gvp-observations/{observation_id}/photo")
-async def gvp_photo(pilot_key: str, observation_id: str, request: Request):
+@router.post("/api/pilots/{pilot_key}/gvp-reports/{report_id}/photos")
+async def gvp_photo(pilot_key: str, report_id: str, request: Request, lon: float | None = None, lat: float | None = None):
+    """A photo as the raw request body (image/jpeg, image/png or image/webp)."""
     actor = _actor(request)
     data = await request.body()
-    return _run(gvp.add_photo, _pilot(pilot_key), observation_id, actor, data)
+    return _run(gvp.add_photo, _pilot(pilot_key), report_id, actor, data, lon, lat)
 
 
-@router.post("/api/pilots/{pilot_key}/gvps/{gvp_id}/events")
-def gvp_event(pilot_key: str, gvp_id: str, body: GvpEventIn, request: Request):
-    return _run(gvp.record_event, _pilot(pilot_key), gvp_id, _actor(request), body.kind, body.value, body.note)
+@router.get("/api/pilots/{pilot_key}/gvp-photos/{photo_id}")
+def gvp_photo_file(pilot_key: str, photo_id: str):
+    path = _run(gvp.photo_file, _pilot(pilot_key), photo_id)
+    data = path.read_bytes()
+    kind = "image/png" if data[1:4] == b"PNG" else "image/webp" if data[8:12] == b"WEBP" else "image/jpeg"
+    return Response(content=data, media_type=kind)

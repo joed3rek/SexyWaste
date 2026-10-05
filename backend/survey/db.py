@@ -52,10 +52,14 @@ BUILDING_FIELDS = {
 USE_MIX_FIELDS = {"count": "number", "occupants_total": "number", "beds_total": "number"}
 
 # Garbage vulnerable points (SWM Rules 2026, r. 15(1): geo-mapped and assessed for accumulation).
-GVP_STATUSES = ("active", "cleared", "closed")  # cleared: no waste now, still watched; closed: no longer a GVP
+# GVP lifecycle: reported -> verified -> assigned -> cleaning -> cleared -> monitoring, or recurred when
+# waste is reported again at a cleared or monitored GVP. "rejected": not a GVP (false or duplicate report).
+GVP_STATUSES = ("reported", "verified", "assigned", "cleaning", "cleared", "monitoring", "recurred", "rejected")
+GVP_SEVERITIES = ("low", "medium", "high", "critical")  # lowest to highest priority
+GVP_REPORT_SOURCES = ("surveyor", "worker", "supervisor", "citizen", "other")  # who reported it
 GVP_FREQUENCIES = ("daily", "few_times_a_week", "weekly", "occasionally")  # how often waste builds up again
-GVP_SOURCES = ("households", "shops", "street_vendors", "market", "construction", "passers_by", "unknown")
-GVP_INTERVENTIONS = ("cleared", "bin_placed", "signage", "cctv", "beautification", "awareness_drive", "notice_issued", "other")
+GVP_SOURCES = ("households", "shops", "street_vendors", "market", "construction", "passers_by", "unknown")  # likely dumpers
+GVP_INTERVENTIONS = ("bin_placed", "signage", "cctv", "beautification", "awareness_drive", "notice_issued", "other")
 
 _SCHEMA = f"""
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
@@ -155,47 +159,74 @@ CREATE TABLE IF NOT EXISTS sector_assignment (
 CREATE TABLE IF NOT EXISTS gvp (
     id TEXT PRIMARY KEY,
     pilot TEXT NOT NULL,
-    sector TEXT,
-    lon REAL NOT NULL, lat REAL NOT NULL,
+    sector TEXT,                              -- the pilot's ward-level unit
+    lon REAL NOT NULL, lat REAL NOT NULL,     -- on the street, not on a property
+    seg_id TEXT,                              -- street segment ID (street graph), the unit of responsibility
+    road_u INTEGER, road_v INTEGER, road_name TEXT,
+    snap_m REAL,                              -- how far the first pin was moved onto the street
     landmark TEXT,
-    road_u INTEGER, road_v INTEGER, road_name TEXT, snap_m REAL,  -- the road it is on (OSM nodes) and how far the pin was moved
-    status TEXT NOT NULL DEFAULT 'active' CHECK (status IN {GVP_STATUSES}),
-    collect INTEGER NOT NULL DEFAULT 1,       -- 1: an active GVP is a stop on collection routes
-    created_by TEXT, created_role TEXT, created_at TEXT NOT NULL
+    status TEXT NOT NULL DEFAULT 'reported' CHECK (status IN {GVP_STATUSES}),
+    severity TEXT NOT NULL CHECK (severity IN {GVP_SEVERITIES}),
+    assigned_to TEXT,                         -- cleaning team or person, while assigned or cleaning
+    verified_at TEXT,
+    created_by TEXT, created_role TEXT,
+    created_source TEXT NOT NULL CHECK (created_source IN {GVP_REPORT_SOURCES}),
+    created_at TEXT NOT NULL
 );
-CREATE TABLE IF NOT EXISTS gvp_observation (
+CREATE TABLE IF NOT EXISTS gvp_observation (    -- one report: the first, or a later one at the same place
     id TEXT PRIMARY KEY,
     gvp_id TEXT NOT NULL REFERENCES gvp(id),
     at TEXT NOT NULL,
     user_name TEXT, user_role TEXT,
+    source TEXT NOT NULL CHECK (source IN {GVP_REPORT_SOURCES}),
+    lon REAL, lat REAL,                       -- where the reporter placed the pin
     streams TEXT NOT NULL,                    -- JSON list of waste streams seen
-    quantity_kg REAL NOT NULL,                -- approximate amount each time it builds up
+    quantity_kg REAL NOT NULL,                -- approximate amount
     frequency TEXT NOT NULL CHECK (frequency IN {GVP_FREQUENCIES}),
-    sources TEXT NOT NULL,                    -- JSON list of likely generators
-    photo_path TEXT, photo_sha256 TEXT,
+    sources TEXT NOT NULL,                    -- JSON list of likely dumpers
+    severity TEXT NOT NULL CHECK (severity IN {GVP_SEVERITIES}),  -- as the reporter saw it
     note TEXT
+);
+CREATE TABLE IF NOT EXISTS gvp_photo (
+    id TEXT PRIMARY KEY,
+    gvp_id TEXT NOT NULL REFERENCES gvp(id),
+    observation_id TEXT NOT NULL REFERENCES gvp_observation(id),
+    file_path TEXT NOT NULL, sha256 TEXT NOT NULL,
+    taken_at TEXT NOT NULL, lon REAL, lat REAL,
+    user_name TEXT
 );
 CREATE TABLE IF NOT EXISTS gvp_event (
     id TEXT PRIMARY KEY,
     gvp_id TEXT NOT NULL REFERENCES gvp(id),
     at TEXT NOT NULL,
     user_name TEXT, user_role TEXT,
-    kind TEXT NOT NULL,                       -- an intervention, 'status' or 'collect'
-    value TEXT,                               -- new status or collect flag
+    kind TEXT NOT NULL,                       -- 'status', 'severity', or an intervention
+    value TEXT,                               -- new status or severity
     note TEXT
 );
+CREATE TABLE IF NOT EXISTS gvp_demand (         -- waste cleared from a GVP and waiting for a collection vehicle
+    id TEXT PRIMARY KEY,
+    gvp_id TEXT NOT NULL REFERENCES gvp(id),
+    created_at TEXT NOT NULL, created_by TEXT,
+    kg REAL NOT NULL,
+    streams TEXT NOT NULL,                    -- JSON list
+    status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'collected')),
+    collected_at TEXT, collected_by TEXT
+);
 CREATE TRIGGER IF NOT EXISTS gvp_observation_no_update BEFORE UPDATE ON gvp_observation
-WHEN NEW.id IS NOT OLD.id OR NEW.gvp_id IS NOT OLD.gvp_id OR NEW.at IS NOT OLD.at OR NEW.streams IS NOT OLD.streams
-  OR NEW.quantity_kg IS NOT OLD.quantity_kg OR NEW.frequency IS NOT OLD.frequency OR NEW.sources IS NOT OLD.sources
-BEGIN SELECT RAISE(ABORT, 'gvp_observation is append-only: only the photo can be attached later'); END;
+BEGIN SELECT RAISE(ABORT, 'gvp_observation is append-only'); END;
 CREATE TRIGGER IF NOT EXISTS gvp_observation_no_delete BEFORE DELETE ON gvp_observation
 BEGIN SELECT RAISE(ABORT, 'gvp_observation is append-only'); END;
+CREATE TRIGGER IF NOT EXISTS gvp_photo_no_delete BEFORE DELETE ON gvp_photo
+BEGIN SELECT RAISE(ABORT, 'gvp_photo rows are kept (the file may be purged)'); END;
 CREATE TRIGGER IF NOT EXISTS gvp_event_no_update BEFORE UPDATE ON gvp_event
 BEGIN SELECT RAISE(ABORT, 'gvp_event is append-only'); END;
 CREATE TRIGGER IF NOT EXISTS gvp_event_no_delete BEFORE DELETE ON gvp_event
 BEGIN SELECT RAISE(ABORT, 'gvp_event is append-only'); END;
 CREATE TRIGGER IF NOT EXISTS gvp_no_delete BEFORE DELETE ON gvp
-BEGIN SELECT RAISE(ABORT, 'GVPs are never deleted: close them'); END;
+BEGIN SELECT RAISE(ABORT, 'GVPs are never deleted: reject or monitor them'); END;
+CREATE TRIGGER IF NOT EXISTS gvp_demand_no_delete BEFORE DELETE ON gvp_demand
+BEGIN SELECT RAISE(ABORT, 'collection demands are never deleted'); END;
 
 CREATE TRIGGER IF NOT EXISTS field_value_no_update BEFORE UPDATE ON field_value
 BEGIN SELECT RAISE(ABORT, 'field_value is append-only: add a new row instead'); END;
@@ -224,21 +255,19 @@ def connect(db_path: Path | None = None) -> sqlite3.Connection:
     con = sqlite3.connect(path)
     con.row_factory = sqlite3.Row
     con.execute("PRAGMA foreign_keys = ON")
+    _replace_first_gvp_tables(con)
     con.executescript(_SCHEMA)
-    _add_missing_columns(con)
     return con
 
 
-# Columns added after a table was first created. CREATE TABLE IF NOT EXISTS does not add them.
-_LATER_COLUMNS = {"gvp": {"road_u": "INTEGER", "road_v": "INTEGER", "road_name": "TEXT", "snap_m": "REAL"}}
-
-
-def _add_missing_columns(con: sqlite3.Connection) -> None:
-    for table, cols in _LATER_COLUMNS.items():
-        have = {r[1] for r in con.execute(f"PRAGMA table_info({table})")}
-        for col, kind in cols.items():
-            if col not in have:
-                con.execute(f"ALTER TABLE {table} ADD COLUMN {col} {kind}")
+def _replace_first_gvp_tables(con: sqlite3.Connection) -> None:
+    """The first GVP tables (before the lifecycle) were never deployed. Replace them while empty."""
+    cols = {r[1] for r in con.execute("PRAGMA table_info(gvp)")}
+    if not cols or "severity" in cols:
+        return
+    if con.execute("SELECT COUNT(*) FROM gvp").fetchone()[0]:
+        raise RuntimeError("data/survey.db has GVPs in the old format; migrate them before upgrading.")
+    con.executescript("DROP TABLE IF EXISTS gvp_event; DROP TABLE IF EXISTS gvp_observation; DROP TABLE IF EXISTS gvp;")
 
 
 def record_value(con: sqlite3.Connection, entity_type: str, entity_id: str, field: str, value, source: str,
