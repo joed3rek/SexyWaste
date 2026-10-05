@@ -17,6 +17,8 @@ PHOTO_RETENTION_DAYS = 365
 
 # Survey quality settings (not regulation).
 GPS_WARN_DISTANCE_M = 50        # warn when the phone's position is this far from the building footprint
+GVP_MAX_ROAD_DISTANCE_M = 30    # a garbage vulnerable point is on a road: a pin further than this from any road is refused
+GVP_MERGE_DISTANCE_M = 25       # a new report this close to an open GVP is a new observation of it, not a new GVP
 SPOT_CHECK_RATE = 0.05          # share of each surveyor's completed quick visits sampled per week
 SPOT_CHECK_WINDOW_DAYS = 7
 

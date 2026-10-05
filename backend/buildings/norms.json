@@ -280,5 +280,20 @@
     "under_construction": "construction",
     "vacant_or_abandoned": "structure",
     "non_occupied_structure": "structure"
+  },
+  "gvp": {
+    "_note": "ESTIMATE. Turns a garbage vulnerable point observation (amount each time it builds up, and how often) into kg per day for route planning. Replace with weighed pickups when collected.",
+    "build_ups_per_day": {
+      "daily": 1.0,
+      "few_times_a_week": 0.43,
+      "weekly": 0.14,
+      "occasionally": 0.033
+    },
+    "size_kg": {
+      "small": 10,
+      "medium": 50,
+      "large": 200
+    },
+    "_size_note": "ESTIMATE. Kg for the public's size choice: small (a few bags), medium (a pile about a handcart load), large (a heap needing a vehicle). Surveyors enter kg directly."
   }
 }

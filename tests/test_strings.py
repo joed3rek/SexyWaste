@@ -8,7 +8,8 @@ from backend import auth
 from backend.survey import db, uses
 
 FRONTEND = Path(__file__).resolve().parent.parent / "frontend"
-BUILT_PAGES = ["index.html", "admin.html", "surveyor.html", "supervisor.html", "surveyor.js", "supervisor.js", "survey_flow.js", "ui.js"]
+BUILT_PAGES = ["index.html", "admin.html", "surveyor.html", "supervisor.html", "surveyor.js", "supervisor.js", "survey_flow.js", "ui.js",
+               "report.html", "report.js"]
 STRINGS = json.loads((FRONTEND / "strings.json").read_text(encoding="utf-8"))["strings"]
 
 
@@ -36,6 +37,10 @@ def test_every_value_shown_to_surveyors_has_a_label():
         if isinstance(values, tuple):
             needed += [f"value.{field}.{v}" for v in values]
     needed += [f"field.{f}" for f in db.USE_MIX_FIELDS]
+    needed += [f"freq.{k}" for k in db.GVP_FREQUENCIES] + [f"src.{k}" for k in db.GVP_SOURCES]
+    needed += [f"int.{k}" for k in db.GVP_INTERVENTIONS] + [f"gvp.status.{k}" for k in db.GVP_STATUSES]
+    from backend.survey import gvp
+    needed += [f"pub.size.{k}" for k in gvp.size_kg()]
     needed += [f"role.{r['key']}" for r in auth.roles()] + [f"role.{r['key']}.description" for r in auth.roles()]
     missing = [k for k in needed if k not in STRINGS]
     assert not missing, missing

@@ -51,6 +51,12 @@ BUILDING_FIELDS = {
 }
 USE_MIX_FIELDS = {"count": "number", "occupants_total": "number", "beds_total": "number"}
 
+# Garbage vulnerable points (SWM Rules 2026, r. 15(1): geo-mapped and assessed for accumulation).
+GVP_STATUSES = ("active", "cleared", "closed")  # cleared: no waste now, still watched; closed: no longer a GVP
+GVP_FREQUENCIES = ("daily", "few_times_a_week", "weekly", "occasionally")  # how often waste builds up again
+GVP_SOURCES = ("households", "shops", "street_vendors", "market", "construction", "passers_by", "unknown")
+GVP_INTERVENTIONS = ("cleared", "bin_placed", "signage", "cctv", "beautification", "awareness_drive", "notice_issued", "other")
+
 _SCHEMA = f"""
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
 
@@ -146,6 +152,51 @@ CREATE TABLE IF NOT EXISTS sector_assignment (
     ended_at TEXT
 );
 
+CREATE TABLE IF NOT EXISTS gvp (
+    id TEXT PRIMARY KEY,
+    pilot TEXT NOT NULL,
+    sector TEXT,
+    lon REAL NOT NULL, lat REAL NOT NULL,
+    landmark TEXT,
+    road_u INTEGER, road_v INTEGER, road_name TEXT, snap_m REAL,  -- the road it is on (OSM nodes) and how far the pin was moved
+    status TEXT NOT NULL DEFAULT 'active' CHECK (status IN {GVP_STATUSES}),
+    collect INTEGER NOT NULL DEFAULT 1,       -- 1: an active GVP is a stop on collection routes
+    created_by TEXT, created_role TEXT, created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS gvp_observation (
+    id TEXT PRIMARY KEY,
+    gvp_id TEXT NOT NULL REFERENCES gvp(id),
+    at TEXT NOT NULL,
+    user_name TEXT, user_role TEXT,
+    streams TEXT NOT NULL,                    -- JSON list of waste streams seen
+    quantity_kg REAL NOT NULL,                -- approximate amount each time it builds up
+    frequency TEXT NOT NULL CHECK (frequency IN {GVP_FREQUENCIES}),
+    sources TEXT NOT NULL,                    -- JSON list of likely generators
+    photo_path TEXT, photo_sha256 TEXT,
+    note TEXT
+);
+CREATE TABLE IF NOT EXISTS gvp_event (
+    id TEXT PRIMARY KEY,
+    gvp_id TEXT NOT NULL REFERENCES gvp(id),
+    at TEXT NOT NULL,
+    user_name TEXT, user_role TEXT,
+    kind TEXT NOT NULL,                       -- an intervention, 'status' or 'collect'
+    value TEXT,                               -- new status or collect flag
+    note TEXT
+);
+CREATE TRIGGER IF NOT EXISTS gvp_observation_no_update BEFORE UPDATE ON gvp_observation
+WHEN NEW.id IS NOT OLD.id OR NEW.gvp_id IS NOT OLD.gvp_id OR NEW.at IS NOT OLD.at OR NEW.streams IS NOT OLD.streams
+  OR NEW.quantity_kg IS NOT OLD.quantity_kg OR NEW.frequency IS NOT OLD.frequency OR NEW.sources IS NOT OLD.sources
+BEGIN SELECT RAISE(ABORT, 'gvp_observation is append-only: only the photo can be attached later'); END;
+CREATE TRIGGER IF NOT EXISTS gvp_observation_no_delete BEFORE DELETE ON gvp_observation
+BEGIN SELECT RAISE(ABORT, 'gvp_observation is append-only'); END;
+CREATE TRIGGER IF NOT EXISTS gvp_event_no_update BEFORE UPDATE ON gvp_event
+BEGIN SELECT RAISE(ABORT, 'gvp_event is append-only'); END;
+CREATE TRIGGER IF NOT EXISTS gvp_event_no_delete BEFORE DELETE ON gvp_event
+BEGIN SELECT RAISE(ABORT, 'gvp_event is append-only'); END;
+CREATE TRIGGER IF NOT EXISTS gvp_no_delete BEFORE DELETE ON gvp
+BEGIN SELECT RAISE(ABORT, 'GVPs are never deleted: close them'); END;
+
 CREATE TRIGGER IF NOT EXISTS field_value_no_update BEFORE UPDATE ON field_value
 BEGIN SELECT RAISE(ABORT, 'field_value is append-only: add a new row instead'); END;
 CREATE TRIGGER IF NOT EXISTS field_value_no_delete BEFORE DELETE ON field_value
@@ -174,7 +225,20 @@ def connect(db_path: Path | None = None) -> sqlite3.Connection:
     con.row_factory = sqlite3.Row
     con.execute("PRAGMA foreign_keys = ON")
     con.executescript(_SCHEMA)
+    _add_missing_columns(con)
     return con
+
+
+# Columns added after a table was first created. CREATE TABLE IF NOT EXISTS does not add them.
+_LATER_COLUMNS = {"gvp": {"road_u": "INTEGER", "road_v": "INTEGER", "road_name": "TEXT", "snap_m": "REAL"}}
+
+
+def _add_missing_columns(con: sqlite3.Connection) -> None:
+    for table, cols in _LATER_COLUMNS.items():
+        have = {r[1] for r in con.execute(f"PRAGMA table_info({table})")}
+        for col, kind in cols.items():
+            if col not in have:
+                con.execute(f"ALTER TABLE {table} ADD COLUMN {col} {kind}")
 
 
 def record_value(con: sqlite3.Connection, entity_type: str, entity_id: str, field: str, value, source: str,

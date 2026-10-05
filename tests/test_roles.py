@@ -33,7 +33,7 @@ def test_roles_have_valid_login_jurisdiction_and_text():
 
 def test_only_this_tasks_roles_are_built_and_they_have_a_home():
     built = {r["key"] for r in auth.roles() if r["built"]}
-    assert built == {"surveyor", "survey_supervisor", "admin"}
+    assert built == {"surveyor", "survey_supervisor", "admin", "fleet_workforce_manager", "generator"}
     assert all(r.get("home") for r in auth.roles() if r["built"])
 
 

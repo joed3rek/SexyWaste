@@ -396,7 +396,9 @@ def purge_old_photos(days: int = PHOTO_RETENTION_DAYS, db_path: Path | None = No
     con = db.connect(db_path)
     try:
         removed = 0
-        for r in con.execute("SELECT file_path FROM photo WHERE taken_at < ?", (cutoff,)):
+        old = list(con.execute("SELECT file_path FROM photo WHERE taken_at < ?", (cutoff,)))
+        old += list(con.execute("SELECT photo_path FROM gvp_observation WHERE photo_path IS NOT NULL AND at < ?", (cutoff,)))
+        for r in old:
             p = Path(r[0])
             if p.exists():
                 p.unlink()

@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <link rel="icon" href="data:," />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Building survey</title>
+  <title>Report dumped waste</title>
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -17,26 +17,17 @@
 
   <header class="sv-top card-float">
     <div class="sv-top-row">
-      <div><b data-t="sv.title"></b><br><span id="who" class="muted small"></span></div>
+      <div><b data-t="pub.title"></b><br><span id="who" class="muted small"></span></div>
       <button type="button" id="signOut" class="ghost small" data-t="common.sign_out"></button>
     </div>
-    <div id="progress" class="sv-progress"><span class="muted small" data-t="common.loading"></span></div>
-    <p id="tapHint" class="hint small sv-hint" data-t="sv.tap_hint" hidden></p>
+    <p class="hint small sv-hint" data-t="pub.hint"></p>
   </header>
 
-  <div class="sv-actions">
-    <button type="button" id="legendBtn" class="secondary small" data-t="sv.legend"></button>
-    <button type="button" id="missingBtn" class="secondary small" data-t="sv.report_missing"></button>
-    <button type="button" id="gvpBtn" class="secondary small" data-t="sv.report_gvp"></button>
-  </div>
-  <div id="legend" class="sv-legend card-float" hidden></div>
   <div id="toast" class="toast" hidden></div>
-
   <section id="sheet" class="sv-sheet card-float" hidden aria-live="polite"></section>
 
   <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
   <script src="ui.js"></script>
-  <script src="survey_flow.js"></script>
-  <script src="surveyor.js"></script>
+  <script src="report.js"></script>
 </body>
 </html>

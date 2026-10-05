@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 
 from backend import auth
 from backend.config import PILOTS
-from backend.survey import db, service, uses
+from backend.survey import db, gvp, service, uses
 from backend.survey.service import SurveyError
 
 router = APIRouter()
@@ -58,6 +58,8 @@ def survey_config():
         "building_fields": {k: (list(v) if isinstance(v, tuple) else v) for k, v in db.BUILDING_FIELDS.items()},
         "geometry_flag_kinds": db.FLAG_KINDS,
         "sources": db.SOURCES,
+        "gvp": {"statuses": db.GVP_STATUSES, "frequencies": db.GVP_FREQUENCIES, "sources": db.GVP_SOURCES,
+                "interventions": db.GVP_INTERVENTIONS, "sizes": list(gvp.size_kg()), "rule": gvp.rule()},
     }
 
 
@@ -242,3 +244,66 @@ def end_assignment(pilot_key: str, assignment_id: str, request: Request):
     _pilot(pilot_key)
     _run(service.end_assignment, assignment_id, _actor(request))
     return {"status": "ended"}
+
+
+# ---------- Garbage vulnerable points ----------
+
+class GvpObservationIn(BaseModel):
+    streams: list[str]
+    quantity_kg: float | None = None
+    size: str | None = None  # the public's choice instead of kg: small, medium or large
+    frequency: str
+    sources: list[str] = []
+    note: str | None = Field(None, max_length=500)
+
+
+class GvpIn(GvpObservationIn):
+    lon: float
+    lat: float
+    landmark: str | None = Field(None, max_length=120)
+
+
+class GvpEventIn(BaseModel):
+    kind: str
+    value: str | None = None
+    note: str | None = Field(None, max_length=500)
+
+
+@router.get("/api/pilots/{pilot_key}/gvps")
+def list_gvps(pilot_key: str, sector: str | None = None):
+    return {"gvps": _run(gvp.list_gvps, _pilot(pilot_key), sector), "rule": gvp.rule()}
+
+
+@router.get("/api/pilots/{pilot_key}/gvps.geojson")
+def gvps_geojson(pilot_key: str):
+    """For publishing on the portal and the local body website (SWM Rules 2026, r. 15(1))."""
+    return _run(gvp.geojson, _pilot(pilot_key))
+
+
+@router.get("/api/pilots/{pilot_key}/gvps/{gvp_id}")
+def gvp_detail(pilot_key: str, gvp_id: str):
+    return _run(gvp.detail, _pilot(pilot_key), gvp_id)
+
+
+@router.post("/api/pilots/{pilot_key}/gvps")
+def report_gvp(pilot_key: str, body: GvpIn, request: Request):
+    return _run(gvp.report, _pilot(pilot_key), _actor(request), body.lon, body.lat, body.streams, body.quantity_kg,
+                body.frequency, body.sources, body.landmark, body.note, body.size)
+
+
+@router.post("/api/pilots/{pilot_key}/gvps/{gvp_id}/observations")
+def observe_gvp(pilot_key: str, gvp_id: str, body: GvpObservationIn, request: Request):
+    return _run(gvp.observe, _pilot(pilot_key), gvp_id, _actor(request), body.streams, body.quantity_kg, body.frequency,
+                body.sources, body.note, body.size)
+
+
+@router.post("/api/pilots/{pilot_key}/gvp-observations/{observation_id}/photo")
+async def gvp_photo(pilot_key: str, observation_id: str, request: Request):
+    actor = _actor(request)
+    data = await request.body()
+    return _run(gvp.add_photo, _pilot(pilot_key), observation_id, actor, data)
+
+
+@router.post("/api/pilots/{pilot_key}/gvps/{gvp_id}/events")
+def gvp_event(pilot_key: str, gvp_id: str, body: GvpEventIn, request: Request):
+    return _run(gvp.record_event, _pilot(pilot_key), gvp_id, _actor(request), body.kind, body.value, body.note)

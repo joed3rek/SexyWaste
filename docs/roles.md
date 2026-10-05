@@ -10,7 +10,7 @@ Roles are defined in `backend/auth/roles.json`. Each role has a key, a label, a 
 | Survey supervisor | Yes | `supervisor.html` | Assigns sectors, spot-checks surveys and resolves map problems |
 | Admin | Yes | `admin.html` | Manages users, roles and jurisdictions (role list only for now) |
 | Planner | Partly | `map.html?role=planner` | Waste profile, routes and transfer stations (map and route builder) |
-| Fleet and workforce manager | No | | Vehicle inventory, staff, shifts and PPE records |
+| Fleet and workforce manager | Fleet only | `fleet.html` | Vehicle inventory now; staff, shifts and PPE records later |
 | Driver | No | | Assigned route and navigation only |
 | Collector (pourakarmika) | No | | Shift, collection confirmations, missed pickups, GVPs, unsafe conditions |
 | Operations supervisor | No | | Live command centre, route reassignment, penalty validation |
@@ -19,7 +19,7 @@ Roles are defined in `backend/auth/roles.json`. Each role has a key, a label, a 
 | Recycler (formal or informal) | No | | Pickups, materials and volumes |
 | Ward officer | No | | Coverage, BWGs, compliance and analytics for the ward |
 | Trainer | No | | Training modules and completion |
-| Generator (household, RWA, BWG) | No | | Their building, schedule and status; complaints |
+| Generator (household, RWA, BWG) | GVP reports only | `report.html` | Reports dumped waste now; their building, schedule, status and complaints later |
 
 Roles that are not built open `stub.html`.
 
@@ -82,6 +82,19 @@ Stored in SQLite at `data/survey.db` (`backend/survey/db.py`).
 - **Items to review:** contradictions, GPS distance, spot-check mismatches, and map problems, each with a link to the building.
 - **Sector assignments:** which surveyor works which sector.
 
+### Garbage vulnerable points
+
+SWM Rules 2026, r. 15(1): every garbage vulnerable point (GVP) is to be geo-mapped and assessed for accumulation by the deadline in the regulations library (31 October 2026), and published on the portal and the local body website.
+
+- **Who maps them.** Surveyors and survey supervisors (in their own sectors) from the surveyor screen, with **Report GVP**; and the public (the generator role) anywhere in the pilot from `report.html`, "Report dumped waste".
+- **On the road.** A GVP is always on a road. The pin is moved to the nearest point on the nearest road, and refused when no road is within 30 m (`GVP_MAX_ROAD_DISTANCE_M`). The road is stored, and the collection vehicle drives it.
+- **No duplicates.** A report within 25 m (`GVP_MERGE_DISTANCE_M`) of a GVP that is not closed is added to that GVP as a new observation. If it had been cleared, it becomes active again.
+- **The form.** Surveyors give waste streams seen, roughly how many kg build up each time, how often, who probably dumps there, a landmark, a photo and a note. The public picks the kind of waste ("mixed / not sure" counts as wet and dry), a size instead of kg (small, medium, large, turned into kg by estimates in `norms.json`), how often, a landmark and a photo.
+- **Assessing accumulation.** Each later visit adds an observation beside the earlier ones (`gvp_observation`, append-only). The latest observation sets the estimate: kg per build-up × build-ups per day, with the factors in `backend/buildings/norms.json` (`gvp`). Shown as an estimate.
+- **Interventions and status.** A survey supervisor records interventions (cleared, bin placed, signage, CCTV, beautification, awareness drive, notice issued, other), sets the status (active, cleared, closed) and can take a GVP off the routes. All in `gvp_event`, append-only. GVPs are never deleted, only closed.
+- **On the routes.** As soon as it is saved, an active GVP marked for collection, whoever reported it, becomes a stop in the route builder on its road, its waste split evenly over the streams seen. It is not sent to park composting. Public reports are not checked first; a supervisor can close a false report or take it off the routes.
+- **Publishing.** The supervisor page shows the rule, the deadline and how many GVPs are mapped, and links to `/api/pilots/hsr/gvps.geojson` with every GVP's location, status and latest assessment.
+
 ### What the survey changes downstream
 
 - `backend/buildings/generators.py` estimates waste from the use mix, then from the building-use typology, then from OSM. Rates are estimates in `backend/buildings/norms.json`.
@@ -89,3 +102,18 @@ Stored in SQLite at `data/survey.db` (`backend/survey/db.py`).
   - **Confirmed:** the surveyed building use is a BWG entity, and floor area (surveyed floors × OSM footprint) or weighed waste is over the threshold read from the regulations library.
   - **Likely:** the estimates alone point to a BWG. These are Round 2 candidates and are outlined in red on the surveyor map.
 - The route planner leaves out wet waste only for confirmed BWGs (SWM Rules 2026, r. 6), and only collects the wet waste a building does not compost itself.
+
+## Fleet inventory
+
+`fleet.html`, kept by the fleet and workforce manager (or an admin), lists the vehicles that exist. Data is in `data/ops.db` (`backend/fleet`).
+
+- Each vehicle has a type (from `reference/vehicles.json`), a registration or fleet ID (unique), where it is based (a sector, or the shared pool for all sectors), a status (available, under repair, off road, retired) and the waste streams it may carry.
+- Payload, body volume, width, narrowest road and compartments default to the type. A vehicle's own figure can be entered when it differs; both are shown.
+- "I have checked this vehicle and its papers today" records who checked it and when.
+- Every change is written to `vehicle_log`, which is append-only.
+
+**The cap.** A plan for a sector may use at most the *available* vehicles of each type based in that sector plus the shared pool. The route builder shows "of N" beside each count, the API refuses a plan over the cap, and Suggest fleet stays within it and says how many more vehicles of each type would be needed. Until the first vehicle is entered, plans are not capped and are labelled "hypothetical fleet".
+
+Shared-pool vehicles count towards every sector, because sectors are planned one at a time. Planning several sectors on the same day with the same pool vehicles is not checked yet.
+
+Route plans still use each type's figures, not each vehicle's own figures.

@@ -101,10 +101,12 @@ function fleetRow(container, tier, type, count) {
     <input type="number" min="0" max="200" value="${count}" title="Number of vehicles" />
     <button class="x" title="Remove">×</button>`;
   const sel = row.querySelector("select");
-  sel.addEventListener("change", () => { row.querySelector("img").src = opts.find((o) => o.key === sel.value).icon; clearResult(); });
+  sel.addEventListener("change", () => { row.querySelector("img").src = opts.find((o) => o.key === sel.value).icon; clearResult(); renderAvail(); });
   row.querySelector("input").addEventListener("change", clearResult);
-  row.querySelector(".x").addEventListener("click", () => { row.remove(); clearResult(); });
+  row.querySelector("input").addEventListener("input", renderAvail);
+  row.querySelector(".x").addEventListener("click", () => { row.remove(); clearResult(); renderAvail(); });
   container.appendChild(row);
+  renderAvail();
 }
 const fleetOf = (id) => [...$(id).querySelectorAll(".fleet-row")].map((r) => ({ type: r.querySelector("select").value, count: +r.querySelector("input").value || 0 })).filter((r) => r.count > 0);
 $("addPrimary").addEventListener("click", () => fleetRow($("primaryFleet"), "primary", null, 1));
@@ -156,10 +158,11 @@ map.on("load", async () => {
     map.addSource("points", { type: "geojson", data: empty });
     map.addLayer({ id: "points", type: "circle", source: "points", paint: {
       "circle-radius": ["interpolate", ["linear"], ["get", "kg"], 0, 2.5, 100, 5, 500, 9],
-      "circle-color": ["coalesce", ["get", "color"], "#64748b"], "circle-stroke-color": "#fff", "circle-stroke-width": 1, "circle-opacity": 0.9 } });
+      "circle-color": ["coalesce", ["get", "color"], "#64748b"], "circle-stroke-color": ["case", ["get", "is_gvp"], "#dc2626", "#fff"], "circle-stroke-width": ["case", ["get", "is_gvp"], 3, 1], "circle-opacity": 0.9 } });
     map.on("mousemove", "points", (e) => {
       const p = e.features[0].properties;
-      popup.setLngLat(e.lngLat).setHTML(`<b>${esc(p.label)}</b><br>${esc(p.use)} · ${fmt(p.buildings)} buildings · ${fmt(p.kg, 1)} kg/day (est.)${p.station ? `<br>→ ${esc(p.station)}` : ""}`).addTo(map);
+      const what = p.is_gvp ? `garbage vulnerable point, ${p.public ? "reported by the public" : "from survey observations"}` : `${esc(p.use)} · ${fmt(p.buildings)} buildings`;
+      popup.setLngLat(e.lngLat).setHTML(`<b>${esc(p.label)}</b><br>${what} · ${fmt(p.kg, 1)} kg/day (est.)${p.station ? `<br>→ ${esc(p.station)}` : ""}`).addTo(map);
       highlightPoint(p.id, p.color);
     });
     map.on("mouseleave", "points", () => { popup.remove(); highlightPoint(null); });
@@ -186,7 +189,7 @@ async function selectSector() {
   const kg = d.points.reduce((a, p) => a + p.total_kg, 0);
   $("sectorInfo").textContent = `${fmt(d.points.length)} door-to-door collection points (street runs), about ${fmt(kg / 1000, 1)} t/day estimated.`;
   drawPoints();
-  await Promise.all([suggest(), loadParks()]);
+  await Promise.all([suggest(), loadParks(), loadAvail(name)]);
 }
 
 // Building footprints by id, loaded once, for highlighting a point's plots.
@@ -212,10 +215,48 @@ function highlightPoint(id, color) {
     ? [{ type: "Feature", geometry: { type: "LineString", coordinates: p.street }, properties: { color: c } }] : [] });
 }
 
+// ---------- Fleet inventory: a plan may not use more vehicles than the sector has ----------
+
+async function loadAvail(sector) {
+  try {
+    state.avail = await api(`/api/pilots/${PILOT}/fleet/available?sector=${encodeURIComponent(sector)}`);
+  } catch {
+    state.avail = null;
+  }
+  renderAvail();
+}
+
+function renderAvail() {
+  const av = state.avail;
+  const note = $("fleetNote");
+  if (!note) return;
+  if (!av || !av.inventory) {
+    note.innerHTML = `No fleet inventory entered yet, so these counts are hypothetical. <a href="fleet.html">Enter the fleet</a> to plan with the vehicles that exist.`;
+  } else {
+    const n = Object.values(av.by_type).reduce((a, b) => a + b, 0);
+    note.innerHTML = `${n} vehicle(s) available for ${esc($("sector").value)} (based here or in the shared pool). <a href="fleet.html">Fleet</a>`;
+  }
+  const used = {};
+  document.querySelectorAll(".fleet-row").forEach((row) => {
+    const type = row.querySelector("select").value;
+    used[type] = (used[type] || 0) + (+row.querySelector("input").value || 0);
+  });
+  document.querySelectorAll(".fleet-row").forEach((row) => {
+    let tag = row.querySelector(".fleet-avail");
+    if (!tag) { tag = document.createElement("span"); tag.className = "fleet-avail"; row.querySelector("input").after(tag); }
+    if (!av || !av.inventory) { tag.textContent = ""; row.querySelector("input").removeAttribute("max"); return; }
+    const type = row.querySelector("select").value, have = av.by_type[type] || 0;
+    tag.textContent = `of ${have}`;
+    tag.classList.toggle("over", used[type] > have);
+    tag.title = used[type] > have ? `Only ${have} available for this sector` : `${have} available for this sector`;
+    row.querySelector("input").max = have;
+  });
+}
+
 function drawPoints(assign) {
   map.getSource("points").setData({ type: "FeatureCollection", features: state.points.map((p) => ({
     type: "Feature", geometry: { type: "Point", coordinates: [p.lon, p.lat] },
-    properties: { id: p.id, label: p.label, use: p.use, buildings: p.buildings, kg: p.total_kg, station: assign?.[p.id]?.station || "", color: assign?.[p.id]?.color || null },
+    properties: { id: p.id, is_gvp: !!p.is_gvp, public: !!p.reported_by_public, label: p.label, use: p.use, buildings: p.buildings, kg: p.total_kg, station: assign?.[p.id]?.station || "", color: assign?.[p.id]?.color || null },
   })) });
 }
 
@@ -337,6 +378,7 @@ function setFleet(s) {
   $("secondaryFleet").innerHTML = "";
   s.primary_fleet.forEach((r) => fleetRow($("primaryFleet"), "primary", r.type, r.count));
   s.secondary_fleet.forEach((r) => fleetRow($("secondaryFleet"), "secondary", r.type, r.count));
+  renderAvail();
 }
 
 function showFleetAdvice(s) {
@@ -348,7 +390,8 @@ function showFleetAdvice(s) {
     if (a.code === "stations_little_effect") return `More transfer stations would save little: they only shorten driving, which is ${a.driving_pct}% of the time. The number of vehicles is what sets the time.`;
     if (a.code === "stations_over_capacity") return `${a.stations.map(esc).join(", ")} hold more than their capacity: add a transfer station near them.`;
     if (a.code === "trucks_limit") return `Trucks set the finish time (${hm(a.truck_min)}): an extra truck finishes sooner.`;
-    if (a.code === "not_reached") return `The target was not reached in ${s.rounds.length} rounds. This is the fastest plan found (${hm(a.time_min)}); press Suggest fleet again to continue from it.`;
+    if (a.code === "fleet_short") return `The fleet that exists is not enough: it would take ${a.needs.map((x) => `${x.more} more ${esc(x.label)}`).join(" and ")} to finish in time. Add them on the <a href="fleet.html">Fleet</a> page, or raise the target time.`;
+    if (a.code === "not_reached") return `The target was not reached in ${s.rounds.length} round${s.rounds.length === 1 ? "" : "s"}. This is the fastest plan found (${hm(a.time_min)}); press Suggest fleet again to continue from it.`;
     return "";
   }).filter(Boolean);
   $("fleetAdvice").innerHTML = `
@@ -411,6 +454,7 @@ function renderResult() {
   ].map(([k, v, sub, bad]) => `<div class="kpi ${bad ? "bad" : ""}"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${sub}</div></div>`).join("");
 
   const warn = [];
+  if (r.fleet_basis === "hypothetical") warn.push(`Hypothetical fleet: no fleet inventory has been entered, so these vehicles may not exist. <a href="fleet.html">Enter the fleet</a>.`);
   if (!s.within_shift) warn.push(`The work takes ${hm(s.time_to_complete_min)}, longer than the ${hm(s.shift_min)} shift. Add vehicles or plan a second shift.`);
   if (s.vehicles_over_shift.length) warn.push(`Over shift: ${s.vehicles_over_shift.map(esc).join(", ")}.`);
   if (s.uncollected_kg > 0) warn.push(`${fmt(s.uncollected_kg)} kg/day at ${s.uncollected_points.length} point(s) could not be collected (street too narrow for every vehicle, or not enough capacity).`);

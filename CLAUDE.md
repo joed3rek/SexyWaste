@@ -18,7 +18,9 @@ GIS and optimisation decision-support app for municipal solid waste management i
 - Every value has a source: assumed < surveyed < verified < weighed. Read values through `backend/survey/resolve.py`, never straight from the table.
 - Sign-in is a dummy login: role, name and sectors arrive as `X-SWM-*` headers and are unverified (`backend/auth`). Browser writes go through `swmWrite()` in `ui.js`.
 - Surveyor and supervisor text lives in `frontend/strings.json` (en, kn). Use `t()`; do not hard-code UI text in those pages. Server messages carry codes, worded in the browser.
-- Roles and the survey flow are described in `docs/roles.md`.
+- Garbage vulnerable points live in the survey database (`backend/survey/gvp.py`); observations and events are append-only. Their kg/day factors are estimates in `norms.json`.
+- The fleet inventory (`backend/fleet`, `data/ops.db`) caps plans per sector. Tests get an empty fleet store from `tests/conftest.py`.
+- Roles, the survey flow, GVPs and the fleet are described in `docs/roles.md`.
 - When a new regulatory document is provided, add it to the library following `docs/regulations/README.md`. Source PDFs go in `data/regulations/` (git-ignored).
 - Write text files as UTF-8 explicitly. Python's default encoding on this machine is cp1252.
 

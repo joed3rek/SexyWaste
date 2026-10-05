@@ -21,7 +21,7 @@
      "description": "Assigns sectors, spot-checks surveys and resolves map problems."},
     {"key": "planner", "label": "Planner", "module": "planning", "login": "email_password", "jurisdiction": "city", "built": false, "home": "map.html?role=planner",
      "description": "Reads the waste profile and designs collection cycles, routes and transfer stations."},
-    {"key": "fleet_workforce_manager", "label": "Fleet and workforce manager", "module": "planning", "login": "email_password", "jurisdiction": "city", "built": false,
+    {"key": "fleet_workforce_manager", "label": "Fleet and workforce manager", "module": "planning", "login": "email_password", "jurisdiction": "city", "built": true, "home": "fleet.html",
      "description": "Maintains the vehicle inventory, staff, shifts and PPE records."},
     {"key": "driver", "label": "Driver", "module": "operations", "login": "phone_pin_icons", "jurisdiction": "ward", "built": false,
      "description": "Sees the assigned route and navigation, nothing more."},
@@ -39,7 +39,7 @@
      "description": "Sees coverage, bulk waste generators, compliance and analytics for the ward."},
     {"key": "trainer", "label": "Trainer", "module": "governance", "login": "email_password", "jurisdiction": "city", "built": false,
      "description": "Assigns and tracks training modules."},
-    {"key": "generator", "label": "Generator (household, RWA, BWG)", "module": "public", "login": "phone_otp", "jurisdiction": "sector", "built": false,
+    {"key": "generator", "label": "Generator (household, RWA, BWG)", "module": "public", "login": "phone_otp", "jurisdiction": "sector", "built": true, "home": "report.html",
      "description": "Sees their building, schedule and status, and reports complaints."},
     {"key": "admin", "label": "Admin", "module": "system", "login": "email_password", "jurisdiction": "city", "built": true, "home": "admin.html",
      "description": "Manages users, roles and jurisdictions."}

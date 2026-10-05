@@ -704,3 +704,17 @@ body.surveyor #map { inset: 0 0 0 var(--rail-w); }
 .fleet-advice p { margin: 4px 0; }
 .fleet-advice ul { margin: 4px 0 0; padding-left: 18px; }
 .sv-hint { margin: 8px 0 0; }
+
+.fleet-filters { margin-bottom: 8px; }
+.fleet-form { max-width: 720px; }
+.fleet-form .streams div { display: flex; flex-wrap: wrap; gap: 6px 16px; }
+.fleet-avail { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.fleet-avail.over { color: var(--danger, #b91c1c); font-weight: 600; }
+#list select[data-status] { min-width: 132px; }
+
+.swatch.dot { border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.15); }
+.chip-btn { padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line, #d0d5dd); background: var(--surface, #fff); font-size: 13px; cursor: pointer; }
+.chip-btn:active { background: var(--surface-2); }
+.gvp-log { margin: 4px 0 10px; padding-left: 18px; }
+.gvp-log li { margin: 2px 0; }
+.gvp-manage { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line, #e4e7ec); display: grid; gap: 8px; }

@@ -93,6 +93,23 @@ async function loadReviews() {
   }
 }
 
+async function loadGvps() {
+  try {
+    const { gvps, rule } = await apiFetch(`/api/pilots/${PILOT}/gvps`);
+    const mine = gvps.filter((g) => SESSION.sectors.includes(g.sector));
+    $("gvpRule").textContent = t("sup.gvp_rule", { rule: rule.rule, text: rule.text });
+    $("gvpCount").textContent = t("sup.gvp_count", { n: fmt(mine.length), active: fmt(mine.filter((g) => g.status === "active").length), date: rule.deadline });
+    $("gvps").innerHTML = mine.length
+      ? table([esc(t("col.place")), esc(t("col.sector")), esc(t("col.status")), esc(t("col.kg_day")), esc(t("col.last_seen")), esc(t("col.interventions")), esc(t("col.routes"))],
+        mine.map((g) => [`<a href="surveyor.html?gvp=${encodeURIComponent(g.id)}">${esc(g.landmark || g.road_name || t("gvp.title"))}</a>${g.reported_by_public ? `<br><span class="muted small">${esc(t("gvp.reported_by_public"))}</span>` : ""}`, esc(g.sector),
+          esc(t(`gvp.status.${g.status}`)), fmt(g.kg_per_day, 1), esc((g.last_observed_at || "").slice(0, 10)), fmt(g.interventions),
+          esc(t(g.on_routes ? "gvp.on_routes" : "gvp.off_routes"))]))
+      : `<p class="hint">${esc(t("sup.gvps_empty"))}</p>`;
+  } catch (err) {
+    failed("gvps", err);
+  }
+}
+
 async function loadAssignments() {
   try {
     const { assignments } = await apiFetch(`/api/pilots/${PILOT}/assignments`);
@@ -142,5 +159,6 @@ $("assignForm").addEventListener("submit", async (e) => {
   loadProgress();
   loadQueue();
   loadReviews();
+  loadGvps();
   loadAssignments();
 })();

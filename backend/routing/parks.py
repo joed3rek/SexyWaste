@@ -104,7 +104,7 @@ def allocate(pts: list[dict], site_list: list[dict], site_nodes: dict, reach, ra
             continue
         dist = reach(site_nodes[s["id"]], radius_m)
         for i, p in enumerate(pts):
-            if p.get("is_bwg") or p["load"].get("wet", 0) <= 0:
+            if p.get("is_bwg") or p.get("is_gvp") or p["load"].get("wet", 0) <= 0:  # dumped waste is not composted
                 continue
             d = dist.get(p["node"])
             if d is not None and d <= radius_m:

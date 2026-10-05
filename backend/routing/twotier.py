@@ -114,8 +114,10 @@ def _litres(kg_by_stream: dict, density: dict) -> float:
 # ---------- Transfer stations ----------
 
 def _sector_points(inp: PlanInput) -> list[dict]:
-    from backend.survey import state
+    from backend.survey import gvp, state
     pts = P.collection_points(inp.pilot, state.building_states(inp.pilot), inp.sector)
+    # Active garbage vulnerable points are stops on the routes too.
+    pts += gvp.collection_points(inp.pilot, inp.sector) if inp.sector else []
     out = []
     for p in pts:
         kg = {s: (0.0 if s == "wet" and p.get("wet_excluded") else p["kg"][s]) for s in inp.streams}
@@ -997,17 +999,36 @@ def _count(rows: list[dict]) -> int:
     return sum(int(r["count"]) for r in rows)
 
 
-def suggest_fleet(inp: PlanInput, target_h: float, progress=None, rounds: int = 4) -> dict:
+def _cap(rows: list[dict], caps: dict | None, short: dict) -> list[dict]:
+    """Hold each type to the vehicles available; note how many more were wanted."""
+    if caps is None:
+        return rows
+    out = []
+    for r in rows:
+        have = int(caps.get(r["type"], 0))
+        if r["count"] > have:
+            short[r["type"]] = max(short.get(r["type"], 0), r["count"] - have)
+        if min(r["count"], have) > 0:
+            out.append({**r, "count": min(r["count"], have)})
+    return out
+
+
+def suggest_fleet(inp: PlanInput, target_h: float, progress=None, rounds: int = 4, caps: dict | None = None) -> dict:
     """Find the smallest fleet, keeping the chosen vehicle types and their mix, whose plan finishes
     within `target_h` hours. Each round runs the full optimiser and rescales the tier that is too
     slow (door-to-door vehicles, or trucks) by how far over or under the target it ran.
-    Returns the fleet, its plan, every round tried, and advice on what limits the time."""
+    `caps` ({type: vehicles available}) holds the suggestion to the fleet that exists; None means
+    no inventory has been entered. Returns the fleet, its plan, every round tried, and advice."""
     report = progress or (lambda stage, frac: None)
     target = target_h * 60
+    short: dict[str, int] = {}
     primary = [dict(r) for r in inp.primary_fleet if int(r.get("count", 0)) > 0]
     secondary = [dict(r) for r in inp.secondary_fleet if int(r.get("count", 0)) > 0]
+    if caps is not None:
+        primary, secondary = _cap(primary, caps, {}), _cap(secondary, caps, {})
     if not primary:
-        raise ValueError("Add at least one primary vehicle")
+        raise ValueError("None of the chosen door-to-door vehicles is available for this sector" if caps is not None
+                         else "Add at least one primary vehicle")
     tried, plans, best, seen = [], [], None, set()
     for i in range(rounds):
         key = (tuple((r["type"], r["count"]) for r in primary), tuple((r["type"], r["count"]) for r in secondary))
@@ -1039,16 +1060,21 @@ def suggest_fleet(inp: PlanInput, target_h: float, progress=None, rounds: int = 
                 break
         n_p = min(n_p, 200)
         n_s = min(n_s, 50)
-        primary = _resize(primary, n_p)
-        secondary = _resize(secondary, n_s) if secondary else []
+        primary = _cap(_resize(primary, n_p), caps, short)
+        secondary = _cap(_resize(secondary, n_s), caps, short) if secondary else []
     if best is None:  # nothing fitted: return the fastest plan found
         fastest = min(range(len(tried)), key=lambda k: tried[k]["time_min"])
         best = (tried[fastest]["primary_fleet"], tried[fastest]["secondary_fleet"], plans[fastest])
     primary, secondary, r = best
     report("Done", 1.0)
-    return {"target_h": target_h, "fits": r["summary"]["time_to_complete_min"] <= target,
-            "primary_fleet": primary, "secondary_fleet": secondary, "rounds": tried,
-            "advice": _fleet_advice(r, target), "result": r}
+    advice = _fleet_advice(r, target)
+    fits = r["summary"]["time_to_complete_min"] <= target
+    if short and not fits:  # the fleet that exists is the limit, not the search
+        advice = [a for a in advice if a["code"] != "not_reached"]
+        advice.append({"code": "fleet_short", "needs": [{"type": k, "label": _vehicle(k, inp.streams)["label"], "more": n}
+                                                        for k, n in short.items()]})
+    return {"target_h": target_h, "fits": fits, "primary_fleet": primary, "secondary_fleet": secondary,
+            "rounds": tried, "advice": advice, "result": r}
 
 
 def _fleet_advice(r: dict, target: float) -> list[dict]:

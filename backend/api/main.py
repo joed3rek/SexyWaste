@@ -17,15 +17,17 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from backend import auth, regulations
+from backend import auth, fleet, regulations
 from backend.buildings import generators
 from backend.buildings.layers import sectors as pilot_sectors
 from backend.config import FRONTEND_DIR, PILOTS, WASTE_STREAMS
 from backend.routing import points as points_v2
 from backend.routing import parks, twotier
 from backend.routing.network import node_lonlat
+from backend.api.fleet_api import router as fleet_router
 from backend.api.survey_api import router as survey_router
 from backend.survey import service as survey_service
+from backend.survey import gvp
 from backend.survey import state as survey_state
 
 @asynccontextmanager
@@ -37,6 +39,7 @@ async def lifespan(_app: FastAPI):
 app = FastAPI(title="SWM Urban Waste Intelligence", lifespan=lifespan)
 app.add_middleware(GZipMiddleware, minimum_size=2000)
 app.include_router(survey_router)
+app.include_router(fleet_router)
 
 
 def _pilot(pilot_key: str) -> str:
@@ -133,6 +136,7 @@ def get_points_v2(pilot_key: str, sector: str | None = None,
         raise HTTPException(422, f"streams must be from {WASTE_STREAMS}")
     try:
         pts = points_v2.collection_points(pilot, survey_state.building_states(pilot), sector, params)
+        pts += gvp.collection_points(pilot, sector) if sector else []
         points_v2.vehicle_class(vehicle)
     except (ValueError, KeyError) as err:
         raise HTTPException(422, str(err)) from err
@@ -217,12 +221,28 @@ def get_stations_v2(pilot_key: str, sector: str, radius_m: float = 500, trucks: 
             "stations": [{k: v for k, v in s.items() if k != "node"} for s in stations]}
 
 
-def _plan_input(pilot_key: str, body: PlanV2In) -> twotier.PlanInput:
+def _fleet_available(pilot: str, sector: str) -> dict:
+    con = fleet.connect()
+    try:
+        return fleet.available(con, pilot, sector)
+    finally:
+        con.close()
+
+
+def _plan_input(pilot_key: str, body: PlanV2In, check_fleet: bool = True) -> twotier.PlanInput:
     pilot = _pilot(pilot_key)
     if body.sector not in set(pilot_sectors(pilot)["name"]):
         raise HTTPException(404, f"Unknown sector '{body.sector}'")
     if not set(body.streams) <= set(WASTE_STREAMS) or not body.streams:
         raise HTTPException(422, f"streams must be from {WASTE_STREAMS}")
+    if check_fleet:  # a plan may not use more vehicles than the sector has
+        con = fleet.connect()
+        try:
+            fleet.check_plan_fleet(con, pilot, body.sector, [r.model_dump() for r in body.primary_fleet + body.secondary_fleet])
+        except fleet.FleetError as err:
+            raise HTTPException(err.status, str(err)) from err
+        finally:
+            con.close()
     return twotier.PlanInput(
         pilot=pilot, sector=body.sector, depot=body.depot, mrf=body.mrf,
         primary_fleet=[r.model_dump() for r in body.primary_fleet],
@@ -232,10 +252,17 @@ def _plan_input(pilot_key: str, body: PlanV2In) -> twotier.PlanInput:
         park=body.park)
 
 
+def _with_basis(result: dict, available: dict) -> dict:
+    """Say whether the plan's fleet was checked against the inventory or is hypothetical."""
+    result["fleet_basis"] = "inventory" if available["inventory"] else "hypothetical"
+    return result
+
+
 @app.post("/api/pilots/{pilot_key}/v2/plan")
 def post_plan_v2(pilot_key: str, body: PlanV2In):
+    inp = _plan_input(pilot_key, body)
     try:
-        return twotier.plan(_plan_input(pilot_key, body))
+        return _with_basis(twotier.plan(inp), _fleet_available(inp.pilot, inp.sector))
     except (ValueError, KeyError) as err:
         raise HTTPException(422, str(err)) from err
 
@@ -252,14 +279,23 @@ class FleetIn(PlanV2In):
 @app.post("/api/pilots/{pilot_key}/v2/plan/jobs")
 def start_plan_job(pilot_key: str, body: PlanV2In):
     inp = _plan_input(pilot_key, body)
-    return _start_job(lambda report: twotier.plan(inp, report), body.time_limit_s + 10)
+    av = _fleet_available(inp.pilot, inp.sector)
+    return _start_job(lambda report: _with_basis(twotier.plan(inp, report), av), body.time_limit_s + 10)
 
 
 @app.post("/api/pilots/{pilot_key}/v2/fleet/jobs")
 def start_fleet_job(pilot_key: str, body: FleetIn):
     """Suggest the fleet that finishes within target_h hours (runs the optimiser several times)."""
-    inp = _plan_input(pilot_key, body)
-    return _start_job(lambda report: twotier.suggest_fleet(inp, body.target_h, report), 4 * (body.time_limit_s + 10))
+    inp = _plan_input(pilot_key, body, check_fleet=False)  # the suggestion itself stays within the fleet
+    av = _fleet_available(inp.pilot, inp.sector)
+    caps = av["by_type"] if av["inventory"] else None
+
+    def run(report):
+        out = twotier.suggest_fleet(inp, body.target_h, report, caps=caps)
+        _with_basis(out["result"], av)
+        out["fleet_basis"] = out["result"]["fleet_basis"]
+        return out
+    return _start_job(run, 4 * (body.time_limit_s + 10))
 
 
 def _start_job(fn, expected_s: float) -> dict:

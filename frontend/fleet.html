@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <link rel="icon" href="data:," />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Fleet inventory</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="page with-rail">
+  <nav id="appNav"></nav>
+  <main class="doc">
+    <header class="page-head">
+      <p class="eyebrow">Fleet and workforce</p>
+      <h1>Fleet inventory</h1>
+      <p class="sub" id="who"></p>
+    </header>
+    <p class="hint">The vehicles that actually exist. The route builder cannot plan more vehicles of a type than are
+      <b>available</b> for a sector: those based in the sector plus the shared pool. Specifications default to the
+      vehicle type; enter a vehicle's own figure only when it differs.</p>
+
+    <h2>Available for planning</h2>
+    <div class="scroll" id="summary"></div>
+
+    <h2>Vehicles</h2>
+    <div class="row fleet-filters">
+      <label>Sector <select id="filterSector"><option value="">All sectors</option></select></label>
+      <label>Status <select id="filterStatus"><option value="">Any status</option></select></label>
+    </div>
+    <div class="scroll" id="list"></div>
+
+    <section id="editor" hidden>
+      <h2 id="formTitle">Add a vehicle</h2>
+      <form id="form" class="fleet-form">
+        <div class="row">
+          <label>Vehicle type <select id="fType" required></select></label>
+          <label>Registration or fleet ID <input id="fReg" required maxlength="40" placeholder="KA-01-AB-1234" /></label>
+        </div>
+        <div class="row">
+          <label>Based in <select id="fHome"><option value="">Shared pool (all sectors)</option></select></label>
+          <label>Status <select id="fStatus"></select></label>
+        </div>
+        <fieldset class="streams"><legend>Waste streams it may carry</legend><div id="fStreams"></div></fieldset>
+        <details class="advanced">
+          <summary>Its own specifications (leave blank to use the type's)</summary>
+          <div class="row">
+            <label>Payload (kg) <input id="f_payload_kg" type="number" min="1" step="1" /></label>
+            <label>Body volume (m³) <input id="f_body_volume_m3" type="number" min="0.1" step="0.1" /></label>
+          </div>
+          <div class="row">
+            <label>Vehicle width (m) <input id="f_vehicle_width_m" type="number" min="0.5" step="0.05" /></label>
+            <label>Narrowest road it can work (m) <input id="f_min_road_width_m" type="number" min="1" step="0.1" /></label>
+          </div>
+          <label>Compartments <input id="f_compartments" type="number" min="1" step="1" /></label>
+        </details>
+        <label>Notes <textarea id="fNotes" rows="2" maxlength="500"></textarea></label>
+        <label class="check"><input type="checkbox" id="fVerify" /> I have checked this vehicle and its papers today</label>
+        <p id="formErr" class="warn" hidden></p>
+        <div class="row">
+          <button type="submit" id="fSave">Add vehicle</button>
+          <button type="button" class="secondary" id="fCancel" hidden>Cancel</button>
+        </div>
+      </form>
+    </section>
+    <p id="readOnly" class="hint" hidden>Only the fleet and workforce manager or an admin can change the fleet.
+      <a href="index.html">Sign in with that role</a>.</p>
+  </main>
+  <script src="ui.js"></script>
+  <script src="fleet.js"></script>
+</body>
+</html>

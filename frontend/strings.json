@@ -1228,6 +1228,354 @@
   "sv.tap_hint": {
    "en": "Tap a building on the map to open it and start a visit. Zoom in to see buildings clearly.",
    "kn": ""
+  },
+  "nav.fleet": {
+   "en": "Fleet",
+   "kn": ""
+  },
+  "sv.report_gvp": {
+   "en": "Report GVP",
+   "kn": ""
+  },
+  "sv.pin_gvp": {
+   "en": "Tap the map where waste is being dumped.",
+   "kn": ""
+  },
+  "legend.gvp": {
+   "en": "Garbage vulnerable point (GVP)",
+   "kn": ""
+  },
+  "legend.gvp_off": {
+   "en": "GVP cleared, closed or off routes",
+   "kn": ""
+  },
+  "gvp.title": {
+   "en": "Garbage vulnerable point",
+   "kn": ""
+  },
+  "gvp.new_title": {
+   "en": "New garbage vulnerable point",
+   "kn": ""
+  },
+  "gvp.landmark": {
+   "en": "Landmark (optional)",
+   "kn": ""
+  },
+  "gvp.landmark_ph": {
+   "en": "For example: behind the bus stop",
+   "kn": ""
+  },
+  "gvp.streams": {
+   "en": "Waste seen here",
+   "kn": ""
+  },
+  "gvp.quantity": {
+   "en": "About how many kg build up each time?",
+   "kn": ""
+  },
+  "gvp.frequency": {
+   "en": "How often does it build up again?",
+   "kn": ""
+  },
+  "gvp.sources": {
+   "en": "Who probably dumps here?",
+   "kn": ""
+  },
+  "gvp.photo": {
+   "en": "Photo of the spot",
+   "kn": ""
+  },
+  "gvp.note": {
+   "en": "Note",
+   "kn": ""
+  },
+  "gvp.save": {
+   "en": "Save GVP",
+   "kn": ""
+  },
+  "gvp.saved": {
+   "en": "GVP saved.",
+   "kn": ""
+  },
+  "gvp.photo_failed": {
+   "en": "Saved, but the photo did not upload: {message}",
+   "kn": ""
+  },
+  "gvp.add_obs": {
+   "en": "Add observation",
+   "kn": ""
+  },
+  "gvp.obs_title": {
+   "en": "How does it look today?",
+   "kn": ""
+  },
+  "gvp.obs_saved": {
+   "en": "Observation saved.",
+   "kn": ""
+  },
+  "gvp.kg_day": {
+   "en": "About {kg} kg/day (estimate)",
+   "kn": ""
+  },
+  "gvp.on_routes": {
+   "en": "On collection routes",
+   "kn": ""
+  },
+  "gvp.off_routes": {
+   "en": "Not on collection routes",
+   "kn": ""
+  },
+  "gvp.observations": {
+   "en": "Observations",
+   "kn": ""
+  },
+  "gvp.obs_line": {
+   "en": "{date} · {name}: {kg} kg, {freq}",
+   "kn": ""
+  },
+  "gvp.interventions": {
+   "en": "Interventions and changes",
+   "kn": ""
+  },
+  "gvp.none_yet": {
+   "en": "None yet.",
+   "kn": ""
+  },
+  "gvp.record": {
+   "en": "Record intervention",
+   "kn": ""
+  },
+  "gvp.set_status": {
+   "en": "Status",
+   "kn": ""
+  },
+  "gvp.collect": {
+   "en": "Collect on routes while active",
+   "kn": ""
+  },
+  "gvp.pick_stream": {
+   "en": "Tick at least one kind of waste.",
+   "kn": ""
+  },
+  "gvp.pick_quantity": {
+   "en": "Enter roughly how many kg.",
+   "kn": ""
+  },
+  "gvp.event_status": {
+   "en": "Status set to {value}",
+   "kn": ""
+  },
+  "gvp.event_collect_on": {
+   "en": "Put on collection routes",
+   "kn": ""
+  },
+  "gvp.event_collect_off": {
+   "en": "Taken off collection routes",
+   "kn": ""
+  },
+  "gvp.status.active": {
+   "en": "Active",
+   "kn": ""
+  },
+  "gvp.status.cleared": {
+   "en": "Cleared",
+   "kn": ""
+  },
+  "gvp.status.closed": {
+   "en": "Closed",
+   "kn": ""
+  },
+  "freq.daily": {
+   "en": "Every day",
+   "kn": ""
+  },
+  "freq.few_times_a_week": {
+   "en": "A few times a week",
+   "kn": ""
+  },
+  "freq.weekly": {
+   "en": "About once a week",
+   "kn": ""
+  },
+  "freq.occasionally": {
+   "en": "Now and then",
+   "kn": ""
+  },
+  "src.households": {
+   "en": "Households",
+   "kn": ""
+  },
+  "src.shops": {
+   "en": "Shops",
+   "kn": ""
+  },
+  "src.street_vendors": {
+   "en": "Street vendors",
+   "kn": ""
+  },
+  "src.market": {
+   "en": "Market",
+   "kn": ""
+  },
+  "src.construction": {
+   "en": "Construction",
+   "kn": ""
+  },
+  "src.passers_by": {
+   "en": "Passers-by",
+   "kn": ""
+  },
+  "src.unknown": {
+   "en": "Not known",
+   "kn": ""
+  },
+  "int.cleared": {
+   "en": "Cleared",
+   "kn": ""
+  },
+  "int.bin_placed": {
+   "en": "Bin placed",
+   "kn": ""
+  },
+  "int.signage": {
+   "en": "Signage",
+   "kn": ""
+  },
+  "int.cctv": {
+   "en": "CCTV",
+   "kn": ""
+  },
+  "int.beautification": {
+   "en": "Beautification",
+   "kn": ""
+  },
+  "int.awareness_drive": {
+   "en": "Awareness drive",
+   "kn": ""
+  },
+  "int.notice_issued": {
+   "en": "Notice issued",
+   "kn": ""
+  },
+  "int.other": {
+   "en": "Other",
+   "kn": ""
+  },
+  "stream.wet": {
+   "en": "Wet waste",
+   "kn": ""
+  },
+  "stream.dry": {
+   "en": "Dry waste",
+   "kn": ""
+  },
+  "stream.sanitary": {
+   "en": "Sanitary waste",
+   "kn": ""
+  },
+  "stream.special": {
+   "en": "Special care waste",
+   "kn": ""
+  },
+  "sup.gvps": {
+   "en": "Garbage vulnerable points",
+   "kn": ""
+  },
+  "sup.gvp_rule": {
+   "en": "SWM Rules 2026, r. {rule}: {text}",
+   "kn": ""
+  },
+  "sup.gvp_count": {
+   "en": "{n} mapped in your sectors so far, {active} active. Deadline: {date}.",
+   "kn": ""
+  },
+  "sup.gvp_export": {
+   "en": "Download all GVPs for publishing (GeoJSON)",
+   "kn": ""
+  },
+  "sup.gvps_empty": {
+   "en": "No garbage vulnerable points mapped yet.",
+   "kn": ""
+  },
+  "col.place": {
+   "en": "Place",
+   "kn": ""
+  },
+  "col.kg_day": {
+   "en": "kg/day",
+   "kn": ""
+  },
+  "col.last_seen": {
+   "en": "Last observed",
+   "kn": ""
+  },
+  "col.interventions": {
+   "en": "Interventions",
+   "kn": ""
+  },
+  "col.routes": {
+   "en": "Routes",
+   "kn": ""
+  },
+  "pub.title": {
+   "en": "Report dumped waste",
+   "kn": ""
+  },
+  "pub.hint": {
+   "en": "Tap the road where waste is being dumped. The point is placed on the nearest road.",
+   "kn": ""
+  },
+  "pub.form_title": {
+   "en": "Waste dumped here",
+   "kn": ""
+  },
+  "pub.what": {
+   "en": "What kind of waste?",
+   "kn": ""
+  },
+  "pub.mixed": {
+   "en": "Mixed / not sure",
+   "kn": ""
+  },
+  "pub.size": {
+   "en": "How much is there?",
+   "kn": ""
+  },
+  "pub.size.small": {
+   "en": "Small: a few bags",
+   "kn": ""
+  },
+  "pub.size.medium": {
+   "en": "Medium: about a handcart",
+   "kn": ""
+  },
+  "pub.size.large": {
+   "en": "Large: a big heap",
+   "kn": ""
+  },
+  "pub.pick_size": {
+   "en": "Choose how much waste there is.",
+   "kn": ""
+  },
+  "pub.send": {
+   "en": "Send report",
+   "kn": ""
+  },
+  "pub.thanks": {
+   "en": "Thank you. The spot is now on the collection routes.",
+   "kn": ""
+  },
+  "pub.merged": {
+   "en": "Thank you. This spot was already reported; your report has been added to it.",
+   "kn": ""
+  },
+  "gvp.reported_by_public": {
+   "en": "Reported by the public",
+   "kn": ""
+  },
+  "nav.report": {
+   "en": "Report",
+   "kn": ""
   }
  }
 }

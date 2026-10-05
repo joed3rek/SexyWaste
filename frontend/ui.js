@@ -12,6 +12,7 @@ const ICONS = {
   recycle: '<path d="M19.5 11A7.5 7.5 0 0 0 6 6.6L4.5 8"/><path d="M4.5 4v4h4"/><path d="M4.5 13A7.5 7.5 0 0 0 18 17.4l1.5-1.4"/><path d="M19.5 20v-4h-4"/>',
   ward: '<path d="M4 20V10M10 20V4M16 20v-7M20 20H3"/>',
   arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>',
+  truck: '<path d="M3 6.5h11v9H3z"/><path d="M14 9.5h3.5l3 3v3H14"/><circle cx="7" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/>',
 };
 
 function icon(name) {
@@ -24,10 +25,12 @@ const FULL_APP_URL = "https://swm-urban-waste.onrender.com/";
 
 const NAV = [
   { key: "home", href: "index.html", icon: "home" },
-  { key: "surveyor", href: "surveyor.html", icon: "survey" },
+  { key: "surveyor", href: "surveyor.html", icon: "survey", hide: ["generator"] },
+  { key: "report", href: "report.html", icon: "household", role: "generator" },
   { key: "supervisor", href: "supervisor.html", icon: "ward", role: "survey_supervisor" },
-  { key: "planner", href: "map.html?role=planner", icon: "planner" },
-  { key: "builder", href: "builder.html", icon: "routes" },
+  { key: "planner", href: "map.html?role=planner", icon: "planner", hide: ["generator"] },
+  { key: "builder", href: "builder.html", icon: "routes", hide: ["generator"] },
+  { key: "fleet", href: "fleet.html", icon: "truck", role: ["fleet_workforce_manager", "admin", "planner"] },
   { key: "rules", href: "rules.html", icon: "rules" },
 ];
 
@@ -153,6 +156,8 @@ function activeNavKey() {
   const page = location.pathname.split("/").pop() || "index.html";
   if (page.startsWith("map")) return "planner";
   if (page.startsWith("surveyor")) return "surveyor";
+  if (page.startsWith("fleet")) return "fleet";
+  if (page.startsWith("report")) return "report";
   if (page.startsWith("supervisor")) return "supervisor";
   if (page.startsWith("builder")) return "builder";
   if (page.startsWith("rules")) return "rules";
@@ -172,7 +177,7 @@ function renderShell() {
     nav.setAttribute("aria-label", "Main");
     const role = (getSession() || {}).role;
     nav.innerHTML = `<a class="logo" href="index.html" title="Urban Waste Intelligence">${icon("logo")}</a>` +
-      NAV.filter((n) => !n.role || n.role === role).map((n) => `<a class="item${n.key === active ? " active" : ""}" href="${n.href}"${n.key === active ? ' aria-current="page"' : ""}>${icon(n.icon)}<span>${t(`nav.${n.key}`)}</span></a>`).join("");
+      NAV.filter((n) => (!n.role || [].concat(n.role).includes(role)) && !(n.hide || []).includes(role)).map((n) => `<a class="item${n.key === active ? " active" : ""}" href="${n.href}"${n.key === active ? ' aria-current="page"' : ""}>${icon(n.icon)}<span>${t(`nav.${n.key}`)}</span></a>`).join("");
   }
 
   if (location.hostname.endsWith("github.io")) {
