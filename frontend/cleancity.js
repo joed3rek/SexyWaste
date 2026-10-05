@@ -217,3 +217,45 @@ document.querySelectorAll("[data-tab]").forEach((b) => b.addEventListener("click
   document.querySelectorAll("[data-tab]").forEach((x) => x.classList.toggle("on", x === b));
   document.querySelectorAll("[data-pane]").forEach((p) => (p.hidden = p.dataset.pane !== b.dataset.tab));
 }));
+
+// ---------- Work plan: the day's cleaning demands given to people and equipment ----------
+
+const FEASIBLE = { feasible: ["ok", "Feasible"], feasible_with_warnings: ["warn", "Feasible, with warnings"], infeasible: ["bad", "Cleaning left undone"] };
+(function fillWorkDays() {
+  const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  for (let i = 0; i < 7; i++) {
+    const d = new Date();
+    d.setDate(d.getDate() + i);
+    const name = d.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" });
+    $("workDay").add(new Option(i === 0 ? `Today, ${name}` : i === 1 ? `Tomorrow, ${name}` : name, iso(d)));
+  }
+})();
+
+function renderWork(p, note) {
+  const [cls, text] = FEASIBLE[p.feasibility];
+  const s = p.summary;
+  const ex = p.exceptions.map((e) => `<li><b>${esc(e.reason)}</b>${e.actions?.length ? `<br><span class="muted small">Options: ${e.actions.map(esc).join(" · ")}</span>` : ""}</li>`).join("");
+  const workers = p.workers.map((w) => `<details class="row-item"><summary><b>${esc(w.label)}</b> <span class="muted small">${fmt(w.minutes / 60, 1)} h · ${fmt(w.metres)} m · ${w.jobs.length} job(s)</span></summary>
+      <ol class="small">${w.jobs.map((j) => `<li>${esc(j.label || j.kind)}${j.metres ? ` (${fmt(j.metres)} m)` : ""}, ${fmt(j.minutes)} min${j.equipment.length ? `, ${j.equipment.map((e) => e.startsWith("missing:") ? `<span class="warn">no ${esc(words(e.slice(8)))}</span>` : "equipment").join(", ")}` : ""}</li>`).join("")}</ol></details>`).join("");
+  const action = note ? `<p class="small">${esc(note)}</p>`
+    : p.status === "draft" && isPlanner() ? `<button type="button" id="adoptWork" class="${p.feasibility === "infeasible" ? "secondary" : ""}">${p.feasibility === "infeasible" ? "Adopt anyway" : "Adopt this work plan"}</button>` : "";
+  $("work").innerHTML = `<div class="plan-box"><p><span class="badge ${cls}">${text}</span> <span class="muted small">Work plan ${esc(p.id.slice(0, 8))} for ${esc(p.service_date)}, ${esc(p.status)}.</span></p>
+    <p class="small">${fmt(s.demands)} cleaning demand(s): ${fmt(s.street_m / 1000, 1)} km of sweeping and ${fmt(s.gvps)} GVP(s). Needs ${fmt(s.required_hours, 1)} worker-hours; ${fmt(s.assigned_hours, 1)} given to ${fmt(s.workers_used)} of ${fmt(s.workers)} worker(s)${s.short_hours ? `, <span class="warn">${fmt(s.short_hours, 1)} h short</span>` : ""}.</p>
+    ${ex ? `<ul class="plan-exceptions">${ex}</ul>` : ""}${action}</div>${workers}`;
+  $("adoptWork")?.addEventListener("click", async () => {
+    if (p.feasibility === "infeasible" && !confirm("This plan leaves cleaning undone. Adopt it anyway?")) return;
+    try {
+      const a = await swmWrite("POST", `/api/pilots/${PILOT}/work-plans/${p.id}/adopt`, { accept_exceptions: p.feasibility === "infeasible" });
+      renderWork(a, `Adopted. ${a.demands_changed.planned} cleaning demand(s) planned${a.demands_changed.open ? `, ${a.demands_changed.open} back to open` : ""}.`);
+    } catch (err) { toast(err.message); }
+  });
+}
+
+$("makeWork").addEventListener("click", async () => {
+  $("work").innerHTML = `<p class="hint">Making the work plan…</p>`;
+  try {
+    renderWork(await swmWrite("POST", `/api/pilots/${PILOT}/work-plans`, { sector: $("sector").value, date: $("workDay").value }));
+  } catch (err) {
+    $("work").innerHTML = `<p class="warn">${esc(err.message)}</p>`;
+  }
+});

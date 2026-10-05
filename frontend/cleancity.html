@@ -36,6 +36,7 @@
       <button type="button" data-tab="street" class="on">Street</button>
       <button type="button" data-tab="bins">Bins</button>
       <button type="button" data-tab="gvp">GVP clearing</button>
+      <button type="button" data-tab="work">Work plan</button>
     </div>
     <section data-pane="street"><div id="street"><p class="hint">Tap a street on the map to see and change its cleaning plan.</p></div></section>
     <section data-pane="bins" hidden>
@@ -44,6 +45,12 @@
       <div id="bins"></div>
     </section>
     <section data-pane="gvp" hidden><div id="tasks"></div></section>
+    <section data-pane="work" hidden>
+      <p class="hint small">The day's cleaning demands (streets due for sweeping, verified GVPs) given to the cleaning staff and equipment in Resources.</p>
+      <label class="inline">Day <select id="workDay"></select></label>
+      <button type="button" id="makeWork">Make work plan</button>
+      <div id="work"></div>
+    </section>
   </aside>
   <div id="map"></div>
   <div id="toast" class="toast" hidden></div>

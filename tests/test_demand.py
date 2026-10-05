@@ -39,7 +39,17 @@ def test_cleanings_are_spread_over_the_week():
     assert [D.cleanings_on(7, i) for i in range(7)] == [1] * 7
     assert [D.cleanings_on(14, i) for i in range(7)] == [2] * 7
     assert [D.cleanings_on(3, i) for i in range(7)] == [0, 0, 1, 0, 1, 0, 1]  # Wed, Fri, Sun
-    assert all(sum(D.cleanings_on(n, i) for i in range(7)) == n for n in (1, 2, 3, 5, 6, 10, 21))
+    assert all(sum(D.cleanings_on(n, i, o) for i in range(7)) == n for n in (1, 2, 3, 5, 6, 10, 21) for o in range(7))
+    assert sum(D.cleanings_on(3.5, i) for i in range(14)) == 7  # a half carries over: 3 one week, 4 the next
+    assert D.day_number("2024-01-01") == 0 and D.weekday("2024-01-01") == "mon"
+
+
+def test_a_weeks_sweeping_matches_the_workload_and_is_level(con):
+    km = [sum(d["length_m"] for d in D.build(con, "hsr", "Sector 4", day) if d["source_type"] == "street") / 1000
+          for day in [f"2026-10-{n:02d}" for n in range(5, 19)]]  # two weeks
+    daily = CC.workload(con, "hsr", "Sector 4")["parts"]["street_sweeping"] * CC.standards()["productivity"]["street_m_per_worker_hour"] / 1000
+    assert sum(km) / 14 == pytest.approx(daily, rel=0.03)
+    assert max(km) < 1.6 * min(km)  # staggered, not all on the same days
 
 
 def test_dates_and_weekdays():
@@ -68,7 +78,8 @@ def test_a_days_demands_follow_the_cycle_and_the_streets(con):
     assert {d["stream"] for d in collection(con, SUN)} == {"wet"}  # Sunday: wet waste from commercial and bulk generators only
     assert {d["generator"] for d in collection(con, SUN)} <= {"commercial", "bulk_generators"}
     sweeping = [d for d in D.demands(con, "hsr", TUE, "Sector 4", "cleaning") if d["source_type"] == "street"]
-    due = [s for s in CC.streets(con, "hsr", "Sector 4") if D.cleanings_on(s["cleanings_per_week"], 1)]
+    due = [s for s in CC.streets(con, "hsr", "Sector 4")
+           if D.cleanings_on(s["cleanings_per_week"], D.day_number(TUE), D.street_offset(s["seg_id"]))]
     assert len(sweeping) == len(due) and all(d["length_m"] > 0 for d in sweeping)
 
 

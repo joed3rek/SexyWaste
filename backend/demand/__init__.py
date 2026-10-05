@@ -29,6 +29,7 @@ import json
 import logging
 import sqlite3
 import uuid
+import zlib
 from datetime import date as Date, datetime, timedelta, timezone
 from pathlib import Path
 
@@ -131,10 +132,25 @@ def next_date_for(weekday_key: str, start: str | None = None) -> str:
     return (d + timedelta(days=(cycle.DAYS.index(weekday_key) - d.weekday()) % 7)).isoformat()
 
 
-def cleanings_on(per_week: float, day_index: int) -> int:
-    """How many times a street with this weekly frequency is cleaned on a weekday (0 = Monday).
-    Cleanings are spread evenly over the week: 7 a week is daily, 14 twice a day, 3 on Wed, Fri, Sun."""
-    return int((day_index + 1) * per_week / 7 + 1e-9) - int(day_index * per_week / 7 + 1e-9)
+EPOCH = Date(2024, 1, 1)  # a Monday: day numbers count from here
+
+
+def day_number(day: str) -> int:
+    return (Date.fromisoformat(day) - EPOCH).days
+
+
+def street_offset(seg_id: str) -> int:
+    """A fixed stagger (0-6 days) per street, so streets with the same frequency are not all swept on
+    the same days and the daily workload stays level."""
+    return zlib.crc32(str(seg_id).encode()) % 7
+
+
+def cleanings_on(per_week: float, day: int, offset: int = 0) -> int:
+    """How many times a street with this weekly frequency is cleaned on day number `day` (0 = a Monday).
+    Spread evenly and carried over across weeks: 7 a week is daily, 14 twice a day, 3 on Wed, Fri, Sun
+    (offset 0), 3.5 is 3 one week and 4 the next. Over any long period the count is exactly per_week / 7 a day."""
+    n = day + offset
+    return int((n + 1) * per_week / 7 + 1e-9) - int(n * per_week / 7 + 1e-9)
 
 
 # ---------- Requirements: one shape over the existing sources ----------
@@ -236,9 +252,9 @@ def build(con, pilot: str, sector: str, day: str | None, *, survey_db: Path | No
                                    quantity_kg=p["kg"][s], priority=2, detail=geometry))
     # Street sweeping due on the day.
     if day:
-        i = cycle.DAYS.index(weekday(day))
+        dn = day_number(day)
         for s in cleancity.streets(con, pilot, sector):
-            n = cleanings_on(s["cleanings_per_week"], i)
+            n = cleanings_on(s["cleanings_per_week"], dn, street_offset(s["seg_id"]))
             if n:
                 out.append(_demand("cleaning", "street", s["seg_id"], sector, day, length_m=round(s["length_m"] * n, 1),
                                    priority=STREET_PRIORITY[s["class"]],
