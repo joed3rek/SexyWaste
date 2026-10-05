@@ -1,15 +1,19 @@
 """Project-wide settings: study areas, cache paths and routing assumptions."""
 
+import os
 from dataclasses import dataclass
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-CACHE_DIR = ROOT / "data" / "cache"
+# The one place the app keeps its data on this machine: the databases (survey.db, ops.db), photos,
+# OSM caches and reference overrides. Git-ignored. Set CITYLOOM_DATA_DIR to keep it somewhere else.
+DATA_DIR = Path(os.environ.get("CITYLOOM_DATA_DIR") or ROOT / "data")
+CACHE_DIR = DATA_DIR / "cache"
 FRONTEND_DIR = ROOT / "frontend"
 
 # Survey frontage photos (Round 1: at most one optional photo per visit). Stored under data/photos/,
-# which is git-ignored. Surveyors are told not to photograph people or the inside of homes.
-PHOTO_DIR = ROOT / "data" / "photos"
+# inside DATA_DIR. Surveyors are told not to photograph people or the inside of homes.
+PHOTO_DIR = DATA_DIR / "photos"
 PHOTO_MAX_BYTES = 3 * 1024 * 1024
 # Photos older than this are deleted by the retention job; their database rows keep the hash so the
 # record shows a photo existed. A policy choice for the pilot, not a regulatory requirement.

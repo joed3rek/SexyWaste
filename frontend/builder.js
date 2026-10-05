@@ -221,26 +221,53 @@ const DAY_NAMES = { mon: "Monday", tue: "Tuesday", wed: "Wednesday", thu: "Thurs
 const STREAM_NAMES = { wet: "wet", dry: "dry", sanitary: "sanitary", special: "special care" };
 let cycleChecked = false;
 
+// The next seven dates, in the browser's own time zone, as YYYY-MM-DD.
+const isoDate = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const weekdayOf = (iso) => Object.keys(DAY_NAMES)[(new Date(`${iso}T12:00:00`).getDay() + 6) % 7];
+(function fillDates() {
+  const sel = $("planDay");
+  for (let i = 0; i < 7; i++) {
+    const d = new Date();
+    d.setDate(d.getDate() + i);
+    const iso = isoDate(d), name = d.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" });
+    sel.add(new Option(i === 0 ? `Today, ${name}` : i === 1 ? `Tomorrow, ${name}` : name, iso));
+  }
+})();
+
+// A day's collection demands: made (or refreshed) from the collection cycle, bins and GVPs, then counted.
+async function demandNote(date) {
+  const sector = $("sector").value;
+  await swmWrite("POST", `/api/pilots/${PILOT}/service-demands/generate`, { date, sector });
+  const d = await api(`/api/pilots/${PILOT}/service-demands?date=${date}&sector=${encodeURIComponent(sector)}&kind=collection`);
+  const c = d.summary.collection;
+  if (!c) return "No collection demands on this day.";
+  const src = c.by_source, part = (k, word) => (src[k] ? `${fmt(src[k].demands)} ${word}` : null);
+  return `${fmt(c.demands)} collection demands, ${fmt(c.kg / 1000, 1)} t: ` +
+    [part("collection_point", "at street runs"), part("bin", "at public bins"), part("gvp", "from cleared GVPs")].filter(Boolean).join(", ") + ".";
+}
+
 async function loadDay() {
-  const day = $("planDay").value;
+  const date = $("planDay").value;
   if (!cycleChecked) {  // first time: default to today when a collection cycle exists
     cycleChecked = true;
     try {
       const c = await api(`/api/pilots/${PILOT}/cycle`);
-      if (c.entries.some((e) => e.active) && !day) {
-        $("planDay").value = Object.keys(DAY_NAMES)[(new Date().getDay() + 6) % 7];
+      if (c.entries.some((e) => e.active) && !date) {
+        $("planDay").selectedIndex = 1;
         return loadDay();
       }
     } catch { /* no cycle: plan every stream */ }
   }
-  if (!day) { $("dayNote").textContent = "No collection cycle used: every stream, one day's waste, within the shift length."; return; }
+  if (!date) { $("dayNote").textContent = "No collection cycle used: every stream, one day's waste, within the shift length."; return; }
+  const day = weekdayOf(date);
   try {
     const p = await api(`/api/pilots/${PILOT}/cycle/day?sector=${encodeURIComponent($("sector").value)}&day=${day}`);
-    if (!p.scheduled) { $("dayNote").innerHTML = `No collection cycle set yet: every stream is planned. <a href="cycle.html">Set the cycle</a>.`; return; }
+    const demands = await demandNote(date);
+    if (!p.scheduled) { $("dayNote").innerHTML = `No collection cycle set yet: every stream is planned. <a href="cycle.html">Set the cycle</a>. ${esc(demands)}`; return; }
     if (!p.window) { $("dayNote").innerHTML = `<span class="warn">Nothing is collected in ${esc($("sector").value)} on ${DAY_NAMES[day]}.</span>`; return; }
     const due = Object.entries(p.factors).map(([g, f]) => [g, Object.entries(f).filter(([, n]) => n)]).filter(([, l]) => l.length)
       .map(([g, l]) => `${g.replace("_", " ")}: ${l.map(([st, n]) => `${STREAM_NAMES[st]}${n > 1 ? ` (${n} days)` : ""}`).join(", ")}`);
-    $("dayNote").innerHTML = `${DAY_NAMES[day]}, ${p.window.start}–${p.window.end} (the shift for this plan). Due: ${esc(due.join("; "))}.`;
+    $("dayNote").innerHTML = `${DAY_NAMES[day]}, ${p.window.start}–${p.window.end} (the shift for this plan). Due: ${esc(due.join("; "))}. ${esc(demands)}`;
   } catch (err) {
     $("dayNote").textContent = err.message;
   }
@@ -381,7 +408,7 @@ async function runPlan(targetH) {
     stations: state.stations, radius_m: +$("radius").value,
     primary_fleet: primary, secondary_fleet: fleetOf("secondaryFleet"),
     streams: [...document.querySelectorAll(".streams input:checked")].map((x) => x.value),
-    shift_h: +$("shift").value, unload_min: +$("unload").value, time_limit_s: +$("timeLimit").value, day: $("planDay").value || null,
+    shift_h: +$("shift").value, unload_min: +$("unload").value, time_limit_s: +$("timeLimit").value, date: $("planDay").value || null,
     park: {
       enabled: $("parkOn").checked, method: $("parkMethod").value, share_mode: $("parkShare").value,
       dropoff_pct: +$("dropoff").value, radius_m: +$("parkRadius").value,

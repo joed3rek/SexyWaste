@@ -17,7 +17,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from backend import auth, cleancity, cycle, regulations, resources
+from backend import auth, cycle, demand, regulations, resources
 from backend.buildings import generators
 from backend.buildings.layers import sectors as pilot_sectors
 from backend.config import FRONTEND_DIR, PILOTS, WASTE_STREAMS
@@ -26,10 +26,10 @@ from backend.routing import parks, twotier
 from backend.routing.network import node_lonlat
 from backend.api.cleancity_api import router as cleancity_router
 from backend.api.cycle_api import router as cycle_router
+from backend.api.demand_api import router as demand_router
 from backend.api.resources_api import router as resources_router
 from backend.api.survey_api import router as survey_router
 from backend.survey import service as survey_service
-from backend.survey import gvp
 from backend.survey import state as survey_state
 
 @asynccontextmanager
@@ -44,6 +44,7 @@ app.include_router(survey_router)
 app.include_router(resources_router)
 app.include_router(cycle_router)
 app.include_router(cleancity_router)
+app.include_router(demand_router)
 
 
 @app.get("/api/landing/photos")
@@ -147,14 +148,16 @@ def get_points_v2(pilot_key: str, sector: str | None = None,
     if not set(stream_list) <= set(WASTE_STREAMS):
         raise HTTPException(422, f"streams must be from {WASTE_STREAMS}")
     try:
-        pts = points_v2.collection_points(pilot, survey_state.building_states(pilot), sector, params)
-        if sector:
-            pts += gvp.collection_points(pilot, sector)
-            con = cleancity.connect()
+        if sector:  # the sector's what-if collection demands, at their places (backend.demand)
+            con = demand.connect()
             try:
-                pts += cleancity.bin_demands(con, pilot, sector)
+                pts = demand.plan_points(con, pilot, sector, None, list(WASTE_STREAMS), keep_empty=True, params=params)
             finally:
                 con.close()
+            for p in pts:
+                p.pop("load", None), p.pop("load_kg", None)
+        else:
+            pts = points_v2.collection_points(pilot, survey_state.building_states(pilot), sector, params)
         points_v2.vehicle_class(vehicle)
     except (ValueError, KeyError) as err:
         raise HTTPException(422, str(err)) from err
@@ -220,7 +223,8 @@ class PlanV2In(BaseModel):
     unload_min: float = Field(10, ge=0, le=120)
     time_limit_s: int = Field(30, ge=5, le=300)
     park: dict | None = None
-    day: str | None = None  # mon..sun: plan that day of the collection cycle
+    day: str | None = None  # mon..sun: plan the next such date (kept for older callers; prefer `date`)
+    date: str | None = None  # YYYY-MM-DD: plan that date's collection demands
 
 
 @app.get("/api/pilots/{pilot_key}/v2/stations")
@@ -262,11 +266,15 @@ def _plan_input(pilot_key: str, body: PlanV2In, check_fleet: bool = True) -> two
             raise HTTPException(err.status, str(err)) from err
         finally:
             con.close()
-    day_plan, shift_h = None, body.shift_h
-    if body.day:
+    day_plan, shift_h, plan_date = None, body.shift_h, None
+    if body.day or body.date:
+        try:
+            plan_date = demand.parse_date(body.date) if body.date else demand.next_date_for(body.day)
+        except demand.DemandError as err:
+            raise HTTPException(err.status, str(err)) from err
         con = cycle.connect()
         try:
-            day_plan = cycle.day_plan(con, pilot, body.sector, body.day)
+            day_plan = cycle.day_plan(con, pilot, body.sector, demand.weekday(plan_date))
         except cycle.CycleError as err:
             raise HTTPException(err.status, str(err)) from err
         finally:
@@ -276,7 +284,7 @@ def _plan_input(pilot_key: str, body: PlanV2In, check_fleet: bool = True) -> two
                 raise HTTPException(422, f"Nothing is collected in {body.sector} on {body.day.title()} in the collection cycle.")
             shift_h = day_plan["window"]["hours"]  # the routes must fit the day's collection window
     return twotier.PlanInput(
-        pilot=pilot, sector=body.sector, depot=body.depot, mrf=body.mrf, cycle=day_plan,
+        pilot=pilot, sector=body.sector, depot=body.depot, mrf=body.mrf, cycle=day_plan, date=plan_date,
         primary_fleet=[r.model_dump() for r in body.primary_fleet],
         secondary_fleet=[r.model_dump() for r in body.secondary_fleet],
         stations=body.stations or None, truck_depot=body.truck_depot, radius_m=body.radius_m,

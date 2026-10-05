@@ -69,6 +69,9 @@ class PlanInput:
     # Collection cycle for the planned day (backend.cycle.day_plan): which streams each generator type has
     # due and how many days of waste have built up. None: every stream, one day's waste.
     cycle: dict | None = None
+    # The date planned (YYYY-MM-DD): the route builder collects that day's stored collection demands
+    # (backend.demand). None: the what-if demands, every stream's daily waste.
+    date: str | None = None
 
 
 # ---------- Graph helpers ----------
@@ -117,29 +120,14 @@ def _litres(kg_by_stream: dict, density: dict) -> float:
 # ---------- Transfer stations ----------
 
 def _sector_points(inp: PlanInput) -> list[dict]:
-    from backend.survey import gvp, state
-    pts = P.collection_points(inp.pilot, state.building_states(inp.pilot), inp.sector)
-    # Other collection demands: waste cleared from GVPs, and public bins that need emptying (Clean City).
-    if inp.sector:
-        from backend import cleancity
-        pts += gvp.collection_points(inp.pilot, inp.sector)
-        con = cleancity.connect()
-        try:
-            pts += cleancity.bin_demands(con, inp.pilot, inp.sector)
-        finally:
-            con.close()
-    out = []
-    factors = inp.cycle["factors"] if inp.cycle and inp.cycle.get("scheduled") else None
-    for p in pts:
-        kg = {s: (0.0 if s == "wet" and p.get("wet_excluded") else p["kg"][s]) for s in inp.streams}
-        if factors is not None:  # only the streams due today, with the waste built up since the last collection
-            from backend.cycle import generator_of
-            g = generator_of(p)
-            if g:
-                kg = {s: x * factors[g][s] for s, x in kg.items()}
-        if sum(kg.values()) <= 0:
-            continue
-        out.append({**p, "load": kg, "load_kg": sum(kg.values())})
+    """The collection demands to route, at their places on the street network. The planner does not
+    work out demand itself: backend.demand does, from the collection cycle, Clean City and GVPs."""
+    from backend import demand
+    con = demand.connect()
+    try:
+        out = demand.plan_points(con, inp.pilot, inp.sector, inp.date, inp.streams)
+    finally:
+        con.close()
     nodes = _nearest_nodes(inp.pilot, np.array([[p["lon"], p["lat"]] for p in out])) if out else []
     known = _routing(inp.pilot).index
     for p, n in zip(out, nodes):

@@ -31,13 +31,13 @@ from shapely.ops import linemerge, polygonize, unary_union
 
 from backend.buildings import generators, layers
 from backend.buildings.layers import METRIC_CRS
-from backend.config import AREAS, ROOT
+from backend.config import AREAS, DATA_DIR, ROOT
 from backend.regulations import stream_keys
 from backend.routing.network import _road_class, load_graph
 
 REFERENCE_DIR = ROOT / "reference"
 STRAIGHT_TURN_DEG = 30  # unnamed street runs continue through a junction only if the turn is at most this
-OVERRIDES_DIR = ROOT / "data" / "reference_overrides"
+OVERRIDES_DIR = DATA_DIR / "reference_overrides"
 STREAMS = stream_keys()
 USES = ("residential", "commercial", "mixed", "institutional")
 CATEGORY_USE = {

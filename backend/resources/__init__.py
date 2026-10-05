@@ -24,11 +24,11 @@ import uuid
 from datetime import date, datetime, timezone
 from pathlib import Path
 
-from backend.config import ROOT
+from backend.config import DATA_DIR
 from backend.regulations import stream_keys
 from backend.routing import points as P
 
-DB_PATH = ROOT / "data" / "ops.db"
+DB_PATH = DATA_DIR / "ops.db"
 STATUSES = ("available", "assigned", "in_use", "maintenance", "unavailable")
 PLANNABLE = ("available", "assigned", "in_use")
 SHIFTS = ("morning", "afternoon", "night", "general")

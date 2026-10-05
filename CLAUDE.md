@@ -24,10 +24,13 @@ GIS and optimisation decision-support app for municipal solid waste management i
 
 ## Planning modules (`data/ops.db`)
 
+- All stored data lives in `DATA_DIR` (`backend/config.py`; `data/` by default, or `CITYLOOM_DATA_DIR`). Never hard-code another data path.
+- Service planning (`backend/demand`) is the hub: requirements are read from the cycle, street plans, bins and GVPs (never copied), and each day's **service demands** are stored in `service_demand` with an append-only `service_demand_event`. `generate()` is idempotent. Consumers read demands; they do not work demand out themselves. Every new feature states which entity it reads, which it creates or updates, and where that flows next. See `docs/architecture.md`.
+
 - Resource management (`backend/resources`): vehicles (fleet manager), people (HR manager) and machinery (fleet manager). Statuses are available, assigned, in_use, maintenance, unavailable; only the first three count for plans. A sector plans with its own resources plus the shared pool, and plans are labelled hypothetical while the inventory is empty. Changes are logged in the append-only `resource_log`. Tests get an empty store from `tests/conftest.py`.
 - Collection cycle (`backend/cycle`, planner): schedules per stream × generator type, for every sector or one sector's override. Schedules are deactivated, never deleted. The route builder takes the day's plan (built-up days per stream) and uses its window as the shift.
 - Clean City (`backend/cleancity`, planner): street classes from the street graph, public bins on the road, GVP clearing tasks and the workforce calculation. Bins that are full, overflowing or due become route builder demands. Assumptions live in `reference/clean_city.json`.
-- The route builder (`backend/routing/twotier.py`) consumes all of these: door-to-door runs, bulk waste generators, cleared GVP pickups and public bins, capped by the inventory and checked for crew.
+- The route builder (`backend/routing/twotier.py`) plans a date from that date's stored collection demands (`demand.plan_points`): door-to-door runs, bulk waste generators, cleared GVP pickups and public bins. It is capped by the inventory and checked for crew. Without a date it uses the what-if demands (every stream, one day's waste). GVP moves sync their demands (`gvp.act` → `demand.sync_gvps`).
 - Assumptions with sources live in `reference/` (vehicles, roads, composting, clean city, collection cycle template), never in the regulations library.
 
 ## Roles and pages

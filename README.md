@@ -438,7 +438,7 @@ Sign-in is a dummy login for the pilot: the role, name and sectors stay in the b
   - Small vehicles collect door to door from street-run collection points and make as many trips to the transfer stations as their capacity needs. Trucks carry the loads to the MRF.
   - The result shows the routes, trips per vehicle, fill per trip, truck trips and the time to complete, against the shift length.
   - Collection points are street runs: buildings are snapped to their frontage street and grouped by use, with stable IDs from OSM nodes. Vehicles drive the whole stretch of street; OR-Tools picks which end to enter, and one-way streets are taken the right way. Hovering a point highlights its plots and street.
-  - **Plan for** a day of the week: the collection cycle decides which streams and generators are collected that day, and its time window becomes the shift. Without a cycle, the plan collects every stream's daily waste.
+  - **Plan for** a date (today or the next six days): the plan collects that date's stored collection demands. The collection cycle decides which streams and generators are due, and its time window becomes the shift. Without a cycle, every stream's daily waste is due.
   - Demands come from four sources: door-to-door street runs, bulk waste generators, cleared GVP pickups and public bins that are full, overflowing or due.
   - The fleet is filled in from the resource inventory. A plan cannot use more available vehicles than the sector has (its own plus the shared pool), and it checks that there are enough drivers and collectors to crew them. Until any vehicles are entered, plans are labelled as a hypothetical fleet.
   - **Suggest fleet** finds the smallest fleet, keeping the chosen vehicle types and mix, that finishes within a target time (5 h by default). It runs the optimiser a few times and says what limits the time. In the HSR plans, collecting at houses takes about 70–75% of vehicle time and driving under 10%, so the number of vehicles matters far more than the number of transfer stations.
@@ -448,6 +448,7 @@ Sign-in is a dummy login for the pilot: the role, name and sectors stay in the b
   - **Machinery** (fleet manager): mechanical sweepers, loaders, compactors, handcarts, pressure washers and other equipment, with capacity, condition and service dates.
   - Statuses are available, assigned, in use, maintenance and unavailable. Plans count only the first three.
   - Every change is logged and kept. The page warns when vehicles lack GPS, which the rules require above a city population (SWM Rules 2026, r. 8(h)(ix)).
+- **Service planning** (`backend/demand`). What service each sector needs (from the collection cycle, street classes, bin rules and GVPs) and, for each day, the **service demands**: collection demands (a stream's waste at a street run, a public bin or a cleared GVP) and cleaning demands (streets due for sweeping, verified GVPs). Demands are stored with their history and can be regenerated at any time; when no longer needed they close with a reason (cancelled, or done when a bin is serviced or a GVP cleared). The route builder plans a date from that date's collection demands. See `docs/architecture.md`.
 - **Collection cycle** (`cycle.html`, planner). The weekly schedule for each stream and generator type (households, commercial, institutions, bulk waste generators), with days, a time window, collection method and vehicle types. Entries can cover every sector, or override the schedule for one sector.
   - A week grid shows what is collected each day. An example template can be loaded from `reference/collection_cycle.json`.
   - Checks flag streams or generators with no regular collection (SWM Rules 2026, r. 8(h)(iii)). The page also shows the rule that markets are cleaned daily (r. 39(19)).
@@ -490,7 +491,7 @@ python -m venv .venv
 .venv\Scripts\python -m uvicorn backend.api.main:app --reload
 ```
 
-Then open http://127.0.0.1:8000. The first load downloads OSM data through Overpass and caches it in `data/cache/`, which takes a few minutes. Survey records and GVPs are stored in `data/survey.db`, resources, the collection cycle and Clean City in `data/ops.db`, and photos in `data/photos/`. Run the tests with:
+Then open http://127.0.0.1:8000. The first load downloads OSM data through Overpass and caches it in `data/cache/`, which takes a few minutes. Everything the app stores lives in one folder, `data/` (git-ignored; set `CITYLOOM_DATA_DIR` to move it). Survey records and GVPs are in `data/survey.db`; resources, the collection cycle, Clean City and service demands in `data/ops.db`; photos in `data/photos/`. Run the tests with:
 
 ```powershell
 .venv\Scripts\python -m pytest
@@ -523,7 +524,8 @@ backend/
 ├── resources/             # data/ops.db: vehicles, people and machinery, with plan caps and crew checks
 ├── cycle/                 # Collection cycle schedules and day plans (data/ops.db)
 ├── cleancity/             # Street classes, public bins, cleaning workload (data/ops.db)
-├── api/                   # FastAPI: main.py plus survey, resources, cycle and Clean City routers; serves the frontend
+├── demand/                # Service requirements and the stored daily service demands (data/ops.db)
+├── api/                   # FastAPI: main.py plus survey, resources, cycle, Clean City and service-planning routers; serves the frontend
 └── routing/               # Road network, street-run collection points (points.py), park composting (parks.py) and two-tier planner (twotier.py)
 frontend/
 ├── index.html, landing.*  # Opening page and sign-in

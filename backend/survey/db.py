@@ -19,9 +19,9 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-from backend.config import ROOT
+from backend.config import DATA_DIR
 
-DB_PATH = ROOT / "data" / "survey.db"
+DB_PATH = DATA_DIR / "survey.db"
 
 ROUNDS = ("quick", "detailed", "weighed")
 PURPOSES = ("survey", "spot_check")

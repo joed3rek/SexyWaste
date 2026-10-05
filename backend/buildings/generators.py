@@ -127,8 +127,9 @@ def _classify(building_tag, lu, poi_cats: list[str], footprint: float):
     anchors = [c for c in poi_cats if c in ANCHORS]
     commerce = [c for c in poi_cats if c in COMMERCE]
     if commerce:
-        # Most frequent commercial use; ties go to the building's own tag, then to eateries.
-        main_commerce = max(set(commerce), key=lambda c: (commerce.count(c), c == tag_cat, c == "food_service"))
+        # Most frequent commercial use; ties go to the building's own tag, then to eateries, then
+        # alphabetically (sorted, so the answer does not depend on Python's set order between runs).
+        main_commerce = max(sorted(set(commerce)), key=lambda c: (commerce.count(c), c == tag_cat, c == "food_service"))
         main_commerce = "healthcare" if main_commerce == "clinic" else main_commerce
     else:
         main_commerce = None

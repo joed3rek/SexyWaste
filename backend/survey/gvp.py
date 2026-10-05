@@ -30,6 +30,7 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import logging
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -38,6 +39,8 @@ from backend.config import (GVP_MAX_PHOTOS, GVP_MAX_ROAD_DISTANCE_M, GVP_MERGE_D
 from backend.regulations import stream_keys, swm
 from backend.survey import db
 from backend.survey.service import SurveyError, _check_sector, point_sector
+
+log = logging.getLogger(__name__)
 
 STREAMS = stream_keys()
 MANAGERS = ("survey_supervisor", "operations_supervisor")  # verify, reject, assign, clear, record interventions
@@ -315,9 +318,20 @@ def act(pilot: str, gvp_id: str, actor: dict, action: str, value: str | None = N
                 _event(con, gvp_id, actor, action, None, note)
             else:
                 raise SurveyError(f"Unknown action '{action}'.")
-        return detail(pilot, gvp_id, db_path)
     finally:
         con.close()
+    _sync_demands(pilot, g["sector"], db_path, actor)
+    return detail(pilot, gvp_id, db_path)
+
+
+def _sync_demands(pilot: str, sector: str | None, db_path: Path | None, actor: dict) -> None:
+    """GVP -> service demands: a verified GVP is a cleaning demand, its cleared waste a collection demand.
+    The GVP change is already saved; if the demands cannot be updated now, the next generate() catches up."""
+    from backend import demand
+    try:
+        demand.sync_gvps(pilot, sector, db_path, actor)
+    except Exception:  # noqa: BLE001 - never undo a saved GVP change over its demands
+        log.exception("Could not update service demands for GVPs in %s", sector)
 
 
 # ---------- Reading ----------
