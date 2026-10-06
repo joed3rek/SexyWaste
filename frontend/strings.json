@@ -1840,6 +1840,10 @@
   "nav.citymap": {
    "en": "City map",
    "kn": ""
+  },
+  "nav.processing": {
+   "en": "Processing",
+   "kn": ""
   }
  }
 }

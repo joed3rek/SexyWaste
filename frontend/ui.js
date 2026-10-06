@@ -44,6 +44,7 @@ const NAV = [
   { key: "cleancity", href: "cleancity.html", icon: "broom", roles: ["planner"] },
   { key: "builder", href: "builder.html", icon: "routes", roles: ["planner"] },
   { key: "operations", href: "operations.html", icon: "pulse", roles: ["planner", "operations_supervisor"] },
+  { key: "processing", href: "processing.html", icon: "recycle", roles: ["planner", "facility_operator"] },
   { key: "performance", href: "performance.html", icon: "chart", roles: ["planner"] },
   { key: "fleet", href: "resources.html", icon: "truck", roles: ["fleet_workforce_manager", "hr_manager", "planner"] },
   { key: "admin", href: "admin.html", icon: "ward", roles: [] },

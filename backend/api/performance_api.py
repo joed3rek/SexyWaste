@@ -64,7 +64,14 @@ def scan_alerts(pilot_key: str, request: Request, body: dict[str, Any] | None = 
     days = int((body or {}).get("days", 14))
     if not 3 <= days <= 90:
         raise HTTPException(422, "days must be between 3 and 90.")
-    return _run(P.scan, pilot, days)
+    out = _run(P.scan, pilot, days)
+    from backend import processing as PR  # processing builds on performance, so it is imported here
+    con = PR.connect()
+    try:
+        out["new"]["facility_over_capacity"] = PR.scan(con, pilot, min(days, 14))
+    finally:
+        con.close()
+    return out
 
 
 @router.patch("/api/pilots/{pilot_key}/planning-alerts/{alert_id}")

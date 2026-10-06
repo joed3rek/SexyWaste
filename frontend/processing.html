@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <link rel="icon" href="data:," />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Processing</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" />
+  <script src="theme.js"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="page with-rail">
+  <nav id="appNav"></nav>
+  <main class="doc">
+    <header class="page-head">
+      <p class="eyebrow">Processing · Collection → transfer → MRF / composting → recovery → disposal</p>
+      <h1>Processing</h1>
+      <p class="sub">What reaches each facility, what is recovered, and what is left for disposal. Facilities are the same ones the
+        route builder uses; add or move them there. A facility over its capacity on several days becomes a planning alert.</p>
+    </header>
+    <div class="fleet-form"><label class="inline">Period <select id="period"><option value="7">Last 7 days</option><option value="30">Last 30 days</option></select></label></div>
+
+    <h2>Facilities</h2>
+    <div class="scroll" id="facilities"></div>
+    <div id="expected"></div>
+    <div id="fractions"></div>
+
+    <section id="recordBox">
+      <h2>Record a day's intake</h2>
+      <form id="intake" class="fleet-form">
+        <label>Facility <select id="fac" required></select></label>
+        <label>Day <input id="day" type="date" required /></label>
+        <label>Stream <select id="stream"></select></label>
+        <label>Received (kg) <input id="received" type="number" min="0" step="1" required /></label>
+        <div id="materials" class="op-form"></div>
+        <label>Rejects (kg) <input id="rejects" type="number" min="0" step="1" /></label>
+        <label>Sent to disposal (kg) <input id="disposal" type="number" min="0" step="1" /></label>
+        <label>Figures are <select id="basis"><option value="weighed">Weighed</option><option value="estimated">Estimated</option></select></label>
+        <button type="submit">Record</button>
+      </form>
+    </section>
+  </main>
+  <div id="toast" class="toast" hidden></div>
+  <script src="ui.js"></script>
+  <script src="processing.js"></script>
+</body>
+</html>

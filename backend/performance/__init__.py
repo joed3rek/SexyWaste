@@ -32,7 +32,7 @@ from backend import demand as D
 from backend import operations as O
 from backend.config import GVP_RESPONSE_HOURS
 
-ALERT_KINDS = ("recurring_gvp", "repeated_miss", "capacity_short")
+ALERT_KINDS = ("recurring_gvp", "repeated_miss", "capacity_short", "facility_over_capacity")
 ALERT_STATUSES = ("open", "acknowledged", "resolved")
 PLANNERS = ("planner", "admin")
 GVP_CAUSES = ["Collection not frequent enough nearby", "Too few public bins", "Poor access for vehicles or carts",
@@ -76,8 +76,22 @@ class PerformanceError(Exception):
 
 def connect(db_path: Path | None = None) -> sqlite3.Connection:
     con = O.connect(db_path)
+    _migrate_kinds(con)
     con.executescript(_SCHEMA)
     return con
+
+
+def _migrate_kinds(con) -> None:
+    """An alert table made before a kind was added is rebuilt with the new list; its rows are kept."""
+    row = con.execute("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'planning_alert'").fetchone()
+    if row is None or all(k in row["sql"] for k in ALERT_KINDS):
+        return
+    with con:
+        con.execute("ALTER TABLE planning_alert RENAME TO planning_alert_old")
+        con.execute("DROP TRIGGER IF EXISTS planning_alert_no_delete")
+        con.executescript(_SCHEMA)
+        con.execute("INSERT INTO planning_alert SELECT * FROM planning_alert_old")
+        con.execute("DROP TABLE planning_alert_old")
 
 
 def _now() -> str:
