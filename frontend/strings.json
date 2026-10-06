@@ -1832,6 +1832,10 @@
   "nav.operations": {
    "en": "Operations",
    "kn": ""
+  },
+  "nav.performance": {
+   "en": "Performance",
+   "kn": ""
   }
  }
 }

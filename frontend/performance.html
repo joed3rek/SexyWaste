@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <link rel="icon" href="data:," />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Performance</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" />
+  <script src="theme.js"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="page with-rail">
+  <nav id="appNav"></nav>
+  <main class="doc">
+    <header class="page-head">
+      <p class="eyebrow">Performance · Service required vs delivered</p>
+      <h1>Performance</h1>
+      <p class="sub">What the service demands asked for, what the operation records say was delivered, the gap and why.
+        Work with no outcome recorded is shown apart, never counted as done or missed.</p>
+    </header>
+    <div class="fleet-form">
+      <label class="inline">Sector <select id="sector"><option value="">All sectors</option></select></label>
+      <label class="inline">Period <select id="period"><option value="7">Last 7 days</option><option value="14">Last 14 days</option><option value="30">Last 30 days</option></select></label>
+    </div>
+
+    <h2>Planning alerts</h2>
+    <p class="hint">Problems that keep coming back, turned into planning questions. <button type="button" id="scan" class="secondary">Look for repeated failures</button></p>
+    <div id="alerts"></div>
+
+    <h2>Service delivered</h2>
+    <div class="scroll" id="service"></div>
+    <div id="causes"></div>
+
+    <h2>Route estimates against actuals</h2>
+    <div class="scroll" id="routes"></div>
+
+    <h2>Garbage vulnerable points</h2>
+    <div id="gvps"></div>
+  </main>
+  <div id="toast" class="toast" hidden></div>
+  <script src="ui.js"></script>
+  <script src="performance.js"></script>
+</body>
+</html>
