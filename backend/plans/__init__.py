@@ -124,6 +124,19 @@ def demand_key(point_id: str) -> tuple[str, str]:
     return "collection_point", pid
 
 
+def with_basis(result: dict, available: dict) -> dict:
+    """Say whether the plan's vehicles and crews were checked against the inventory or are hypothetical,
+    and how many drivers and collectors the plan's vehicles need (available: resources.available)."""
+    inv = available["inventory"]
+    result["fleet_basis"] = "inventory" if inv["vehicle"] else "hypothetical"
+    result["crew_basis"] = "inventory" if inv["staff"] else "hypothetical"
+    vehicles = [{"type": v["type"], "count": 1} for v in result["primary"]["vehicles"] + result["secondary"]["trucks"]]
+    result["crew"] = {"needed": resources.crew_needed(vehicles, available["crew_per_vehicle"]),
+                      "available": {"drivers": available["staff"].get("driver", {}).get("count", 0),
+                                    "collectors": available["staff"].get("waste_collector", {}).get("count", 0)}}
+    return result
+
+
 # ---------- Feasibility: the route optimiser contract ----------
 
 def assess(result: dict) -> tuple[str, list[dict]]:

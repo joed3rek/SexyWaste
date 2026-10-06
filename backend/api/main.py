@@ -7,6 +7,7 @@ then open http://127.0.0.1:8000
 
 from __future__ import annotations
 
+import os
 import threading
 import time
 import uuid
@@ -17,7 +18,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from backend import auth, cycle, demand, plans, regulations, resources
+from backend import agent, auth, cycle, demand, plans, regulations, resources
 from backend.buildings import generators
 from backend.buildings.layers import sectors as pilot_sectors
 from backend.config import FRONTEND_DIR, PILOTS, WASTE_STREAMS
@@ -34,6 +35,7 @@ from backend.api.operations_api import router as operations_router
 from backend.api.performance_api import router as performance_router
 from backend.api.processing_api import router as processing_router
 from backend.api.command_api import router as command_router
+from backend.api.agent_api import router as agent_router
 from backend.api.resources_api import router as resources_router
 from backend.api.survey_api import router as survey_router
 from backend.survey import service as survey_service
@@ -42,7 +44,12 @@ from backend.survey import state as survey_state
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     survey_service.purge_old_photos()  # photo retention (backend/config.py)
+    # The Collection Intelligence Agent's loop (reference/agent.json schedule); CITYLOOM_AGENT=off keeps it stopped.
+    loop = None if os.environ.get("CITYLOOM_AGENT") == "off" else agent.start_scheduler("hsr", lambda: list(pilot_sectors("hsr")["name"]))
     yield
+    if loop is not None:
+        loop.stop.set()
+        agent._LOOP["running"] = False
 
 
 app = FastAPI(title="SWM Urban Waste Intelligence", lifespan=lifespan)
@@ -59,6 +66,7 @@ app.include_router(operations_router)
 app.include_router(performance_router)
 app.include_router(processing_router)
 app.include_router(command_router)
+app.include_router(agent_router)
 
 
 @app.get("/api/landing/photos")
@@ -307,16 +315,7 @@ def _plan_input(pilot_key: str, body: PlanV2In, check_fleet: bool = True) -> two
 
 
 def _with_basis(result: dict, available: dict) -> dict:
-    """Say whether the plan's vehicles and crews were checked against the inventory or are hypothetical,
-    and how many drivers and collectors the plan's vehicles need."""
-    inv = available["inventory"]
-    result["fleet_basis"] = "inventory" if inv["vehicle"] else "hypothetical"
-    result["crew_basis"] = "inventory" if inv["staff"] else "hypothetical"
-    vehicles = [{"type": v["type"], "count": 1} for v in result["primary"]["vehicles"] + result["secondary"]["trucks"]]
-    result["crew"] = {"needed": resources.crew_needed(vehicles, available["crew_per_vehicle"]),
-                      "available": {"drivers": available["staff"].get("driver", {}).get("count", 0),
-                                    "collectors": available["staff"].get("waste_collector", {}).get("count", 0)}}
-    return result
+    return plans.with_basis(result, available)
 
 
 def _who(request: Request) -> dict:

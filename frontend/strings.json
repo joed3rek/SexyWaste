@@ -1848,6 +1848,10 @@
   "nav.command": {
    "en": "Today",
    "kn": ""
+  },
+  "nav.agent": {
+   "en": "Agent",
+   "kn": ""
   }
  }
 }

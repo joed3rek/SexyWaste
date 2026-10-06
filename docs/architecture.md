@@ -44,15 +44,32 @@ Fixes found on the way:
 - Streets of one frequency all fell on the same days. Each street now has a fixed stagger, so the daily load is level.
 - The active navigation item and the role guard came from a hand-kept list, so new pages were open to every role. Both now come from `NAV`.
 
+**Collection Intelligence Agent, first build** (`backend/agent`, `reference/agent.json`, page *Agent*). This is not a chatbot: it is a background orchestrator over the modules above, and adds only its own run records (`agent_run`, `agent_trigger`, `agent_state`).
+- **Planning a sector and day.** It makes the demands, then runs the checks before any routing:
+  - the collection window (from the cycle);
+  - the depot and MRF;
+  - the vehicles, labelled hypothetical when none are entered;
+  - a capacity bound that no plan can beat;
+  - capacity from recorded history (*insufficient data* until there is enough);
+  - crew;
+  - MRF capacity.
+
+  Then come the scenarios, in two stages. Stage 1 is the fleet as available, or straight to more capacity when the bound proves the fleet short. Stage 2 is chosen from how stage 1 actually turned out: more vehicles and a longer window if it ran over or left demand, one vehicle fewer if it had room to spare. Each scenario is optimised with OR-Tools and saved as a draft route plan. Scenarios are scored with the configurable weights. The agent recommends one plan, with reasons, a comparison, alternatives and risks, all from the metrics. Demand that no added capacity serves is reported as not a capacity shortfall.
+- **Approval.** A planner approves, which adopts the plan, or rejects; who, when, the settings version and the assumptions are kept. When no scenario is feasible, the status is *no feasible plan*, and adopting the closest one needs an explicit acceptance.
+- **Review.** Each recorded route is compared with its plan. A cause is given only when the record supports it (*UNKNOWN* otherwise). Unrecorded routes and missed work by reason are listed. Patterns over the history become proposals, which are never applied by the agent.
+- **Triggers.** A loop inside the app (`agent.start_scheduler`, started with the server; `CITYLOOM_AGENT=off` stops it) does three things:
+  - plans the next day at 18:00;
+  - reviews the day at 22:30;
+  - every 15 minutes, checks adopted plans for a vehicle that is no longer available or new demand above the threshold, and proposes one new plan per adopted plan.
+
+  Manual runs come from the Agent page.
+
 **Collection Intelligence Agent brief.** Steps 1–9 are the operational foundation that brief asks for in its phases 1, 2 and 4:
 - demand, resources, constraints, GIS and database;
 - routing with validation and planning exceptions;
 - planned vs actual, operational history and failure signals.
 
-Its later phases build on these records and are not started:
-- the agent's tool layer and candidate-plan comparison;
-- prediction of demand, travel and service time, and risk;
-- model versioning and back-testing.
+The agent's orchestration (phase 4) is now built as described above. Prediction (phase 5) and learning with versioned, back-tested models (phase 6) wait for recorded actuals. Until then the agent reports *insufficient data* rather than predicting.
 
 **Data folder.** All stored data sits in one folder, `DATA_DIR` in `backend/config.py`: `data/` in the repository, git-ignored. It can be moved with the `CITYLOOM_DATA_DIR` environment variable.
 

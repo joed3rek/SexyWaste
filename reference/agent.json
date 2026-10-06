@@ -1,0 +1,51 @@
+{
+  "_about": "Settings of the Collection Intelligence Agent (backend/agent). Planning choices of the municipality, not regulations or measured facts. Change 'version' whenever a value changes: every agent run records the version it used.",
+  "version": "1.0",
+  "schedule": {
+    "_note": "Local times. The agent plans the next day's collection for every sector with demand, and reviews the day's operations in the evening.",
+    "enabled": true,
+    "plan_next_day_at": "18:00",
+    "review_day_at": "22:30",
+    "check_conditions_every_min": 15
+  },
+  "planning": {
+    "default_window_h": 8,
+    "_default_window_h": "Used when the collection cycle sets no window for the day.",
+    "max_window_extension_h": 2,
+    "max_extra_vehicles": 4,
+    "solver_time_limit_s": 10,
+    "station_radius_m": 500,
+    "unload_min": 10,
+    "default_primary_type": "e_loader_3w",
+    "default_secondary_type": "rear_loader_compactor",
+    "max_scenarios": 4,
+    "comfortable_below_pct": 60,
+    "_comfortable_below_pct": "Demand below this share of the capacity bound: also try one vehicle fewer."
+  },
+  "objective": {
+    "_note": "Weights of the plan score (lower is better). Unserved demand and overtime dominate by design: coverage first, then the window, then cost.",
+    "unserved_kg": 10.0,
+    "overtime_min": 2.0,
+    "km": 1.0,
+    "vehicles": 30.0,
+    "extra_vehicles_needed": 60.0,
+    "imbalance_min": 0.2,
+    "risk": {"low": 0, "medium": 40, "high": 120}
+  },
+  "risk": {
+    "_note": "Rule-based risk of a plan until a risk model exists: time slack within the window and coverage.",
+    "high_if_slack_below_pct": 5,
+    "medium_if_slack_below_pct": 15
+  },
+  "replanning": {
+    "_note": "Conditions that make the agent propose a new plan for an adopted day (today or tomorrow). Below these, the plan is left alone: replanning has an operational cost.",
+    "vehicle_lost": true,
+    "new_collection_demand_kg": 250
+  },
+  "review": {
+    "deviation_pct": 15,
+    "pattern_min_routes": 5,
+    "pattern_mean_error_pct": 15,
+    "lookback_days": 28
+  }
+}

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <link rel="icon" href="data:," />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Planning agent</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" />
+  <script src="theme.js"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="page with-rail">
+  <nav id="appNav"></nav>
+  <main class="doc">
+    <header class="page-head">
+      <p class="eyebrow">Collection Intelligence Agent</p>
+      <h1>Planning agent</h1>
+      <p class="sub">The agent checks each day's demand against capacity, resources and constraints, tries the scenarios the
+        problem calls for, optimises routes with OR-Tools, and recommends a plan with its reasons. You approve or reject;
+        nothing is deployed without you. After the day it compares plan with actual and reports what it can prove.</p>
+    </header>
+    <div id="status" class="card-box"></div>
+
+    <h2>Ask the agent</h2>
+    <div class="fleet-form agent-ask">
+      <label>Plan the day <input id="planDate" type="date" /></label>
+      <div id="sectorChecks" class="chips"></div>
+      <button type="button" id="planNow">Plan</button>
+      <label>Review the day <input id="reviewDate" type="date" /></label>
+      <button type="button" id="reviewNow" class="secondary">Review</button>
+    </div>
+
+    <h2>Waiting for your decision</h2>
+    <div id="pending"></div>
+
+    <h2>Reviews</h2>
+    <div id="reviews"></div>
+
+    <h2>History</h2>
+    <div class="scroll" id="history"></div>
+  </main>
+  <div id="toast" class="toast" hidden></div>
+  <script src="ui.js"></script>
+  <script src="agent.js"></script>
+</body>
+</html>

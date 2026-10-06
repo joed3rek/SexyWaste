@@ -35,6 +35,13 @@ def _adopted(con, table: str, pilot: str, day: str) -> dict:
         return {}
 
 
+def _agent_pending(con, pilot: str) -> int:
+    try:
+        return con.execute("SELECT COUNT(*) FROM agent_run WHERE pilot = ? AND status = 'recommended'", (pilot,)).fetchone()[0]
+    except sqlite3.OperationalError:  # the agent's tables are made when it first runs
+        return 0
+
+
 def overview(con, pilot: str, sectors: list[str], day: str | None = None, survey_db=None) -> dict:
     from backend.survey import gvp
     day = day or D.today()
@@ -115,4 +122,5 @@ def overview(con, pilot: str, sectors: list[str], day: str | None = None, survey
                   "sectors_without_route_plan": [x["sector"] for x in sectors_out if x["collection_demands"] and not x["route_plan"]]},
         "sectors": sectors_out,
         "top_alerts": alerts[:6],
+        "agent_pending": _agent_pending(con, pilot),
     }

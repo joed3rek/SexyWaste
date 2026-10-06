@@ -27,6 +27,7 @@ function render(c) {
   $("todayKpis").innerHTML = kpi("Urgent work open", fmt(t.urgent_open), "high or critical GVPs, bins to empty", t.urgent_open > 0, "cleancity.html")
     + kpi("Missed today", fmt(t.missed), null, t.missed > 0, "operations.html")
     + kpi("GVPs on the street", fmt(t.open_gvps), null, t.open_gvps > 0, "cleancity.html")
+    + kpi("Agent plans to decide", fmt(c.agent_pending), "recommended, awaiting approval", c.agent_pending > 0, "agent.html")
     + kpi("Sectors without a route plan", fmt(t.sectors_without_route_plan.length), t.sectors_without_route_plan.join(", "), t.sectors_without_route_plan.length > 0, "builder.html");
   $("sectors").innerHTML = c.sectors.map((s) => {
     const badge = (p, label) => (p ? `<span class="badge ${PLAN[p][0]}">${label} ${PLAN[p][1]}</span>` : `<span class="badge">${label}: none</span>`);

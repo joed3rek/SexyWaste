@@ -985,3 +985,10 @@ a.kpi:hover { border-color: var(--line-strong); }
 .cmd-sectors { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: var(--s-3); }
 .cmd-sector { padding: var(--s-4); }
 .cmd-sector p { margin: 0 0 var(--s-2); }
+
+/* Planning agent */
+.agent-run { padding: var(--s-4); margin-bottom: var(--s-3); }
+.agent-run p, .agent-run h3 { margin: 0 0 var(--s-2); }
+.agent-run details { margin: var(--s-2) 0; }
+.agent-run summary { cursor: pointer; font-weight: 500; }
+.agent-ask { align-items: flex-end; }
