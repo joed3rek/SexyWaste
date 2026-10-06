@@ -965,3 +965,11 @@ p.warn::before { background: transparent; border: 1.5px solid currentColor; colo
 .plan-box p { margin: 0 0 var(--s-2); }
 .plan-exceptions { margin: 0 0 var(--s-3); padding-left: 18px; font-size: var(--fs-md); }
 .plan-exceptions li { margin-bottom: var(--s-2); }
+
+/* Operations: recording actuals */
+.op-row { padding: var(--s-3); margin-bottom: var(--s-2); }
+.op-row p { margin: 0 0 var(--s-2); }
+.op-form { display: flex; flex-wrap: wrap; gap: var(--s-2); align-items: flex-end; }
+.op-form label { flex: 0 1 120px; margin: 0; }
+.op-form label:has(select[multiple]) { flex: 1 1 220px; }
+.op-form select.reason { flex: 1 1 200px; width: auto; }

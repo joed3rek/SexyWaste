@@ -1828,6 +1828,10 @@
   "theme.toggle": {
    "en": "Switch between light and dark theme",
    "kn": ""
+  },
+  "nav.operations": {
+   "en": "Operations",
+   "kn": ""
   }
  }
 }

@@ -16,6 +16,7 @@ const ICONS = {
   calendar: '<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/>',
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"/>',
   moon: '<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>',
+  pulse: '<path d="M3 12h4l3 7 4-14 3 7h4"/>',
   truck: '<path d="M3 6.5h11v9H3z"/><path d="M14 9.5h3.5l3 3v3H14"/><circle cx="7" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/>',
 };
 
@@ -39,6 +40,7 @@ const NAV = [
   { key: "cycle", href: "cycle.html", icon: "calendar", roles: ["planner"] },
   { key: "cleancity", href: "cleancity.html", icon: "broom", roles: ["planner"] },
   { key: "builder", href: "builder.html", icon: "routes", roles: ["planner"] },
+  { key: "operations", href: "operations.html", icon: "pulse", roles: ["planner", "operations_supervisor"] },
   { key: "fleet", href: "resources.html", icon: "truck", roles: ["fleet_workforce_manager", "hr_manager", "planner"] },
   { key: "admin", href: "admin.html", icon: "ward", roles: [] },
   { key: "rules", href: "rules.html", icon: "rules", roles: ["surveyor", "survey_supervisor", "planner", "fleet_workforce_manager", "hr_manager", "generator"] },

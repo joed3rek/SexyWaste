@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <link rel="icon" href="data:," />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Operations</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" />
+  <script src="theme.js"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="page with-rail">
+  <nav id="appNav"></nav>
+  <main class="doc">
+    <header class="page-head">
+      <p class="eyebrow">Operations · What actually happened</p>
+      <h1>Operations</h1>
+      <p class="sub">Record each day's actual work against the adopted plans: every vehicle route (km, time, kg and any stops
+        missed) and every cleaning demand (done, partly done or missed, with the reason). These records feed Performance.
+        A record is never changed: record again to correct it, and the latest one counts.</p>
+    </header>
+    <div class="fleet-form">
+      <label class="inline">Sector <select id="sector"></select></label>
+      <label class="inline">Day <input id="day" type="date" /></label>
+    </div>
+    <h2>Vehicle routes</h2>
+    <div id="routes"></div>
+    <h2>Cleaning</h2>
+    <div id="cleaning"></div>
+  </main>
+  <div id="toast" class="toast" hidden></div>
+  <script src="ui.js"></script>
+  <script src="operations.js"></script>
+</body>
+</html>
