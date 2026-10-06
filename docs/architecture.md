@@ -26,6 +26,34 @@ Two changes from the plan below:
 - **`gvp_demand` stays** as the GVP's own record of cleared waste in `survey.db`; the service demand mirrors it. The two tables are in different databases, so folding one into the other waits for the database decision in section 6.
 - **A bug found on the way:** building classification broke ties between POI types by Python's random set order. A few buildings changed category between server starts, so point IDs and kilograms shifted. Ties now break in a fixed order, and all 11,505 buildings classify the same in every run.
 
+**Steps 2–9 are built** on branch `feature/connected-system`, one commit per step. Each step has its own module, router and tests.
+
+| Step | Module | What it does | Page |
+|---|---|---|---|
+| 2 Facilities | `backend/facilities` | Depot, truck yard, transfer stations, MRF and other places, one record each; the route builder loads and saves them | Route builder: *Save places* |
+| 3 Route plan contract | `backend/plans` | Every optimiser run kept as a plan with routes and stops; feasibility with reasons and actions; adoption marks demands `planned` and assigns vehicles and crews; a vehicle's routes are derived from adopted plans | Route builder: plan box, *Adopt* |
+| 4 Work planner | `backend/workplan` | Cleaning demands given to cleaning staff and equipment; shortages in worker-hours; adoption | Clean City: *Work plan* tab |
+| 5 Operations | `backend/operations` | Append-only actuals for demands and routes, with context: the operational memory | Operations |
+| 6 Performance | `backend/performance` | Required vs delivered, reasons, route estimate accuracy, GVP response; planning alerts from repeated failure | Performance |
+| 7 Shared map | `frontend/citymap.js` | One base map for every map page, and shared layer groups read from the domain APIs | City map |
+| 8 Processing | `backend/processing` | Facility intake, recovery, rejects, disposal; utilisation; observed vs assumed dry fractions; capacity alerts | Processing |
+| 9 Command centre | `backend/command` | Service level, failures, today's work and the reasons per sector; the planner's home page | Today |
+
+Fixes found on the way:
+- Sweeping frequencies with a half (3.5 a week) lost the half. They now carry over between weeks.
+- Streets of one frequency all fell on the same days. Each street now has a fixed stagger, so the daily load is level.
+- The active navigation item and the role guard came from a hand-kept list, so new pages were open to every role. Both now come from `NAV`.
+
+**Collection Intelligence Agent brief.** Steps 1–9 are the operational foundation that brief asks for in its phases 1, 2 and 4:
+- demand, resources, constraints, GIS and database;
+- routing with validation and planning exceptions;
+- planned vs actual, operational history and failure signals.
+
+Its later phases build on these records and are not started:
+- the agent's tool layer and candidate-plan comparison;
+- prediction of demand, travel and service time, and risk;
+- model versioning and back-testing.
+
 **Data folder.** All stored data sits in one folder, `DATA_DIR` in `backend/config.py`: `data/` in the repository, git-ignored. It can be moved with the `CITYLOOM_DATA_DIR` environment variable.
 
 ---

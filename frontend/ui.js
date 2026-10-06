@@ -16,6 +16,7 @@ const ICONS = {
   calendar: '<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/>',
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"/>',
   moon: '<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>',
+  check: '<rect x="4" y="4" width="16" height="16" rx="3"/><path d="m8.5 12 2.5 2.5 4.5-5"/>',
   map: '<path d="m3 6 6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/>',
   chart: '<path d="M4 20V4M4 20h16"/><path d="m8 15 4-5 3 3 5-6"/>',
   pulse: '<path d="M3 12h4l3 7 4-14 3 7h4"/>',
@@ -35,6 +36,7 @@ const FULL_APP_URL = "https://swm-urban-waste.onrender.com/";
 // this keeps each role's screen focused, it does not protect data.)
 const NAV = [
   { key: "home", href: "index.html", icon: "home" },
+  { key: "command", href: "command.html", icon: "pulse", roles: ["planner"] },
   { key: "surveyor", href: "surveyor.html", icon: "survey", roles: ["surveyor", "survey_supervisor"] },
   { key: "supervisor", href: "supervisor.html", icon: "ward", roles: ["survey_supervisor"] },
   { key: "report", href: "report.html", icon: "household", roles: ["generator"] },
@@ -43,7 +45,7 @@ const NAV = [
   { key: "cycle", href: "cycle.html", icon: "calendar", roles: ["planner"] },
   { key: "cleancity", href: "cleancity.html", icon: "broom", roles: ["planner"] },
   { key: "builder", href: "builder.html", icon: "routes", roles: ["planner"] },
-  { key: "operations", href: "operations.html", icon: "pulse", roles: ["planner", "operations_supervisor"] },
+  { key: "operations", href: "operations.html", icon: "check", roles: ["planner", "operations_supervisor"] },
   { key: "processing", href: "processing.html", icon: "recycle", roles: ["planner", "facility_operator"] },
   { key: "performance", href: "performance.html", icon: "chart", roles: ["planner"] },
   { key: "fleet", href: "resources.html", icon: "truck", roles: ["fleet_workforce_manager", "hr_manager", "planner"] },

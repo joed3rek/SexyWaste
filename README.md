@@ -449,6 +449,13 @@ Sign-in is a dummy login for the pilot: the role, name and sectors stay in the b
   - Statuses are available, assigned, in use, maintenance and unavailable. Plans count only the first three.
   - Every change is logged and kept. The page warns when vehicles lack GPS, which the rules require above a city population (SWM Rules 2026, r. 8(h)(ix)).
 - **Service planning** (`backend/demand`). What service each sector needs (from the collection cycle, street classes, bin rules and GVPs) and, for each day, the **service demands**: collection demands (a stream's waste at a street run, a public bin or a cleared GVP) and cleaning demands (streets due for sweeping, verified GVPs). Demands are stored with their history and can be regenerated at any time; when no longer needed they close with a reason (cancelled, or done when a bin is serviced or a GVP cleared). The route builder plans a date from that date's collection demands. See `docs/architecture.md`.
+- **Today** (`command.html`, the planner's home). How the city is doing (service level over 7 days), where it is failing (alerts, recurring and critical GVPs, full bins, sectors below target, workforce short), today's work and, per sector, why: no adopted plan, the plan's exceptions, cleaning hours needed against those available.
+- **Route plans.** Every optimiser run is saved with its routes and stops. A plan that leaves demand unserved, runs a vehicle past the window or leaves waste at a transfer station is marked infeasible, with reasons and the actions that would fix it. Adopting a plan marks its demands planned and assigns vehicles and crews from Resources. The depot, transfer stations, MRF and truck yard are saved facilities.
+- **Work plans** (Clean City, *Work plan* tab). The day's cleaning demands given to cleaning staff and equipment, GVPs first; what does not fit is a workforce shortage in worker-hours.
+- **Operations** (`operations.html`). The day's actual routes (km, time, kg, missed stops) and cleaning (done, partly done, missed, with the reason), recorded against the adopted plans. Records are append-only and keep their context: this is the operational history later learning uses.
+- **Performance** (`performance.html`). Service required vs delivered by sector and kind of work, the gap and its reasons, route estimates against actuals, GVP response times, and planning alerts that turn repeated failure (a GVP that keeps coming back, a place missed again and again, a sector short of capacity, an MRF over capacity) into planning questions.
+- **Processing** (`processing.html`). Intake at each facility by stream, recovered material, rejects and disposal; utilisation against capacity; observed dry waste fractions next to the assumed ones.
+- **City map** (`citymap.html`). One map with switchable layers from the same records: sectors, street cleaning classes, bins, GVPs, today's collection demands and facilities. Every map page uses the same base (`frontend/citymap.js`).
 - **Collection cycle** (`cycle.html`, planner). The weekly schedule for each stream and generator type (households, commercial, institutions, bulk waste generators), with days, a time window, collection method and vehicle types. Entries can cover every sector, or override the schedule for one sector.
   - A week grid shows what is collected each day. An example template can be loaded from `reference/collection_cycle.json`.
   - Checks flag streams or generators with no regular collection (SWM Rules 2026, r. 8(h)(iii)). The page also shows the rule that markets are cleaned daily (r. 39(19)).
@@ -525,6 +532,13 @@ backend/
 ├── cycle/                 # Collection cycle schedules and day plans (data/ops.db)
 ├── cleancity/             # Street classes, public bins, cleaning workload (data/ops.db)
 ├── demand/                # Service requirements and the stored daily service demands (data/ops.db)
+├── facilities/            # Depots, truck yards, transfer stations, MRFs and other places
+├── plans/                 # Route plans: saved runs, routes, stops, feasibility, adoption, assignment
+├── workplan/              # Cleaning work plans: demands given to staff and equipment
+├── operations/            # Append-only actuals against plans (operational history)
+├── performance/           # Required vs delivered, route accuracy, GVP response, planning alerts
+├── processing/            # Facility intake, recovery, rejects, disposal
+├── command/               # The command centre read model
 ├── api/                   # FastAPI: main.py plus survey, resources, cycle, Clean City and service-planning routers; serves the frontend
 └── routing/               # Road network, street-run collection points (points.py), park composting (parks.py) and two-tier planner (twotier.py)
 frontend/

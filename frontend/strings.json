@@ -1844,6 +1844,10 @@
   "nav.processing": {
    "en": "Processing",
    "kn": ""
+  },
+  "nav.command": {
+   "en": "Today",
+   "kn": ""
   }
  }
 }

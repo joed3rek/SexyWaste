@@ -32,6 +32,9 @@ GIS and optimisation decision-support app for municipal solid waste management i
 - Clean City (`backend/cleancity`, planner): street classes from the street graph, public bins on the road, GVP clearing tasks and the workforce calculation. Bins that are full, overflowing or due become route builder demands. Assumptions live in `reference/clean_city.json`.
 - The route builder (`backend/routing/twotier.py`) plans a date from that date's stored collection demands (`demand.plan_points`): door-to-door runs, bulk waste generators, cleared GVP pickups and public bins. It is capped by the inventory and checked for crew. Without a date it uses the what-if demands (every stream, one day's waste). GVP moves sync their demands (`gvp.act` → `demand.sync_gvps`).
 - Assumptions with sources live in `reference/` (vehicles, roads, composting, clean city, collection cycle template), never in the regulations library.
+- The loop after demands: `backend/facilities` (places) → `backend/plans` (route plans: saved, feasibility, adoption, vehicle and crew assignment) and `backend/workplan` (cleaning work plans) → `backend/operations` (append-only actuals; the operational memory) → `backend/performance` (required vs delivered, planning alerts) → `backend/processing` (facility intake, recovery) → `backend/command` (the planner's home). Plans, records and alerts are never deleted: superseded, corrected by a new record, or resolved.
+- Never return a bad plan silently: a plan that leaves demand unserved, runs past its window or cannot be staffed is `infeasible` with reasons and actions, and adopting it needs an explicit `accept_exceptions`.
+- Maps use `cityMap()` and the shared layers in `frontend/citymap.js`; do not copy a map style into a page. A new page needs only its `NAV` entry in `ui.js` for the rail and the role guard.
 
 ## Roles and pages
 

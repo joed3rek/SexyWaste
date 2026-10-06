@@ -33,6 +33,7 @@ from backend.api.workplan_api import router as workplan_router
 from backend.api.operations_api import router as operations_router
 from backend.api.performance_api import router as performance_router
 from backend.api.processing_api import router as processing_router
+from backend.api.command_api import router as command_router
 from backend.api.resources_api import router as resources_router
 from backend.api.survey_api import router as survey_router
 from backend.survey import service as survey_service
@@ -57,6 +58,7 @@ app.include_router(workplan_router)
 app.include_router(operations_router)
 app.include_router(performance_router)
 app.include_router(processing_router)
+app.include_router(command_router)
 
 
 @app.get("/api/landing/photos")

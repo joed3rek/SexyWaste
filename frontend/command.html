@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <link rel="icon" href="data:," />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Command centre</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" />
+  <script src="theme.js"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="page with-rail">
+  <nav id="appNav"></nav>
+  <main class="doc">
+    <header class="page-head">
+      <p class="eyebrow" id="today">Command centre</p>
+      <h1>How is the city doing?</h1>
+      <p class="sub">Service delivered over the last 7 days, what is failing, what needs attention today, and why.
+        Every figure comes from the demands, plans and records behind the other pages.</p>
+    </header>
+
+    <div class="kpis" id="headline"></div>
+
+    <h2>Where are the failures?</h2>
+    <div class="kpis" id="failures"></div>
+    <div id="alerts"></div>
+
+    <h2>What needs attention today?</h2>
+    <div class="kpis" id="todayKpis"></div>
+
+    <h2>Why: sector by sector</h2>
+    <div id="sectors" class="cmd-sectors"></div>
+  </main>
+  <script src="ui.js"></script>
+  <script src="command.js"></script>
+</body>
+</html>

@@ -19,7 +19,7 @@
      "description": "Visits buildings and records building use, use mix and collection basics."},
     {"key": "survey_supervisor", "label": "Survey supervisor", "module": "planning", "login": "phone_pin", "jurisdiction": "sector", "built": true, "home": "supervisor.html",
      "description": "Assigns sectors, spot-checks surveys and resolves map problems."},
-    {"key": "planner", "label": "Planner", "module": "planning", "login": "email_password", "jurisdiction": "city", "built": true, "home": "map.html?role=planner",
+    {"key": "planner", "label": "Planner", "module": "planning", "login": "email_password", "jurisdiction": "city", "built": true, "home": "command.html",
      "description": "Reads the waste profile and designs collection cycles, routes and transfer stations."},
     {"key": "fleet_workforce_manager", "label": "Fleet manager", "module": "planning", "login": "email_password", "jurisdiction": "city", "built": true, "home": "resources.html",
      "description": "Keeps the inventories of vehicles and machinery, with shifts and status."},

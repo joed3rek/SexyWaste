@@ -9,7 +9,7 @@ Roles are defined in `backend/auth/roles.json`. Each role has a key, a label, a 
 | Surveyor | Yes | `surveyor.html` | Visits buildings and records building use, use mix and collection basics |
 | Survey supervisor | Yes | `supervisor.html` | Assigns sectors, spot-checks surveys and resolves map problems |
 | Admin | Yes | `admin.html` | Manages users, roles and jurisdictions (role list only for now) |
-| Planner | Partly | `map.html?role=planner` | Waste profile, routes and transfer stations (map and route builder) |
+| Planner | Yes | `command.html` | Today (command centre), city map, waste profile, collection cycle, Clean City and work plans, route plans, operations, processing and performance |
 | Fleet manager | Yes | `resources.html` | Vehicles and machinery: inventory, shifts and status |
 | Human resource manager | Yes | `resources.html?tab=staff` | People: drivers, collectors, sweepers and other staff, with roles, shifts and hours |
 | Driver | No | | Assigned route and navigation only |
