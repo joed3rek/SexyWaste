@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <link rel="icon" href="data:," />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>City map</title>
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" />
+  <script src="theme.js"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="app">
+  <nav id="appNav"></nav>
+  <aside id="panel">
+    <header class="panel-head">
+      <p class="eyebrow">One map of the city</p>
+      <h1>City map</h1>
+    </header>
+    <section>
+      <p class="hint small">Every layer comes from the same records the rest of CityLoom uses: switch on what you need.
+        Hover a feature for details.</p>
+      <div id="layers"></div>
+    </section>
+  </aside>
+  <div id="map"></div>
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <script src="ui.js"></script>
+  <script src="citymap.js"></script>
+  <script>
+    const map = cityMap({ zoom: 14.2 });
+    map.on("load", () => UI_READY.then(() => cityLayerPanel(document.getElementById("layers"), addCityLayers(map, "hsr"))));
+  </script>
+</body>
+</html>

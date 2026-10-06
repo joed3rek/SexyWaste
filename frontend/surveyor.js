@@ -20,20 +20,7 @@ let pinMode = null; // "missing" or "gvp" while the next tap places a pin
 
 if (!SESSION || !["surveyor", "survey_supervisor", "admin"].includes(SESSION.role)) location.replace("index.html");
 
-const map = new maplibregl.Map({
-  container: "map",
-  style: {
-    version: 8,
-    sources: { osm: { type: "raster", tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"], tileSize: 256, attribution: "© OpenStreetMap contributors" } },
-    layers: [
-      { id: "bg", type: "background", paint: { "background-color": "#f4f5f6" } },
-      { id: "osm", type: "raster", source: "osm", paint: { "raster-opacity": 0.55, "raster-saturation": -1, "raster-contrast": -0.1 } },
-    ],
-  },
-  center: [77.641, 12.9125],
-  zoom: 15,
-});
-map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
+const map = cityMap({ zoom: 15, tileOpacity: 0.55, controls: "bottom-right", compass: false });
 map.addControl(new maplibregl.GeolocateControl({ positionOptions: { enableHighAccuracy: true }, trackUserLocation: true }), "bottom-right");
 
 function eachCoord(geom, fn) { const w = (c) => (typeof c[0] === "number" ? fn(c) : c.forEach(w)); w(geom.coordinates); }

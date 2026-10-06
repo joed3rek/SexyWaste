@@ -137,20 +137,7 @@ function applyFilters() {
 
 // ---------- Map ----------
 
-const map = new maplibregl.Map({
-  container: "map",
-  style: {
-    version: 8,
-    sources: { osm: { type: "raster", tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"], tileSize: 256, attribution: "© OpenStreetMap contributors" } },
-    layers: [
-      { id: "bg", type: "background", paint: { "background-color": "#f4f5f6" } },
-      { id: "osm", type: "raster", source: "osm", paint: { "raster-opacity": 0.5, "raster-saturation": -1, "raster-contrast": -0.1 } },
-    ],
-  },
-  center: [77.641, 12.9125],
-  zoom: 14.2,
-});
-map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-right");
+const map = cityMap({ zoom: 14.2, tileOpacity: 0.5, pitch: true });
 
 function eachCoord(geom, fn) {
   const walk = (c) => (typeof c[0] === "number" ? fn(c) : c.forEach(walk));

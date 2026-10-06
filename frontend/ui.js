@@ -16,6 +16,7 @@ const ICONS = {
   calendar: '<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/>',
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"/>',
   moon: '<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>',
+  map: '<path d="m3 6 6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/>',
   chart: '<path d="M4 20V4M4 20h16"/><path d="m8 15 4-5 3 3 5-6"/>',
   pulse: '<path d="M3 12h4l3 7 4-14 3 7h4"/>',
   truck: '<path d="M3 6.5h11v9H3z"/><path d="M14 9.5h3.5l3 3v3H14"/><circle cx="7" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/>',
@@ -37,6 +38,7 @@ const NAV = [
   { key: "surveyor", href: "surveyor.html", icon: "survey", roles: ["surveyor", "survey_supervisor"] },
   { key: "supervisor", href: "supervisor.html", icon: "ward", roles: ["survey_supervisor"] },
   { key: "report", href: "report.html", icon: "household", roles: ["generator"] },
+  { key: "citymap", href: "citymap.html", icon: "map", roles: ["planner", "survey_supervisor", "operations_supervisor", "fleet_workforce_manager", "hr_manager"] },
   { key: "planner", href: "map.html?role=planner", icon: "planner", roles: ["planner"] },
   { key: "cycle", href: "cycle.html", icon: "calendar", roles: ["planner"] },
   { key: "cleancity", href: "cleancity.html", icon: "broom", roles: ["planner"] },
@@ -171,18 +173,10 @@ function mapPadding(map, extra = 20) {
 }
 
 function activeNavKey() {
+  // The NAV item whose page this is (one source of truth: a new page needs only its NAV entry).
   const page = location.pathname.split("/").pop() || "index.html";
-  if (page.startsWith("map")) return "planner";
-  if (page.startsWith("surveyor")) return "surveyor";
-  if (page.startsWith("resources")) return "fleet";
-  if (page.startsWith("cycle")) return "cycle";
-  if (page.startsWith("cleancity")) return "cleancity";
-  if (page.startsWith("report")) return "report";
-  if (page.startsWith("supervisor")) return "supervisor";
-  if (page.startsWith("builder")) return "builder";
-  if (page.startsWith("rules")) return "rules";
-  if (page.startsWith("admin")) return "admin";
-  return "home";
+  const item = NAV.find((n) => n.href.split("?")[0] === page);
+  return item ? item.key : "home";
 }
 
 const UI_READY = loadStrings().then(renderShell);

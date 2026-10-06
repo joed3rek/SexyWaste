@@ -1836,6 +1836,10 @@
   "nav.performance": {
    "en": "Performance",
    "kn": ""
+  },
+  "nav.citymap": {
+   "en": "City map",
+   "kn": ""
   }
  }
 }

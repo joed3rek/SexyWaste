@@ -973,3 +973,8 @@ p.warn::before { background: transparent; border: 1.5px solid currentColor; colo
 .op-form label { flex: 0 1 120px; margin: 0; }
 .op-form label:has(select[multiple]) { flex: 1 1 220px; }
 .op-form select.reason { flex: 1 1 200px; width: auto; }
+
+/* Shared city map: layer switches */
+.city-layers { margin: 0 0 var(--s-3); padding: var(--s-2) var(--s-3); }
+.city-layers legend { font-size: var(--fs-sm); color: var(--ink-3); padding: 0 4px; }
+.city-layers label.check { display: block; margin: 4px 0; font-weight: 400; }

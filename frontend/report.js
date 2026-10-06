@@ -13,20 +13,7 @@ let pin = null;
 
 if (!SESSION || !["generator", "admin"].includes(SESSION.role)) location.replace("index.html");
 
-const map = new maplibregl.Map({
-  container: "map",
-  style: {
-    version: 8,
-    sources: { osm: { type: "raster", tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"], tileSize: 256, attribution: "© OpenStreetMap contributors" } },
-    layers: [
-      { id: "bg", type: "background", paint: { "background-color": "#f4f5f6" } },
-      { id: "osm", type: "raster", source: "osm", paint: { "raster-opacity": 0.75, "raster-saturation": -0.6 } },
-    ],
-  },
-  center: [77.641, 12.9125],
-  zoom: 15,
-});
-map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
+const map = cityMap({ zoom: 15, tileOpacity: 0.75, tileSaturation: -0.6, controls: "bottom-right", compass: false });
 const geo = new maplibregl.GeolocateControl({ positionOptions: { enableHighAccuracy: true }, trackUserLocation: true });
 map.addControl(geo, "bottom-right");
 let here = null;  // the phone's last GPS position
